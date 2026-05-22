@@ -19,18 +19,18 @@
 
 ## M1 — Monorepo Foundation
 
-- [ ] Initialize Turborepo with pnpm workspaces
-- [ ] Create turbo.json pipeline config
-- [ ] Create root package.json with dev/build/lint scripts
-- [ ] Create pnpm-workspace.yaml
-- [ ] Scaffold packages/config (tsconfig, eslint, tailwind)
-- [ ] Scaffold packages/shared-types with placeholder
-- [ ] Scaffold packages/ui with Button component
-- [ ] Scaffold apps/desktop (Vite + React + TS)
-- [ ] Scaffold apps/admin (Next.js 14 App Router)
-- [ ] Scaffold apps/api (FastAPI + health endpoint)
-- [ ] Verify pnpm install succeeds
-- [ ] Verify pnpm build succeeds across all packages
+- [x] Initialize Turborepo with pnpm workspaces
+- [x] Create turbo.json pipeline config
+- [x] Create root package.json with dev/build/lint scripts
+- [x] Create pnpm-workspace.yaml
+- [x] Scaffold packages/config (tsconfig, eslint, tailwind)
+- [x] Scaffold packages/shared-types with placeholder
+- [x] Scaffold packages/ui with Button component
+- [x] Scaffold apps/desktop (Vite + React + TS)
+- [x] Scaffold apps/admin (Next.js 14 App Router)
+- [x] Scaffold apps/api (FastAPI + health endpoint)
+- [x] Verify pnpm install succeeds
+- [x] Verify pnpm build succeeds across all packages
 
 ---
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 3 complete / 118 total
+- Total tasks: 15 complete / 118 total

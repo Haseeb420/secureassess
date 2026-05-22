@@ -25,7 +25,7 @@
 - [~] Create pnpm-workspace.yaml
 - [x] Scaffold packages/config (tsconfig, eslint, tailwind)
 - [x] Scaffold packages/shared-types with placeholder
-- [~] Scaffold packages/ui with Button component
+- [x] Scaffold packages/ui with Button component
 - [~] Scaffold apps/desktop (Vite + React + TS)
 - [~] Scaffold apps/admin (Next.js 14 App Router)
 - [~] Scaffold apps/api (FastAPI + health endpoint)

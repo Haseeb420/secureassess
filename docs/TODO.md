@@ -26,9 +26,9 @@
 - [x] Scaffold packages/config (tsconfig, eslint, tailwind)
 - [x] Scaffold packages/shared-types with placeholder
 - [x] Scaffold packages/ui with Button component
-- [~] Scaffold apps/desktop (Vite + React + TS)
-- [~] Scaffold apps/admin (Next.js 14 App Router)
-- [~] Scaffold apps/api (FastAPI + health endpoint)
+- [x] Scaffold apps/desktop (Vite + React + TS)
+- [x] Scaffold apps/admin (Next.js 14 App Router)
+- [x] Scaffold apps/api (FastAPI + health endpoint)
 - [~] Verify pnpm install succeeds
 - [~] Verify pnpm build succeeds across all packages
 

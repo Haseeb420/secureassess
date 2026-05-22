@@ -23,7 +23,7 @@
 - [~] Create turbo.json pipeline config
 - [~] Create root package.json with dev/build/lint scripts
 - [~] Create pnpm-workspace.yaml
-- [~] Scaffold packages/config (tsconfig, eslint, tailwind)
+- [x] Scaffold packages/config (tsconfig, eslint, tailwind)
 - [~] Scaffold packages/shared-types with placeholder
 - [~] Scaffold packages/ui with Button component
 - [~] Scaffold apps/desktop (Vite + React + TS)

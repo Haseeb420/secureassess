@@ -24,7 +24,7 @@
 - [~] Create root package.json with dev/build/lint scripts
 - [~] Create pnpm-workspace.yaml
 - [x] Scaffold packages/config (tsconfig, eslint, tailwind)
-- [~] Scaffold packages/shared-types with placeholder
+- [x] Scaffold packages/shared-types with placeholder
 - [~] Scaffold packages/ui with Button component
 - [~] Scaffold apps/desktop (Vite + React + TS)
 - [~] Scaffold apps/admin (Next.js 14 App Router)

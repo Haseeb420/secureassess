@@ -43,7 +43,7 @@
 - [x] Create SecureLayout wrapper
 - [x] Create AppShell component
 - [x] Create Zustand store skeleton (candidateId, assessmentId, status, timerSeconds)
-- [ ] Verify cargo tauri dev opens native window
+- [x] Verify cargo tauri dev opens native window
 
 ---
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 22 complete / 118 total
+- Total tasks: 23 complete / 118 total

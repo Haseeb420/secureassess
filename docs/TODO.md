@@ -36,13 +36,13 @@
 
 ## M2 — Desktop App Shell
 
-- [ ] Run cargo tauri init inside apps/desktop
-- [ ] Configure tauri.conf.json (window, bundle, security)
-- [ ] Install react-router-dom, zustand, @tauri-apps/api
-- [ ] Create route structure: Login, PreAssessment, Assessment, Completion
-- [ ] Create SecureLayout wrapper
-- [ ] Create AppShell component
-- [ ] Create Zustand store skeleton (candidateId, assessmentId, status, timerSeconds)
+- [~] Run cargo tauri init inside apps/desktop
+- [~] Configure tauri.conf.json (window, bundle, security)
+- [~] Install react-router-dom, zustand, @tauri-apps/api
+- [~] Create route structure: Login, PreAssessment, Assessment, Completion
+- [~] Create SecureLayout wrapper
+- [~] Create AppShell component
+- [~] Create Zustand store skeleton (candidateId, assessmentId, status, timerSeconds)
 - [ ] Verify cargo tauri dev opens native window
 
 ---

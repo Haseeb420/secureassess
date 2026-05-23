@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { SyncIndicator } from '../features/sync/SyncIndicator'
 import { useTimerPersistence } from '../features/persistence/useTimerPersistence'
 
 interface TopBarProps {
@@ -51,8 +52,7 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Sync indicator — wired in Part C */}
-        <span className="h-2 w-2 rounded-full bg-zinc-600" title="Sync status" />
+        <SyncIndicator />
         <button
           type="button"
           onClick={onSubmit}

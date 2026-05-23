@@ -1,5 +1,8 @@
 mod security;
 
+use security::display::validate_displays;
+use security::processes::check_forbidden_processes;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -13,6 +16,10 @@ pub fn run() {
       }
       Ok(())
     })
+    .invoke_handler(tauri::generate_handler![
+      validate_displays,
+      check_forbidden_processes,
+    ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

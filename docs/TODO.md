@@ -71,17 +71,17 @@
 
 ## M4 — Native Security Layer
 
-- [ ] Create security/ Rust module structure
-- [ ] Define SecurityEvent, ViolationType, ValidationResult types
-- [ ] Implement display count detection (macOS)
-- [ ] Implement forbidden process scanner (sysinfo)
-- [ ] Implement focus loss detection
-- [ ] Implement kiosk fullscreen enforcement
-- [ ] Register all security Tauri commands
-- [ ] Create securityService.ts in React
-- [ ] Create useSecurityMonitor hook
-- [ ] Create ViolationBanner component
-- [ ] Build PreAssessmentPage validation checklist UI
+- [x] Create security/ Rust module structure
+- [x] Define SecurityEvent, ViolationType, ValidationResult types
+- [x] Implement display count detection (macOS)
+- [x] Implement forbidden process scanner (sysinfo)
+- [x] Implement focus loss detection
+- [x] Implement kiosk fullscreen enforcement
+- [x] Register all security Tauri commands
+- [x] Create securityService.ts in React
+- [x] Create useSecurityMonitor hook
+- [x] Create ViolationBanner component
+- [x] Build PreAssessmentPage validation checklist UI
 - [ ] Verify: Chrome open → violation detected
 - [ ] Verify: multiple displays → validation fails
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 40 complete / 118 total
+- Total tasks: 51 complete / 118 total

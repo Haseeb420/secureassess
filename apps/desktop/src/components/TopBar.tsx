@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
+import { useTimerPersistence } from '../features/persistence/useTimerPersistence'
 
 interface TopBarProps {
   candidateName: string
   questionIndex: number
   totalQuestions: number
   timerSeconds: number
+  sessionId: string | null
   onSubmit: () => void
 }
 
@@ -19,22 +21,22 @@ export function TopBar({
   questionIndex,
   totalQuestions,
   timerSeconds,
+  sessionId,
   onSubmit,
 }: TopBarProps) {
   const isLow = timerSeconds < 300
   const isExpired = timerSeconds === 0
 
-  // Auto-submit when timer hits 0
+  useTimerPersistence({ sessionId, timerSeconds })
+
   useEffect(() => {
     if (isExpired) onSubmit()
   }, [isExpired, onSubmit])
 
   return (
     <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
-      {/* Left: candidate name */}
       <span className="text-sm text-zinc-400">{candidateName}</span>
 
-      {/* Center: question position + timer */}
       <div className="flex items-center gap-4">
         <span className="text-sm text-zinc-300">
           Question {questionIndex} of {totalQuestions}
@@ -48,11 +50,9 @@ export function TopBar({
         </span>
       </div>
 
-      {/* Right: sync indicator + submit */}
       <div className="flex items-center gap-3">
-        {/* Sync indicator placeholder — wired in M6 */}
+        {/* Sync indicator — wired in Part C */}
         <span className="h-2 w-2 rounded-full bg-zinc-600" title="Sync status" />
-
         <button
           type="button"
           onClick={onSubmit}

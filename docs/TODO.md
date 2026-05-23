@@ -114,13 +114,13 @@
 - [x] Implement encryption key derivation from machine fingerprint
 - [x] Run migrations on app startup
 - [x] Create Tauri commands for save/get session, snapshot, events
-- [~] Create useAutoSave hook (debounce 3s + periodic 30s)
-- [~] Create useTimerPersistence hook (every 10s)
-- [~] Create useCrashRecovery hook
-- [~] Create CrashRecoveryModal component
-- [~] Wire auto-save into CodeEditor onChange
-- [~] Wire timer persistence into TopBar
-- [~] Wire crash recovery into App.tsx mount
+- [x] Create useAutoSave hook (debounce 3s + periodic 30s)
+- [x] Create useTimerPersistence hook (every 10s)
+- [x] Create useCrashRecovery hook
+- [x] Create CrashRecoveryModal component
+- [x] Wire auto-save into CodeEditor onChange
+- [x] Wire timer persistence into TopBar
+- [x] Wire crash recovery into App.tsx mount
 - [ ] Create Rust sync queue (queue.rs, worker.rs)
 - [ ] Background sync worker flushes every 30s when online
 - [ ] Create useSyncStatus React hook
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 69 complete / 118 total
+- Total tasks: 77 complete / 118 total

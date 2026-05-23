@@ -8,6 +8,7 @@ import { EditorToolbar } from '../features/ide/EditorToolbar'
 import { QuestionPanel } from '../features/ide/QuestionPanel'
 import { TestRunner } from '../features/ide/TestRunner'
 import { TopBar } from '../components/TopBar'
+import { useAutoSave } from '../features/persistence/useAutoSave'
 import { useAssessmentStore } from '../store/assessmentStore'
 
 const mockQuestion: Question = {
@@ -77,6 +78,7 @@ export function AssessmentPage() {
   const navigate = useNavigate()
   const {
     candidate,
+    assessmentId,
     currentLanguage,
     codeByLanguage,
     consoleOutput,
@@ -97,9 +99,18 @@ export function AssessmentPage() {
     return () => clearInterval(id)
   })
 
+  // Auto-save current code (debounce 3s + periodic 30s)
+  const { forceSave } = useAutoSave({
+    sessionId: assessmentId,
+    questionId: mockQuestion.id,
+    language: currentLanguage,
+    code: codeByLanguage[currentLanguage],
+  })
+
   const handleSave = useCallback(() => {
+    forceSave()
     appendOutput({ type: 'system', text: '— Saved —' })
-  }, [appendOutput])
+  }, [forceSave, appendOutput])
 
   const handleRun = useCallback(async (): Promise<ExecutionResult[]> => {
     setIsRunning(true)
@@ -131,6 +142,7 @@ export function AssessmentPage() {
         questionIndex={1}
         totalQuestions={1}
         timerSeconds={timerSeconds}
+        sessionId={assessmentId}
         onSubmit={handleSubmit}
       />
 

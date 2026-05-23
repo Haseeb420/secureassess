@@ -1,5 +1,6 @@
 mod db;
 mod security;
+mod sync;
 
 use db::commands::{
     get_active_session, get_code_snapshot, get_latest_snapshot, get_security_events, get_session,
@@ -32,6 +33,9 @@ pub fn run() {
             let pool = tauri::async_runtime::block_on(init_pool(&db_url))
                 .expect("Failed to initialize database");
             app.manage(DbPool(pool));
+
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(sync::worker::start_sync_worker(app_handle));
 
             Ok(())
         })

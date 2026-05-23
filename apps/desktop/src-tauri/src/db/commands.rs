@@ -1,9 +1,11 @@
 use chrono::Utc;
+use serde_json::json;
 use tauri::State;
 use uuid::Uuid;
 
 use super::models::{AssessmentSession, CodeSnapshot, SecurityEventRow};
 use super::DbPool;
+use crate::sync::queue::enqueue;
 
 // ── Session ───────────────────────────────────────────────────────────────────
 
@@ -158,6 +160,10 @@ pub async fn save_code_snapshot(
     .execute(&db.0)
     .await
     .map_err(|e| e.to_string())?;
+
+    let payload = json!({ "id": id, "session_id": session_id, "question_id": question_id, "language": language, "code": code, "saved_at": now }).to_string();
+    let _ = enqueue(&db.0, "snapshot", &payload, None).await;
+
     Ok(())
 }
 
@@ -255,6 +261,10 @@ pub async fn save_security_event(
     .execute(&db.0)
     .await
     .map_err(|e| e.to_string())?;
+
+    let payload = json!({ "id": id, "session_id": session_id, "event_type": event_type, "metadata": metadata, "occurred_at": now }).to_string();
+    let _ = enqueue(&db.0, "security_event", &payload, None).await;
+
     Ok(id)
 }
 

@@ -75,13 +75,13 @@
 - [x] Define SecurityEvent, ViolationType, ValidationResult types
 - [x] Implement display count detection (macOS)
 - [x] Implement forbidden process scanner (sysinfo)
-- [ ] Implement focus loss detection
-- [ ] Implement kiosk fullscreen enforcement
-- [~] Register all security Tauri commands
-- [ ] Create securityService.ts in React
-- [ ] Create useSecurityMonitor hook
-- [ ] Create ViolationBanner component
-- [ ] Build PreAssessmentPage validation checklist UI
+- [x] Implement focus loss detection
+- [x] Implement kiosk fullscreen enforcement
+- [x] Register all security Tauri commands
+- [~] Create securityService.ts in React
+- [~] Create useSecurityMonitor hook
+- [~] Create ViolationBanner component
+- [~] Build PreAssessmentPage validation checklist UI
 - [ ] Verify: Chrome open → violation detected
 - [ ] Verify: multiple displays → validation fails
 

@@ -1,6 +1,7 @@
 mod security;
 
 use security::display::validate_displays;
+use security::kiosk::{enter_kiosk_mode, exit_kiosk_mode};
 use security::processes::check_forbidden_processes;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -19,6 +20,8 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       validate_displays,
       check_forbidden_processes,
+      enter_kiosk_mode,
+      exit_kiosk_mode,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

@@ -81,7 +81,7 @@
 - [x] Create securityService.ts in React
 - [x] Create useSecurityMonitor hook
 - [x] Create ViolationBanner component
-- [~] Build PreAssessmentPage validation checklist UI
+- [x] Build PreAssessmentPage validation checklist UI
 - [ ] Verify: Chrome open → violation detected
 - [ ] Verify: multiple displays → validation fails
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 44 complete / 118 total
+- Total tasks: 51 complete / 118 total

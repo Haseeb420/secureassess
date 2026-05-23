@@ -96,13 +96,13 @@
 - [x] Create ConsoleOutput.tsx with color-coded output
 - [x] Create code templates for all 6 languages
 - [x] Add codeByLanguage to Zustand store
-- [ ] Add assessment types to shared-types
-- [ ] Create QuestionPanel.tsx with markdown rendering
-- [ ] Create TestRunner.tsx with stubbed execution
-- [ ] Compose full AssessmentPage layout with resizable panels
-- [ ] Create TopBar.tsx with countdown timer
-- [ ] Timer turns red at < 5 minutes
-- [ ] Timer at 0 triggers auto-submit stub
+- [x] Add assessment types to shared-types
+- [~] Create QuestionPanel.tsx with markdown rendering
+- [~] Create TestRunner.tsx with stubbed execution
+- [~] Compose full AssessmentPage layout with resizable panels
+- [~] Create TopBar.tsx with countdown timer
+- [~] Timer turns red at < 5 minutes
+- [~] Timer at 0 triggers auto-submit stub
 
 ---
 

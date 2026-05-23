@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { Candidate } from '@secureassess/shared-types'
+import { defaultTemplates, type Language } from '../features/ide/templates'
+import type { OutputLine } from '../features/ide/ConsoleOutput'
 
 type AssessmentStatus = 'idle' | 'validating' | 'active' | 'completed'
 
@@ -10,6 +12,9 @@ interface AssessmentState {
   timerSeconds: number
   candidate: Candidate | null
   authToken: string | null
+  currentLanguage: Language
+  codeByLanguage: Record<Language, string>
+  consoleOutput: OutputLine[]
   setCandidate: (id: string) => void
   setAssessment: (id: string) => void
   setStatus: (status: AssessmentStatus) => void
@@ -18,6 +23,10 @@ interface AssessmentState {
   setCandidateData: (candidate: Candidate) => void
   setAuthToken: (token: string) => void
   clearAuth: () => void
+  setLanguage: (lang: Language) => void
+  setCode: (lang: Language, code: string) => void
+  appendOutput: (line: OutputLine) => void
+  clearOutput: () => void
   reset: () => void
 }
 
@@ -28,6 +37,9 @@ const initialState = {
   timerSeconds: 0,
   candidate: null,
   authToken: null,
+  currentLanguage: 'python' as Language,
+  codeByLanguage: { ...defaultTemplates },
+  consoleOutput: [] as OutputLine[],
 }
 
 export const useAssessmentStore = create<AssessmentState>((set) => ({
@@ -41,5 +53,13 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
   setCandidateData: (candidate) => set({ candidate, candidateId: candidate.id }),
   setAuthToken: (token) => set({ authToken: token }),
   clearAuth: () => set({ candidate: null, authToken: null, candidateId: null }),
+  setLanguage: (lang) => set({ currentLanguage: lang }),
+  setCode: (lang, code) =>
+    set((state) => ({
+      codeByLanguage: { ...state.codeByLanguage, [lang]: code },
+    })),
+  appendOutput: (line) =>
+    set((state) => ({ consoleOutput: [...state.consoleOutput, line] })),
+  clearOutput: () => set({ consoleOutput: [] }),
   reset: () => set(initialState),
 }))

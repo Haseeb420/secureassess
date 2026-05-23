@@ -71,8 +71,8 @@
 
 ## M4 — Native Security Layer
 
-- [ ] Create security/ Rust module structure
-- [ ] Define SecurityEvent, ViolationType, ValidationResult types
+- [x] Create security/ Rust module structure
+- [x] Define SecurityEvent, ViolationType, ValidationResult types
 - [ ] Implement display count detection (macOS)
 - [ ] Implement forbidden process scanner (sysinfo)
 - [ ] Implement focus loss detection
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 40 complete / 118 total
+- Total tasks: 42 complete / 118 total

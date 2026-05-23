@@ -73,11 +73,11 @@
 
 - [x] Create security/ Rust module structure
 - [x] Define SecurityEvent, ViolationType, ValidationResult types
-- [ ] Implement display count detection (macOS)
-- [ ] Implement forbidden process scanner (sysinfo)
+- [x] Implement display count detection (macOS)
+- [x] Implement forbidden process scanner (sysinfo)
 - [ ] Implement focus loss detection
 - [ ] Implement kiosk fullscreen enforcement
-- [ ] Register all security Tauri commands
+- [~] Register all security Tauri commands
 - [ ] Create securityService.ts in React
 - [ ] Create useSecurityMonitor hook
 - [ ] Create ViolationBanner component
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 42 complete / 118 total
+- Total tasks: 44 complete / 118 total

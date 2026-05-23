@@ -89,13 +89,13 @@
 
 ## M5 — IDE & Code Editor
 
-- [~] Install @monaco-editor/react
-- [~] Create CodeEditor.tsx with dark theme, font, settings
-- [~] Create LanguageSelector.tsx (6 languages)
-- [~] Create EditorToolbar.tsx
-- [~] Create ConsoleOutput.tsx with color-coded output
-- [~] Create code templates for all 6 languages
-- [~] Add codeByLanguage to Zustand store
+- [x] Install @monaco-editor/react
+- [x] Create CodeEditor.tsx with dark theme, font, settings
+- [x] Create LanguageSelector.tsx (6 languages)
+- [x] Create EditorToolbar.tsx
+- [x] Create ConsoleOutput.tsx with color-coded output
+- [x] Create code templates for all 6 languages
+- [x] Add codeByLanguage to Zustand store
 - [ ] Add assessment types to shared-types
 - [ ] Create QuestionPanel.tsx with markdown rendering
 - [ ] Create TestRunner.tsx with stubbed execution
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 51 complete / 118 total
+- Total tasks: 58 complete / 118 total

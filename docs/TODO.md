@@ -62,10 +62,10 @@
 - [x] Build LoginPage with email/password + invite token toggle
 - [x] Add ProtectedRoute wrapper
 - [x] Wrap assessment routes in ProtectedRoute
-- [ ] Add Supabase SSR auth to admin (Next.js)
-- [ ] Create admin middleware for route protection
-- [ ] Build admin login page
-- [ ] Build admin dashboard placeholder
+- [~] Add Supabase SSR auth to admin (Next.js)
+- [~] Create admin middleware for route protection
+- [~] Build admin login page
+- [~] Build admin dashboard placeholder
 
 ---
 

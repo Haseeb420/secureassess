@@ -97,12 +97,12 @@
 - [x] Create code templates for all 6 languages
 - [x] Add codeByLanguage to Zustand store
 - [x] Add assessment types to shared-types
-- [~] Create QuestionPanel.tsx with markdown rendering
-- [~] Create TestRunner.tsx with stubbed execution
-- [~] Compose full AssessmentPage layout with resizable panels
-- [~] Create TopBar.tsx with countdown timer
-- [~] Timer turns red at < 5 minutes
-- [~] Timer at 0 triggers auto-submit stub
+- [x] Create QuestionPanel.tsx with markdown rendering
+- [x] Create TestRunner.tsx with stubbed execution
+- [x] Compose full AssessmentPage layout with resizable panels
+- [x] Create TopBar.tsx with countdown timer
+- [x] Timer turns red at < 5 minutes
+- [x] Timer at 0 triggers auto-submit stub
 
 ---
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 58 complete / 118 total
+- Total tasks: 64 complete / 118 total

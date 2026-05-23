@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { SecureLayout } from './layouts/SecureLayout'
 import { LoginPage } from './routes/LoginPage'
 import { PreAssessmentPage } from './routes/PreAssessmentPage'
@@ -13,11 +14,13 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/pre-assessment" element={<PreAssessmentPage />} />
-          <Route path="/assessment" element={<SecureLayout />}>
-            <Route index element={<AssessmentPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/pre-assessment" element={<PreAssessmentPage />} />
+            <Route path="/assessment" element={<SecureLayout />}>
+              <Route index element={<AssessmentPage />} />
+            </Route>
+            <Route path="/completion" element={<CompletionPage />} />
           </Route>
-          <Route path="/completion" element={<CompletionPage />} />
         </Routes>
       </AppShell>
     </BrowserRouter>

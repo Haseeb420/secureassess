@@ -56,12 +56,12 @@
 - [x] Create /auth/refresh endpoint
 - [x] Create /auth/me endpoint
 - [x] Create get_current_candidate FastAPI dependency
-- [~] Add Supabase client to desktop (apps/desktop/src/lib/supabase.ts)
-- [~] Create authService.ts in desktop
-- [~] Create useAuth.ts hook
-- [~] Build LoginPage with email/password + invite token toggle
-- [~] Add ProtectedRoute wrapper
-- [~] Wrap assessment routes in ProtectedRoute
+- [x] Add Supabase client to desktop (apps/desktop/src/lib/supabase.ts)
+- [x] Create authService.ts in desktop
+- [x] Create useAuth.ts hook
+- [x] Build LoginPage with email/password + invite token toggle
+- [x] Add ProtectedRoute wrapper
+- [x] Wrap assessment routes in ProtectedRoute
 - [ ] Add Supabase SSR auth to admin (Next.js)
 - [ ] Create admin middleware for route protection
 - [ ] Build admin login page
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 30 complete / 118 total
+- Total tasks: 36 complete / 118 total

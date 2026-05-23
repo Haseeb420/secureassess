@@ -108,11 +108,11 @@
 
 ## M6 — Offline Persistence & Sync
 
-- [ ] Add tauri-plugin-sql with SQLCipher to Cargo.toml
-- [ ] Create db/ Rust module (schema, migrations, models)
-- [ ] Define all 4 DB tables (sessions, snapshots, events, sync_queue)
-- [ ] Implement encryption key derivation from machine fingerprint
-- [ ] Run migrations on app startup
+- [x] Add tauri-plugin-sql with SQLCipher to Cargo.toml
+- [x] Create db/ Rust module (schema, migrations, models)
+- [x] Define all 4 DB tables (sessions, snapshots, events, sync_queue)
+- [x] Implement encryption key derivation from machine fingerprint
+- [x] Run migrations on app startup
 - [ ] Create Tauri commands for save/get session, snapshot, events
 - [ ] Create useAutoSave hook (debounce 3s + periodic 30s)
 - [ ] Create useTimerPersistence hook (every 10s)
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 64 complete / 118 total
+- Total tasks: 69 complete / 118 total

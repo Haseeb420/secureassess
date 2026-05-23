@@ -49,23 +49,23 @@
 
 ## M3 — Authentication
 
-- [ ] Add auth interfaces to packages/shared-types
-- [ ] Set up FastAPI Supabase client and config
-- [ ] Create /auth/candidate/login endpoint
-- [ ] Create /auth/candidate/verify-invite endpoint
-- [ ] Create /auth/refresh endpoint
-- [ ] Create /auth/me endpoint
-- [ ] Create get_current_candidate FastAPI dependency
-- [ ] Add Supabase client to desktop (apps/desktop/src/lib/supabase.ts)
-- [ ] Create authService.ts in desktop
-- [ ] Create useAuth.ts hook
-- [ ] Build LoginPage with email/password + invite token toggle
-- [ ] Add ProtectedRoute wrapper
-- [ ] Wrap assessment routes in ProtectedRoute
-- [ ] Add Supabase SSR auth to admin (Next.js)
-- [ ] Create admin middleware for route protection
-- [ ] Build admin login page
-- [ ] Build admin dashboard placeholder
+- [x] Add auth interfaces to packages/shared-types
+- [x] Set up FastAPI Supabase client and config
+- [x] Create /auth/candidate/login endpoint
+- [x] Create /auth/candidate/verify-invite endpoint
+- [x] Create /auth/refresh endpoint
+- [x] Create /auth/me endpoint
+- [x] Create get_current_candidate FastAPI dependency
+- [x] Add Supabase client to desktop (apps/desktop/src/lib/supabase.ts)
+- [x] Create authService.ts in desktop
+- [x] Create useAuth.ts hook
+- [x] Build LoginPage with email/password + invite token toggle
+- [x] Add ProtectedRoute wrapper
+- [x] Wrap assessment routes in ProtectedRoute
+- [x] Add Supabase SSR auth to admin (Next.js)
+- [x] Create admin middleware for route protection
+- [x] Build admin login page
+- [x] Build admin dashboard placeholder
 
 ---
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 23 complete / 118 total
+- Total tasks: 40 complete / 118 total

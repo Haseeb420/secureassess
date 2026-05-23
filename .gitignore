@@ -16,6 +16,7 @@ out/
 .env.local
 .env.*.local
 !.env.example
+!.env.*.example
 !.env.local.example
 
 # Python
@@ -54,3 +55,4 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+docs.zip

@@ -5,7 +5,7 @@ use uuid::Uuid;
 use super::models::{AssessmentSession, CodeSnapshot, SecurityEventRow};
 use super::DbPool;
 
-// ── Session ──────────────────────────────────────────────────────────────────
+// ── Session ───────────────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub async fn save_session(
@@ -16,7 +16,6 @@ pub async fn save_session(
 ) -> Result<String, String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-
     sqlx::query(
         "INSERT INTO assessment_sessions
            (id, assessment_id, candidate_id, status, started_at, timer_remaining_secs, last_saved_at)
@@ -33,8 +32,30 @@ pub async fn save_session(
     .execute(&db.0)
     .await
     .map_err(|e| e.to_string())?;
-
     Ok(id)
+}
+
+#[tauri::command]
+pub async fn save_session_state(
+    db: State<'_, DbPool>,
+    session_id: String,
+    status: String,
+    timer_remaining_secs: i64,
+) -> Result<(), String> {
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "UPDATE assessment_sessions
+         SET status = ?1, timer_remaining_secs = ?2, last_saved_at = ?3
+         WHERE id = ?4",
+    )
+    .bind(&status)
+    .bind(timer_remaining_secs)
+    .bind(&now)
+    .bind(&session_id)
+    .execute(&db.0)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -42,20 +63,52 @@ pub async fn get_session(
     db: State<'_, DbPool>,
     candidate_id: String,
 ) -> Result<Option<AssessmentSession>, String> {
-    let session = sqlx::query_as::<_, AssessmentSession>(
+    sqlx::query_as::<_, AssessmentSession>(
         "SELECT id, assessment_id, candidate_id, status, started_at,
                 timer_remaining_secs, last_saved_at
          FROM assessment_sessions
          WHERE candidate_id = ?1 AND status = 'active'
-         ORDER BY started_at DESC
-         LIMIT 1",
+         ORDER BY started_at DESC LIMIT 1",
     )
     .bind(&candidate_id)
     .fetch_optional(&db.0)
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| e.to_string())
+}
 
-    Ok(session)
+#[tauri::command]
+pub async fn get_active_session(
+    db: State<'_, DbPool>,
+) -> Result<Option<AssessmentSession>, String> {
+    sqlx::query_as::<_, AssessmentSession>(
+        "SELECT id, assessment_id, candidate_id, status, started_at,
+                timer_remaining_secs, last_saved_at
+         FROM assessment_sessions
+         WHERE status = 'active'
+         ORDER BY started_at DESC LIMIT 1",
+    )
+    .fetch_optional(&db.0)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn mark_session_complete(
+    db: State<'_, DbPool>,
+    session_id: String,
+) -> Result<(), String> {
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "UPDATE assessment_sessions
+         SET status = 'completed', last_saved_at = ?1
+         WHERE id = ?2",
+    )
+    .bind(&now)
+    .bind(&session_id)
+    .execute(&db.0)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -76,25 +129,24 @@ pub async fn update_timer(
     .execute(&db.0)
     .await
     .map_err(|e| e.to_string())?;
-
     Ok(())
 }
 
-// ── Snapshot ─────────────────────────────────────────────────────────────────
+// ── Snapshot ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn save_snapshot(
+pub async fn save_code_snapshot(
     db: State<'_, DbPool>,
     session_id: String,
     question_id: String,
     language: String,
     code: String,
-) -> Result<String, String> {
+) -> Result<(), String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-
     sqlx::query(
-        "INSERT INTO code_snapshots (id, session_id, question_id, language, code, saved_at, synced)
+        "INSERT OR REPLACE INTO code_snapshots
+           (id, session_id, question_id, language, code, saved_at, synced)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)",
     )
     .bind(&id)
@@ -106,8 +158,56 @@ pub async fn save_snapshot(
     .execute(&db.0)
     .await
     .map_err(|e| e.to_string())?;
+    Ok(())
+}
 
+#[tauri::command]
+pub async fn save_snapshot(
+    db: State<'_, DbPool>,
+    session_id: String,
+    question_id: String,
+    language: String,
+    code: String,
+) -> Result<String, String> {
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "INSERT INTO code_snapshots
+           (id, session_id, question_id, language, code, saved_at, synced)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)",
+    )
+    .bind(&id)
+    .bind(&session_id)
+    .bind(&question_id)
+    .bind(&language)
+    .bind(&code)
+    .bind(&now)
+    .execute(&db.0)
+    .await
+    .map_err(|e| e.to_string())?;
     Ok(id)
+}
+
+#[tauri::command]
+pub async fn get_code_snapshot(
+    db: State<'_, DbPool>,
+    session_id: String,
+    question_id: String,
+    language: String,
+) -> Result<Option<String>, String> {
+    let row: Option<CodeSnapshot> = sqlx::query_as::<_, CodeSnapshot>(
+        "SELECT id, session_id, question_id, language, code, saved_at, synced
+         FROM code_snapshots
+         WHERE session_id = ?1 AND question_id = ?2 AND language = ?3
+         ORDER BY saved_at DESC LIMIT 1",
+    )
+    .bind(&session_id)
+    .bind(&question_id)
+    .bind(&language)
+    .fetch_optional(&db.0)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(row.map(|r| r.code))
 }
 
 #[tauri::command]
@@ -117,21 +217,18 @@ pub async fn get_latest_snapshot(
     question_id: String,
     language: String,
 ) -> Result<Option<CodeSnapshot>, String> {
-    let snapshot = sqlx::query_as::<_, CodeSnapshot>(
+    sqlx::query_as::<_, CodeSnapshot>(
         "SELECT id, session_id, question_id, language, code, saved_at, synced
          FROM code_snapshots
          WHERE session_id = ?1 AND question_id = ?2 AND language = ?3
-         ORDER BY saved_at DESC
-         LIMIT 1",
+         ORDER BY saved_at DESC LIMIT 1",
     )
     .bind(&session_id)
     .bind(&question_id)
     .bind(&language)
     .fetch_optional(&db.0)
     .await
-    .map_err(|e| e.to_string())?;
-
-    Ok(snapshot)
+    .map_err(|e| e.to_string())
 }
 
 // ── Security event ────────────────────────────────────────────────────────────
@@ -145,9 +242,9 @@ pub async fn save_security_event(
 ) -> Result<String, String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-
     sqlx::query(
-        "INSERT INTO security_events (id, session_id, event_type, metadata, occurred_at, synced)
+        "INSERT INTO security_events
+           (id, session_id, event_type, metadata, occurred_at, synced)
          VALUES (?1, ?2, ?3, ?4, ?5, 0)",
     )
     .bind(&id)
@@ -158,7 +255,6 @@ pub async fn save_security_event(
     .execute(&db.0)
     .await
     .map_err(|e| e.to_string())?;
-
     Ok(id)
 }
 
@@ -167,7 +263,7 @@ pub async fn get_security_events(
     db: State<'_, DbPool>,
     session_id: String,
 ) -> Result<Vec<SecurityEventRow>, String> {
-    let events = sqlx::query_as::<_, SecurityEventRow>(
+    sqlx::query_as::<_, SecurityEventRow>(
         "SELECT id, session_id, event_type, metadata, occurred_at, synced
          FROM security_events
          WHERE session_id = ?1
@@ -176,7 +272,5 @@ pub async fn get_security_events(
     .bind(&session_id)
     .fetch_all(&db.0)
     .await
-    .map_err(|e| e.to_string())?;
-
-    Ok(events)
+    .map_err(|e| e.to_string())
 }

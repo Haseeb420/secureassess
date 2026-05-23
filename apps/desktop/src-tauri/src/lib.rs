@@ -2,8 +2,9 @@ mod db;
 mod security;
 
 use db::commands::{
-    get_latest_snapshot, get_security_events, get_session, save_security_event, save_session,
-    save_snapshot, update_timer,
+    get_active_session, get_code_snapshot, get_latest_snapshot, get_security_events, get_session,
+    mark_session_complete, save_code_snapshot, save_security_event, save_session,
+    save_session_state, save_snapshot, update_timer,
 };
 use db::encryption::get_db_key;
 use db::migrations::init_pool;
@@ -26,14 +27,10 @@ pub fn run() {
                 )?;
             }
 
-            // Derive encryption key from machine fingerprint
             let key = get_db_key();
-            // Use first 8 chars of key in filename so each machine gets its own DB
             let db_url = format!("sqlite:secureassess_{}.db", &key[..8]);
-
             let pool = tauri::async_runtime::block_on(init_pool(&db_url))
                 .expect("Failed to initialize database");
-
             app.manage(DbPool(pool));
 
             Ok(())
@@ -44,12 +41,19 @@ pub fn run() {
             check_forbidden_processes,
             enter_kiosk_mode,
             exit_kiosk_mode,
-            // db
+            // db – session
             save_session,
+            save_session_state,
             get_session,
+            get_active_session,
+            mark_session_complete,
             update_timer,
+            // db – snapshot
+            save_code_snapshot,
             save_snapshot,
+            get_code_snapshot,
             get_latest_snapshot,
+            // db – events
             save_security_event,
             get_security_events,
         ])

@@ -113,14 +113,14 @@
 - [x] Define all 4 DB tables (sessions, snapshots, events, sync_queue)
 - [x] Implement encryption key derivation from machine fingerprint
 - [x] Run migrations on app startup
-- [ ] Create Tauri commands for save/get session, snapshot, events
-- [ ] Create useAutoSave hook (debounce 3s + periodic 30s)
-- [ ] Create useTimerPersistence hook (every 10s)
-- [ ] Create useCrashRecovery hook
-- [ ] Create CrashRecoveryModal component
-- [ ] Wire auto-save into CodeEditor onChange
-- [ ] Wire timer persistence into TopBar
-- [ ] Wire crash recovery into App.tsx mount
+- [x] Create Tauri commands for save/get session, snapshot, events
+- [~] Create useAutoSave hook (debounce 3s + periodic 30s)
+- [~] Create useTimerPersistence hook (every 10s)
+- [~] Create useCrashRecovery hook
+- [~] Create CrashRecoveryModal component
+- [~] Wire auto-save into CodeEditor onChange
+- [~] Wire timer persistence into TopBar
+- [~] Wire crash recovery into App.tsx mount
 - [ ] Create Rust sync queue (queue.rs, worker.rs)
 - [ ] Background sync worker flushes every 30s when online
 - [ ] Create useSyncStatus React hook

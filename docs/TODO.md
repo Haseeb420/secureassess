@@ -49,13 +49,13 @@
 
 ## M3 — Authentication
 
-- [~] Add auth interfaces to packages/shared-types
-- [~] Set up FastAPI Supabase client and config
-- [~] Create /auth/candidate/login endpoint
-- [~] Create /auth/candidate/verify-invite endpoint
-- [~] Create /auth/refresh endpoint
-- [~] Create /auth/me endpoint
-- [~] Create get_current_candidate FastAPI dependency
+- [x] Add auth interfaces to packages/shared-types
+- [x] Set up FastAPI Supabase client and config
+- [x] Create /auth/candidate/login endpoint
+- [x] Create /auth/candidate/verify-invite endpoint
+- [x] Create /auth/refresh endpoint
+- [x] Create /auth/me endpoint
+- [x] Create get_current_candidate FastAPI dependency
 - [ ] Add Supabase client to desktop (apps/desktop/src/lib/supabase.ts)
 - [ ] Create authService.ts in desktop
 - [ ] Create useAuth.ts hook
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 23 complete / 118 total
+- Total tasks: 30 complete / 118 total

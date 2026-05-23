@@ -36,14 +36,14 @@
 
 ## M2 — Desktop App Shell
 
-- [ ] Run cargo tauri init inside apps/desktop
-- [ ] Configure tauri.conf.json (window, bundle, security)
-- [ ] Install react-router-dom, zustand, @tauri-apps/api
-- [ ] Create route structure: Login, PreAssessment, Assessment, Completion
-- [ ] Create SecureLayout wrapper
-- [ ] Create AppShell component
-- [ ] Create Zustand store skeleton (candidateId, assessmentId, status, timerSeconds)
-- [ ] Verify cargo tauri dev opens native window
+- [x] Run cargo tauri init inside apps/desktop
+- [x] Configure tauri.conf.json (window, bundle, security)
+- [x] Install react-router-dom, zustand, @tauri-apps/api
+- [x] Create route structure: Login, PreAssessment, Assessment, Completion
+- [x] Create SecureLayout wrapper
+- [x] Create AppShell component
+- [x] Create Zustand store skeleton (candidateId, assessmentId, status, timerSeconds)
+- [x] Verify cargo tauri dev opens native window
 
 ---
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 15 complete / 118 total
+- Total tasks: 23 complete / 118 total

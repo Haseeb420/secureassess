@@ -1,0 +1,120 @@
+name: Auto PR Description
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  generate-description:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate PR description from conventional commits
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+
+            const TYPES = {
+              feat:     { label: 'Features',         emoji: '✨' },
+              fix:      { label: 'Bug Fixes',         emoji: '🐛' },
+              perf:     { label: 'Performance',       emoji: '⚡' },
+              refactor: { label: 'Refactoring',       emoji: '♻️' },
+              test:     { label: 'Tests',             emoji: '🧪' },
+              docs:     { label: 'Documentation',     emoji: '📝' },
+              build:    { label: 'Build',             emoji: '🔧' },
+              ci:       { label: 'CI',                emoji: '🤖' },
+              chore:    { label: 'Chores',            emoji: '🔩' },
+              security: { label: 'Security',          emoji: '🔒' },
+            };
+
+            // Parse conventional commit: type(scope)!: description
+            const CONV_RE = /^(\w+)(\(([^)]+)\))?(!)?: (.+)$/;
+
+            const sections = {};
+            const breaking = [];
+            const unknown = [];
+
+            for (const { commit } of commits) {
+              const msg = commit.message.split('\n')[0].trim();
+              const m = msg.match(CONV_RE);
+
+              if (!m) {
+                unknown.push(`- ${msg}`);
+                continue;
+              }
+
+              const [, type, , scope, bang, description] = m;
+              const entry = scope
+                ? `- **${scope}:** ${description}`
+                : `- ${description}`;
+
+              if (bang) breaking.push(entry);
+
+              const key = type.toLowerCase();
+              if (!sections[key]) sections[key] = [];
+              sections[key].push(entry);
+            }
+
+            // Build description
+            const lines = [];
+
+            if (breaking.length) {
+              lines.push('## ⚠️ Breaking Changes');
+              lines.push(...breaking);
+              lines.push('');
+            }
+
+            for (const [type, { label, emoji }] of Object.entries(TYPES)) {
+              if (sections[type]?.length) {
+                lines.push(`## ${emoji} ${label}`);
+                lines.push(...sections[type]);
+                lines.push('');
+              }
+            }
+
+            // Any conventional type not in our map
+            for (const [type, entries] of Object.entries(sections)) {
+              if (!TYPES[type] && entries.length) {
+                lines.push(`## ${type}`);
+                lines.push(...entries);
+                lines.push('');
+              }
+            }
+
+            if (unknown.length) {
+              lines.push('## 📦 Other Changes');
+              lines.push(...unknown);
+              lines.push('');
+            }
+
+            // Preserve any manually written content after a marker
+            const KEEP_MARKER = '<!-- custom -->';
+            const existing = context.payload.pull_request.body ?? '';
+            const keepIdx = existing.indexOf(KEEP_MARKER);
+            const customSection = keepIdx >= 0
+              ? '\n' + existing.slice(keepIdx)
+              : '';
+
+            const body = lines.join('\n').trimEnd() + customSection;
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body,
+            });
+
+            core.info(`Updated PR #${context.payload.pull_request.number} description.`);

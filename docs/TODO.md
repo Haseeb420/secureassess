@@ -121,10 +121,10 @@
 - [x] Wire auto-save into CodeEditor onChange
 - [x] Wire timer persistence into TopBar
 - [x] Wire crash recovery into App.tsx mount
-- [ ] Create Rust sync queue (queue.rs, worker.rs)
-- [ ] Background sync worker flushes every 30s when online
-- [ ] Create useSyncStatus React hook
-- [ ] Create SyncIndicator component in TopBar
+- [x] Create Rust sync queue (queue.rs, worker.rs)
+- [x] Background sync worker flushes every 30s when online
+- [x] Create useSyncStatus React hook
+- [x] Create SyncIndicator component in TopBar
 - [ ] Verify: kill app → relaunch → session restores
 - [ ] Verify: offline → work → reconnect → data syncs
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 77 complete / 118 total
+- Total tasks: 81 complete / 118 total

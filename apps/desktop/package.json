@@ -13,10 +13,12 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@secureassess/shared-types": "workspace:*",
     "@secureassess/ui": "workspace:*",
     "@supabase/supabase-js": "^2.106.1",
     "@tauri-apps/api": "^2.11.0",
+    "monaco-editor": "^0.55.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",

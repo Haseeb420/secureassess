@@ -108,23 +108,23 @@
 
 ## M6 — Offline Persistence & Sync
 
-- [x] Add tauri-plugin-sql with SQLCipher to Cargo.toml
-- [x] Create db/ Rust module (schema, migrations, models)
-- [x] Define all 4 DB tables (sessions, snapshots, events, sync_queue)
-- [x] Implement encryption key derivation from machine fingerprint
-- [x] Run migrations on app startup
-- [x] Create Tauri commands for save/get session, snapshot, events
-- [x] Create useAutoSave hook (debounce 3s + periodic 30s)
-- [x] Create useTimerPersistence hook (every 10s)
-- [x] Create useCrashRecovery hook
-- [x] Create CrashRecoveryModal component
-- [x] Wire auto-save into CodeEditor onChange
-- [x] Wire timer persistence into TopBar
-- [x] Wire crash recovery into App.tsx mount
-- [x] Create Rust sync queue (queue.rs, worker.rs)
-- [x] Background sync worker flushes every 30s when online
-- [x] Create useSyncStatus React hook
-- [x] Create SyncIndicator component in TopBar
+- [ ] Add tauri-plugin-sql with SQLCipher to Cargo.toml
+- [ ] Create db/ Rust module (schema, migrations, models)
+- [ ] Define all 4 DB tables (sessions, snapshots, events, sync_queue)
+- [ ] Implement encryption key derivation from machine fingerprint
+- [ ] Run migrations on app startup
+- [ ] Create Tauri commands for save/get session, snapshot, events
+- [ ] Create useAutoSave hook (debounce 3s + periodic 30s)
+- [ ] Create useTimerPersistence hook (every 10s)
+- [ ] Create useCrashRecovery hook
+- [ ] Create CrashRecoveryModal component
+- [ ] Wire auto-save into CodeEditor onChange
+- [ ] Wire timer persistence into TopBar
+- [ ] Wire crash recovery into App.tsx mount
+- [ ] Create Rust sync queue (queue.rs, worker.rs)
+- [ ] Background sync worker flushes every 30s when online
+- [ ] Create useSyncStatus React hook
+- [ ] Create SyncIndicator component in TopBar
 - [ ] Verify: kill app → relaunch → session restores
 - [ ] Verify: offline → work → reconnect → data syncs
 
@@ -213,4 +213,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 81 complete / 118 total
+- Total tasks: 64 complete / 118 total

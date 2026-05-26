@@ -132,18 +132,25 @@
 
 ## M7 — Evaluation Engine
 
-- [ ] Create infra/judge0/ with docker-compose.yml
-- [ ] Verify Judge0 running on port 2358
-- [ ] Create Judge0Client in apps/api/services/judge0.py
-- [ ] Add JUDGE0_URL + JUDGE0_API_KEY to config
-- [ ] Create POST /evaluation/run endpoint
-- [ ] Create POST /evaluation/submit endpoint
-- [ ] Create evaluation_results Supabase table
-- [ ] Create question_submissions Supabase table
+### Part A — Rust EvaluationBackend trait + LocalExecutor
+- [~] Add async-trait dep and enable tokio full features in Cargo.toml
+- [~] Create eval/types.rs (ExecutionRequest, ExecutionResult, ExecutionStatus)
+- [~] Create eval/mod.rs (EvaluationBackend trait, get_backend())
+- [~] Create eval/judge0.rs (Judge0Client stub — not yet implemented)
+- [~] Create eval/local.rs (LocalExecutor with subprocess execution for 6 languages)
+- [~] Write and pass 4 unit tests (python hello world, timeout, runtime error, js hello world)
+
+### Part B — Tauri commands + React wiring (upcoming)
+- [ ] Expose run_code and run_tests Tauri commands
 - [ ] Create evaluationService.ts in desktop
-- [ ] Wire TestRunner to real API
+- [ ] Wire TestRunner to real Tauri eval commands
 - [ ] Wire ConsoleOutput to real execution results
 - [ ] Wire Monaco markers for compile errors
+
+### Part C — API + submission (upcoming)
+- [ ] Create infra/judge0/ with docker-compose.yml
+- [ ] Create POST /evaluation/run and /evaluation/submit endpoints
+- [ ] Create evaluation_results and question_submissions Supabase tables
 - [ ] Create SubmissionModal component
 - [ ] Verify: Python hello world runs correctly
 - [ ] Verify: hidden tests not exposed to candidate
@@ -213,4 +220,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 81 complete / 118 total
+- Total tasks: 81 complete / 130 total

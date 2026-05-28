@@ -214,7 +214,7 @@
 - [x] Create .github/workflows/ci.yml
 - [ ] CI passes on push to main
 - [x] Configure Tauri production bundle (fullscreen, no devtools)
-- [~] Add startup env var validation to FastAPI
+- [x] Add startup env var validation to FastAPI
 - [~] Add structured logging (structlog + tracing)
 - [~] Write root README.md
 - [ ] cargo tauri build produces working macOS .app

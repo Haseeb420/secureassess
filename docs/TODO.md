@@ -143,9 +143,9 @@
 ### Part B — Tauri commands + scoring
 - [~] Add test_cases SQLite table (schema + model + migration)
 - [~] Add evaluation_results SQLite table (schema + model + migration)
-- [~] Add save_test_cases and get_test_cases Tauri commands
-- [~] Add run_sample_tests Tauri command (sample tests, no hidden)
-- [~] Add submit_solution Tauri command (all tests, score, save + sync)
+- [x] Add save_test_cases and get_test_cases Tauri commands
+- [x] Add run_sample_tests Tauri command (sample tests, no hidden)
+- [x] Add submit_solution Tauri command (all tests, score, save + sync)
 - [~] Create API migration files for evaluation_results and question_submissions
 
 ### Part C — React wiring + submission UI (upcoming)

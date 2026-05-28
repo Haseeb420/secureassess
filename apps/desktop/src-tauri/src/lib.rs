@@ -5,9 +5,10 @@ mod sync;
 
 use db::commands::{
     get_active_session, get_code_snapshot, get_latest_snapshot, get_security_events, get_session,
-    mark_session_complete, save_code_snapshot, save_security_event, save_session,
-    save_session_state, save_snapshot, update_timer,
+    get_test_cases, mark_session_complete, save_code_snapshot, save_security_event, save_session,
+    save_session_state, save_snapshot, save_test_cases, update_timer,
 };
+use eval::commands::{run_sample_tests, submit_solution};
 use db::encryption::get_db_key;
 use db::migrations::init_pool;
 use db::DbPool;
@@ -61,6 +62,12 @@ pub fn run() {
             // db – events
             save_security_event,
             get_security_events,
+            // db – test cases
+            save_test_cases,
+            get_test_cases,
+            // eval
+            run_sample_tests,
+            submit_solution,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

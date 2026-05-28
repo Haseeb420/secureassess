@@ -5,8 +5,9 @@ mod sync;
 
 use db::commands::{
     get_active_session, get_code_snapshot, get_latest_snapshot, get_security_events, get_session,
-    get_test_cases, mark_session_complete, save_code_snapshot, save_security_event, save_session,
-    save_session_state, save_snapshot, save_test_cases, update_timer,
+    get_test_cases, lock_assessment, mark_session_complete, save_code_snapshot,
+    save_security_event, save_session, save_session_state, save_snapshot, save_test_cases,
+    update_timer,
 };
 use eval::commands::{run_sample_tests, submit_solution};
 use eval::runtime_check::get_available_runtimes;
@@ -14,6 +15,7 @@ use db::encryption::get_db_key;
 use db::migrations::init_pool;
 use db::DbPool;
 use security::display::validate_displays;
+use security::fingerprint::get_machine_fingerprint;
 use security::kiosk::{enter_kiosk_mode, exit_kiosk_mode};
 use security::processes::check_forbidden_processes;
 use tauri::Manager;
@@ -48,12 +50,14 @@ pub fn run() {
             check_forbidden_processes,
             enter_kiosk_mode,
             exit_kiosk_mode,
+            get_machine_fingerprint,
             // db – session
             save_session,
             save_session_state,
             get_session,
             get_active_session,
             mark_session_complete,
+            lock_assessment,
             update_timer,
             // db – snapshot
             save_code_snapshot,

@@ -7,6 +7,8 @@ use uuid::Uuid;
 
 use crate::db::models::TestCaseRow;
 use crate::db::DbPool;
+use crate::security::fingerprint::get_or_create_fingerprint;
+use crate::sync::integrity::build_signed_payload;
 use crate::sync::queue::enqueue;
 use super::{get_backend, types::{ExecutionRequest, ExecutionStatus}, EvaluationBackend};
 
@@ -207,7 +209,7 @@ pub async fn submit_solution(
         .map(|b| format!("{b:02x}"))
         .collect();
 
-    let payload = json!({
+    let data = json!({
         "session_id": session_id,
         "question_id": question_id,
         "language": language,
@@ -217,8 +219,10 @@ pub async fn submit_solution(
         "total_tests": total,
         "submitted_at": now,
         "outcomes": run.outcomes,
-    })
-    .to_string();
+    });
+    let fingerprint = get_or_create_fingerprint(&db.0).await;
+    let signed = build_signed_payload(data, &fingerprint);
+    let payload = serde_json::to_string(&signed).unwrap_or_default();
 
     let _ = enqueue(&db.0, "submission", &payload, Some(&submission_hash)).await;
 

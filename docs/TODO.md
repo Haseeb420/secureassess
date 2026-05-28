@@ -183,15 +183,15 @@
 
 ## M9 — Submission Integrity
 
-- [ ] Implement machine fingerprint (MAC + CPU + hostname hash)
-- [ ] Build SignedPayload with SHA256 checksum + HMAC
-- [ ] Create API integrity verification service
-- [ ] Add replay protection (timestamp check)
-- [ ] Implement assessment locking in Rust
-- [ ] Emit assessment:locked Tauri event
-- [ ] Build CompletionPage (no back navigation)
-- [ ] Add submission_hash deduplication to sync_queue
-- [ ] Add idempotency check in API /sync/ingest
+- [x] Implement machine fingerprint (MAC + CPU + hostname hash)
+- [x] Build SignedPayload with SHA256 checksum + HMAC
+- [x] Create API integrity verification service
+- [x] Add replay protection (timestamp check)
+- [x] Implement assessment locking in Rust
+- [x] Emit assessment:locked Tauri event
+- [x] Build CompletionPage (no back navigation)
+- [x] Add submission_hash deduplication to sync_queue
+- [x] Add idempotency check in API /sync/ingest
 - [ ] Verify: submit → cannot go back
 - [ ] Verify: duplicate sync → no duplicate record
 - [ ] Verify: tampered payload → API rejects
@@ -223,4 +223,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 117 complete / 143 total
+- Total tasks: 124 complete / 143 total

@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { listen } from '@tauri-apps/api/event'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import type { Question } from '@secureassess/shared-types'
 import { CodeEditor } from '../features/ide/CodeEditor'
@@ -146,8 +147,16 @@ export function AssessmentPage() {
     }
   }, [assessmentId, currentLanguage, codeByLanguage, appendOutput])
 
+  // Navigate to completion when the Rust layer locks the assessment
+  useEffect(() => {
+    const unlisten = listen('assessment:locked', () => {
+      navigate('/completion', { replace: true })
+    })
+    return () => { unlisten.then((fn) => fn()) }
+  }, [navigate])
+
   const handleFinish = useCallback(() => {
-    navigate('/completion')
+    navigate('/completion', { replace: true })
   }, [navigate])
 
   const consoleStatus = isRunning || isSubmitting

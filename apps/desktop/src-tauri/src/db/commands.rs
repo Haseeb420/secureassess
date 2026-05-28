@@ -1,6 +1,6 @@
 use chrono::Utc;
 use serde_json::json;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use super::models::{AssessmentSession, CodeSnapshot, SecurityEventRow, TestCaseRow};
@@ -131,6 +131,33 @@ pub async fn update_timer(
     .execute(&db.0)
     .await
     .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ── Assessment locking ────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn lock_assessment(
+    db: State<'_, DbPool>,
+    app_handle: AppHandle,
+    session_id: String,
+) -> Result<(), String> {
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "UPDATE assessment_sessions
+         SET status = 'completed', last_saved_at = ?1
+         WHERE id = ?2",
+    )
+    .bind(&now)
+    .bind(&session_id)
+    .execute(&db.0)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    app_handle
+        .emit("assessment:locked", json!({ "session_id": session_id }))
+        .map_err(|e| e.to_string())?;
+
     Ok(())
 }
 

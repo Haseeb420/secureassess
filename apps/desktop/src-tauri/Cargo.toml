@@ -28,7 +28,9 @@ chrono = { version = "0.4", features = ["serde"] }
 sysinfo = "0.39"
 # cipher feature does not exist in tauri-plugin-sql; SQLCipher requires a custom build
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
-sha2 = "0.11"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
 sqlx = { version = "0.9", features = ["sqlite", "runtime-tokio", "tls-native-tls"] }
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 tokio = { version = "1", features = ["full"] }

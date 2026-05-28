@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { AppShell } from './components/AppShell'
 import { CrashRecoveryModal } from './components/CrashRecoveryModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -50,6 +51,7 @@ function App() {
       <AppShell>
         <AppContent />
       </AppShell>
+      <Toaster position="top-right" theme="dark" richColors />
     </BrowserRouter>
   )
 }

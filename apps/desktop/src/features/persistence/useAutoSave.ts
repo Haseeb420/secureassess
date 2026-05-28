@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { toast } from 'sonner'
 
 interface AutoSaveProps {
   sessionId: string | null
@@ -15,6 +16,7 @@ async function persistSnapshot(
   code: string,
 ): Promise<void> {
   await invoke('save_code_snapshot', { sessionId, questionId, language, code })
+  toast.success('Saved', { duration: 2000 })
 }
 
 export function useAutoSave({ sessionId, questionId, language, code }: AutoSaveProps) {

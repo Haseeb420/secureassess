@@ -141,12 +141,12 @@
 - [x] Write and pass 4 unit tests (python hello world, timeout, runtime error, js hello world)
 
 ### Part B — Tauri commands + scoring
-- [~] Add test_cases SQLite table (schema + model + migration)
-- [~] Add evaluation_results SQLite table (schema + model + migration)
+- [x] Add test_cases SQLite table (schema + model + migration)
+- [x] Add evaluation_results SQLite table (schema + model + migration)
 - [x] Add save_test_cases and get_test_cases Tauri commands
 - [x] Add run_sample_tests Tauri command (sample tests, no hidden)
 - [x] Add submit_solution Tauri command (all tests, score, save + sync)
-- [~] Create API migration files for evaluation_results and question_submissions
+- [x] Create API migration files for evaluation_results and question_submissions
 
 ### Part C — React wiring + submission UI (upcoming)
 - [ ] Create evaluationService.ts in desktop
@@ -222,4 +222,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 87 complete / 136 total
+- Total tasks: 93 complete / 136 total

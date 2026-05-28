@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { OfflineBanner } from '../components/OfflineBanner'
 
 export function SecureLayout() {
   return (
@@ -12,6 +13,7 @@ export function SecureLayout() {
         flexDirection: 'column',
       }}
     >
+      <OfflineBanner />
       <Outlet />
     </div>
   )

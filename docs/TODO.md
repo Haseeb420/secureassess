@@ -205,7 +205,7 @@
 - [x] Add skeleton loaders for question and test loading
 - [x] Install and configure sonner toasts
 - [x] Add offline banner component
-- [~] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
+- [x] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
 - [~] Audit accessibility (aria-labels, focus ring, contrast)
 - [ ] Write Rust unit tests (display, processes, integrity, encryption)
 - [ ] Write Python tests (auth, evaluation, integrity)

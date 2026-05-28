@@ -206,7 +206,7 @@
 - [x] Install and configure sonner toasts
 - [x] Add offline banner component
 - [x] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
-- [~] Audit accessibility (aria-labels, focus ring, contrast)
+- [x] Audit accessibility (aria-labels, focus ring, contrast)
 - [ ] Write Rust unit tests (display, processes, integrity, encryption)
 - [ ] Write Python tests (auth, evaluation, integrity)
 - [ ] Write React tests (CodeEditor, TestRunner, CrashRecoveryModal)

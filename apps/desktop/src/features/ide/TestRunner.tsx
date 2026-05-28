@@ -27,7 +27,8 @@ export function TestRunner({ onRun, result, isRunning }: TestRunnerProps) {
         type="button"
         onClick={onRun}
         disabled={isRunning}
-        className="flex items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        aria-label={isRunning ? 'Running tests…' : 'Run sample tests'}
+        className="flex items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-green-400"
       >
         {isRunning ? (
           <>

@@ -24,7 +24,8 @@ export function EditorToolbar({
         <button
           type="button"
           onClick={onSave}
-          className="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+          aria-label="Save code (Ctrl+S)"
+          className="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           Save
         </button>
@@ -33,7 +34,8 @@ export function EditorToolbar({
           type="button"
           onClick={onRun}
           disabled={isRunning}
-          className="flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          aria-label={isRunning ? 'Running tests…' : 'Run sample tests (Ctrl+Enter)'}
+          className="flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-green-400"
         >
           {isRunning ? (
             <>

@@ -46,7 +46,8 @@ export function ConsoleOutput({ lines, status, onClear }: ConsoleOutputProps) {
         <button
           type="button"
           onClick={onClear}
-          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          aria-label="Clear console output"
+          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
         >
           Clear
         </button>

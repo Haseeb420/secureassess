@@ -184,7 +184,7 @@
 ## M9 — Submission Integrity
 
 - [x] Implement machine fingerprint (MAC + CPU + hostname hash)
-- [~] Build SignedPayload with SHA256 checksum + HMAC
+- [x] Build SignedPayload with SHA256 checksum + HMAC
 - [~] Create API integrity verification service
 - [~] Add replay protection (timestamp check)
 - [~] Implement assessment locking in Rust

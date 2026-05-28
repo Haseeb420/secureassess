@@ -1,14 +1,11 @@
-# cargo-deny configuration
-# Run: cargo deny check
-# See: https://embarkstudios.github.io/cargo-deny/
+# cargo-deny configuration — see https://embarkstudios.github.io/cargo-deny/
+# Run locally: cargo deny check
 
 [advisories]
-# vulnerability/yanked/notice accept: "deny" | "warn" | "allow"
-# unmaintained accepts: "all" | "workspace" | "transitive" | "none"
-vulnerability = "warn"
+# unmaintained: "all" | "workspace" | "transitive" | "none"
 unmaintained = "none"
+# yanked: "deny" | "warn" | "allow"
 yanked = "deny"
-notice = "warn"
 
 ignore = [
   # RUSTSEC-2024-0370 — glib VariantStrIter unsoundness
@@ -28,8 +25,8 @@ ignore = [
   #   wry / tauri-runtime-wry have not yet released a version that uses the
   #   newer gtk-rs 0.20.x stack.
   #
-  # Tracking: https://github.com/tauri-apps/wry/issues — watch for a wry
-  #   release that bumps gtk to 0.20.x; remove this ignore at that point.
+  # Tracking: watch for a wry release that bumps gtk to 0.20.x; remove this
+  #   ignore entry at that point.
   { id = "RUSTSEC-2024-0370", reason = "Linux-only transitive dep via wry/webkit2gtk; blocked by upstream tauri/wry migration to gtk-rs 0.20.x" },
 ]
 
@@ -45,13 +42,10 @@ allow = [
   "CC0-1.0",
   "MPL-2.0",
 ]
-deny = []
-exceptions = []
 
 [bans]
 multiple-versions = "warn"
 wildcards = "warn"
-deny = []
 
 [sources]
 unknown-registry = "warn"

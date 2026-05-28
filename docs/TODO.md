@@ -133,12 +133,12 @@
 ## M7 — Evaluation Engine
 
 ### Part A — Rust EvaluationBackend trait + LocalExecutor
-- [~] Add async-trait dep and enable tokio full features in Cargo.toml
-- [~] Create eval/types.rs (ExecutionRequest, ExecutionResult, ExecutionStatus)
-- [~] Create eval/mod.rs (EvaluationBackend trait, get_backend())
-- [~] Create eval/judge0.rs (Judge0Client stub — not yet implemented)
-- [~] Create eval/local.rs (LocalExecutor with subprocess execution for 6 languages)
-- [~] Write and pass 4 unit tests (python hello world, timeout, runtime error, js hello world)
+- [x] Add async-trait dep and enable tokio full features in Cargo.toml
+- [x] Create eval/types.rs (ExecutionRequest, ExecutionResult, ExecutionStatus)
+- [x] Create eval/mod.rs (EvaluationBackend trait, get_backend())
+- [x] Create eval/judge0.rs (Judge0Client stub — not yet implemented)
+- [x] Create eval/local.rs (LocalExecutor with subprocess execution for 6 languages)
+- [x] Write and pass 4 unit tests (python hello world, timeout, runtime error, js hello world)
 
 ### Part B — Tauri commands + React wiring (upcoming)
 - [ ] Expose run_code and run_tests Tauri commands
@@ -220,4 +220,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 81 complete / 130 total
+- Total tasks: 87 complete / 130 total

@@ -1,0 +1,28 @@
+version: 2
+
+# Packages reviewed and accepted for this project.
+# All entries below are devDependencies used exclusively in test/dev environments
+# and are never shipped to end users or included in the Tauri production bundle.
+ignore:
+  - package: "npm/jsdom@29.1.1"
+    comment: >
+      jsdom is a devDependency used as the test environment for Vitest (browser API simulation).
+      Supply-chain score reflects the large transitive closure of the package, not an active threat.
+      Not included in production builds.
+
+  - package: "npm/vitest@4.1.7"
+    comment: >
+      vitest is the test runner for React unit tests (devDependency only).
+      Quality score reflects fast release cadence typical of modern tooling.
+      Not included in production builds.
+
+  - package: "npm/sonner@2.0.7"
+    comment: >
+      sonner is a toast notification library used in the candidate desktop app.
+      Scores reflect a smaller ecosystem package; reviewed and acceptable for this use case.
+
+  - package: "npm/@testing-library/user-event@14.6.1"
+    comment: >
+      @testing-library/user-event is a devDependency for simulating browser interactions in tests.
+      Maintenance score reflects stable API with infrequent releases (intentional).
+      Not included in production builds.

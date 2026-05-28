@@ -190,8 +190,8 @@
 - [x] Implement assessment locking in Rust
 - [x] Emit assessment:locked Tauri event
 - [x] Build CompletionPage (no back navigation)
-- [~] Add submission_hash deduplication to sync_queue
-- [~] Add idempotency check in API /sync/ingest
+- [x] Add submission_hash deduplication to sync_queue
+- [x] Add idempotency check in API /sync/ingest
 - [ ] Verify: submit → cannot go back
 - [ ] Verify: duplicate sync → no duplicate record
 - [ ] Verify: tampered payload → API rejects
@@ -223,4 +223,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 117 complete / 143 total
+- Total tasks: 124 complete / 143 total

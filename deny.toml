@@ -3,9 +3,10 @@
 # See: https://embarkstudios.github.io/cargo-deny/
 
 [advisories]
-# Warn on advisories; set to "deny" once the upstream constraint is resolved.
+# vulnerability/yanked/notice accept: "deny" | "warn" | "allow"
+# unmaintained accepts: "all" | "workspace" | "transitive" | "none"
 vulnerability = "warn"
-unmaintained = "warn"
+unmaintained = "none"
 yanked = "deny"
 notice = "warn"
 

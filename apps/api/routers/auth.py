@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from gotrue.errors import AuthApiError
+from supabase_auth.errors import AuthApiError
 
 from core.dependencies import bearer_scheme, get_current_candidate
 from core.supabase import get_supabase

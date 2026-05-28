@@ -213,7 +213,7 @@
 - [x] All tests pass with pnpm test
 - [x] Create .github/workflows/ci.yml
 - [ ] CI passes on push to main
-- [~] Configure Tauri production bundle (fullscreen, no devtools)
+- [x] Configure Tauri production bundle (fullscreen, no devtools)
 - [~] Add startup env var validation to FastAPI
 - [~] Add structured logging (structlog + tracing)
 - [~] Write root README.md

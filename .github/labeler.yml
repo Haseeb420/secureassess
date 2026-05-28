@@ -1,0 +1,41 @@
+# Label rules for actions/labeler@v4
+# A PR gets a label when ANY changed file matches at least one glob in that group.
+
+'area: desktop':
+  - changed-files:
+    - any-glob-to-any-file: 'apps/desktop/**'
+
+'area: api':
+  - changed-files:
+    - any-glob-to-any-file: 'apps/api/**'
+
+'area: admin':
+  - changed-files:
+    - any-glob-to-any-file: 'apps/admin/**'
+
+'area: packages':
+  - changed-files:
+    - any-glob-to-any-file: 'packages/**'
+
+'area: rust':
+  - changed-files:
+    - any-glob-to-any-file: 'apps/desktop/src-tauri/**'
+
+'area: ci':
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
+
+'area: docs':
+  - changed-files:
+    - any-glob-to-any-file: 'docs/**'
+    - any-glob-to-any-file: '*.md'
+    - any-glob-to-any-file: 'claude.md'
+
+'dependencies':
+  - changed-files:
+    - any-glob-to-any-file: '**/Cargo.toml'
+    - any-glob-to-any-file: '**/Cargo.lock'
+    - any-glob-to-any-file: '**/package.json'
+    - any-glob-to-any-file: 'pnpm-lock.yaml'
+    - any-glob-to-any-file: '**/requirements*.txt'
+    - any-glob-to-any-file: 'deny.toml'

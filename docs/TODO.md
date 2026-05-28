@@ -200,8 +200,8 @@
 
 ## M10 — MVP Hardening
 
-- [~] Create ErrorBoundary component
-- [~] Wrap assessment pages in ErrorBoundary
+- [x] Create ErrorBoundary component
+- [x] Wrap assessment pages in ErrorBoundary
 - [~] Add skeleton loaders for question and test loading
 - [~] Install and configure sonner toasts
 - [~] Add offline banner component

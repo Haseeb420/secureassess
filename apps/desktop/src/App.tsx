@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { CrashRecoveryModal } from './components/CrashRecoveryModal'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { SecureLayout } from './layouts/SecureLayout'
 import { useCrashRecovery } from './features/persistence/useCrashRecovery'
@@ -26,7 +27,14 @@ function AppContent() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/pre-assessment" element={<PreAssessmentPage />} />
-          <Route path="/assessment" element={<SecureLayout />}>
+          <Route
+            path="/assessment"
+            element={
+              <ErrorBoundary>
+                <SecureLayout />
+              </ErrorBoundary>
+            }
+          >
             <Route index element={<AssessmentPage />} />
           </Route>
           <Route path="/completion" element={<CompletionPage />} />

@@ -5,7 +5,7 @@ pub fn get_db_key() -> String {
     let mac = get_mac_address();
     let raw = format!("{hostname}{mac}secureassess-salt");
     let hash = Sha256::digest(raw.as_bytes());
-    let hex = format!("{hash:x}");
+    let hex: String = hash.iter().map(|b| format!("{b:02x}")).collect();
     hex[..32].to_string()
 }
 

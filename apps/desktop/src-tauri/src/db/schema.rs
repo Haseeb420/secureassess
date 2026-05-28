@@ -41,3 +41,30 @@ pub const CREATE_SYNC_QUEUE: &str = "
     last_attempt_at TEXT,
     status TEXT NOT NULL DEFAULT 'pending'
   );";
+
+pub const CREATE_TEST_CASES: &str = "
+  CREATE TABLE IF NOT EXISTS test_cases (
+    id TEXT PRIMARY KEY,
+    question_id TEXT NOT NULL,
+    input TEXT NOT NULL,
+    expected_output TEXT NOT NULL,
+    is_hidden INTEGER NOT NULL DEFAULT 0,
+    time_limit_ms INTEGER NOT NULL DEFAULT 5000,
+    memory_limit_mb INTEGER NOT NULL DEFAULT 256
+  );";
+
+pub const CREATE_EVAL_RESULTS: &str = "
+  CREATE TABLE IF NOT EXISTS evaluation_results (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    language TEXT NOT NULL,
+    test_case_id TEXT NOT NULL,
+    passed INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL,
+    stdout TEXT NOT NULL DEFAULT '',
+    stderr TEXT NOT NULL DEFAULT '',
+    execution_time_ms INTEGER NOT NULL DEFAULT 0,
+    compile_error TEXT,
+    created_at TEXT NOT NULL
+  );";

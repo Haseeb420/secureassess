@@ -132,19 +132,29 @@
 
 ## M7 — Evaluation Engine
 
-- [ ] Create infra/judge0/ with docker-compose.yml
-- [ ] Verify Judge0 running on port 2358
-- [ ] Create Judge0Client in apps/api/services/judge0.py
-- [ ] Add JUDGE0_URL + JUDGE0_API_KEY to config
-- [ ] Create POST /evaluation/run endpoint
-- [ ] Create POST /evaluation/submit endpoint
-- [ ] Create evaluation_results Supabase table
-- [ ] Create question_submissions Supabase table
-- [ ] Create evaluationService.ts in desktop
-- [ ] Wire TestRunner to real API
-- [ ] Wire ConsoleOutput to real execution results
-- [ ] Wire Monaco markers for compile errors
-- [ ] Create SubmissionModal component
+### Part A — Rust EvaluationBackend trait + LocalExecutor
+- [x] Add async-trait dep and enable tokio full features in Cargo.toml
+- [x] Create eval/types.rs (ExecutionRequest, ExecutionResult, ExecutionStatus)
+- [x] Create eval/mod.rs (EvaluationBackend trait, get_backend())
+- [x] Create eval/judge0.rs (Judge0Client stub — not yet implemented)
+- [x] Create eval/local.rs (LocalExecutor with subprocess execution for 6 languages)
+- [x] Write and pass 4 unit tests (python hello world, timeout, runtime error, js hello world)
+
+### Part B — Tauri commands + scoring
+- [x] Add test_cases SQLite table (schema + model + migration)
+- [x] Add evaluation_results SQLite table (schema + model + migration)
+- [x] Add save_test_cases and get_test_cases Tauri commands
+- [x] Add run_sample_tests Tauri command (sample tests, no hidden)
+- [x] Add submit_solution Tauri command (all tests, score, save + sync)
+- [x] Create API migration files for evaluation_results and question_submissions
+
+### Part C — React wiring + submission UI (upcoming)
+- [x] Create evaluationService.ts in desktop
+- [x] Wire TestRunner to real Tauri eval commands
+- [x] Wire ConsoleOutput to real execution results
+- [x] Wire Monaco markers for compile errors
+- [x] Create SubmissionModal component
+- [x] Add runtime detection (runtime_check.rs + get_available_runtimes command)
 - [ ] Verify: Python hello world runs correctly
 - [ ] Verify: hidden tests not exposed to candidate
 
@@ -213,4 +223,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 81 complete / 118 total
+- Total tasks: 105 complete / 143 total

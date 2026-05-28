@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import { toast } from 'sonner'
 import { onFocusLoss, onProcessViolation } from './securityService'
 import type { ForbiddenProcess, FocusLossPayload } from './securityService'
 
@@ -24,13 +25,13 @@ export function useSecurityMonitor({ enabled }: { enabled: boolean }): UseSecuri
       const unFocus = await onFocusLoss((payload) => {
         setLastViolation({ kind: 'focus-loss', payload })
         setViolationCount((c) => c + 1)
-        // TODO: save_security_event stub — wire to SQLite in M6
+        toast.warning('Violation detected: focus-loss')
       })
 
       const unProcess = await onProcessViolation((payload) => {
         setLastViolation({ kind: 'process', payload })
         setViolationCount((c) => c + 1)
-        // TODO: save_security_event stub — wire to SQLite in M6
+        toast.warning(`Violation detected: ${payload.name}`)
       })
 
       unlistenRefs.current = [unFocus, unProcess]

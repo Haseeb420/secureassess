@@ -155,6 +155,27 @@ export function AssessmentPage() {
     return () => { unlisten.then((fn) => fn()) }
   }, [navigate])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod) return
+
+      if (e.shiftKey && e.key === 'Enter') {
+        e.preventDefault()
+        handleSubmit()
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        handleRun()
+      } else if (e.key === 's') {
+        e.preventDefault()
+        forceSave()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleRun, handleSubmit, forceSave])
+
   const handleFinish = useCallback(() => {
     navigate('/completion', { replace: true })
   }, [navigate])

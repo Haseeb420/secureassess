@@ -1,5 +1,5 @@
 use sqlx::{SqlitePool, Error};
-use log::info;
+use tracing::info;
 
 use super::schema::{
     CREATE_DEVICE_SETTINGS, CREATE_EVAL_RESULTS, CREATE_EVENTS, CREATE_SESSIONS, CREATE_SNAPSHOTS,

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
+import { toast } from 'sonner'
 
 interface SyncStatus {
   online: boolean
@@ -19,16 +20,23 @@ export function useSyncStatus(): SyncState {
     pendingCount: 0,
     lastSyncAt: null,
   })
+  const prevOnlineRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     let unlisten: (() => void) | undefined
 
     listen<SyncStatus>('sync:status', (event) => {
-      setState({
-        isOnline: event.payload.online,
-        pendingCount: event.payload.pending_count,
-        lastSyncAt: event.payload.last_sync_at,
-      })
+      const { online, pending_count, last_sync_at } = event.payload
+      setState({ isOnline: online, pendingCount: pending_count, lastSyncAt: last_sync_at })
+
+      if (prevOnlineRef.current !== null && prevOnlineRef.current !== online) {
+        if (!online) {
+          toast.info('Syncing paused — you are offline')
+        } else {
+          toast.success('Synced')
+        }
+      }
+      prevOnlineRef.current = online
     }).then((fn) => {
       unlisten = fn
     })

@@ -45,6 +45,8 @@ export function TopBar({
           Question {questionIndex} of {totalQuestions}
         </span>
         <span
+          aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
+          aria-live="off"
           className={`font-mono text-sm font-semibold tabular-nums ${
             isLow ? 'text-red-400' : 'text-white'
           }`}
@@ -59,7 +61,8 @@ export function TopBar({
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition-opacity hover:opacity-90 disabled:opacity-50"
+          aria-label={isSubmitting ? 'Submitting assessment…' : 'Submit assessment (Ctrl+Shift+Enter)'}
+          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition-opacity hover:opacity-90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {isSubmitting ? (
             <>

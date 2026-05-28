@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,7 +8,24 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_SERVICE_KEY: str
     SUPABASE_JWT_SECRET: str
+    JUDGE0_URL: str = ""
     DATABASE_URL: str = ""
+    LOG_LEVEL: str = "INFO"
+
+    @model_validator(mode="after")
+    def _check_required(self) -> "Settings":
+        missing = [
+            name
+            for name, val in [
+                ("SUPABASE_URL", self.SUPABASE_URL),
+                ("SUPABASE_SERVICE_KEY", self.SUPABASE_SERVICE_KEY),
+                ("SUPABASE_JWT_SECRET", self.SUPABASE_JWT_SECRET),
+            ]
+            if not val
+        ]
+        if missing:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
+        return self
 
 
 settings = Settings()

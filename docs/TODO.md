@@ -200,27 +200,27 @@
 
 ## M10 — MVP Hardening
 
-- [ ] Create ErrorBoundary component
-- [ ] Wrap assessment pages in ErrorBoundary
-- [ ] Add skeleton loaders for question and test loading
-- [ ] Install and configure sonner toasts
-- [ ] Add offline banner component
-- [ ] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
-- [ ] Audit accessibility (aria-labels, focus ring, contrast)
-- [ ] Write Rust unit tests (display, processes, integrity, encryption)
-- [ ] Write Python tests (auth, evaluation, integrity)
-- [ ] Write React tests (CodeEditor, TestRunner, CrashRecoveryModal)
-- [ ] All tests pass with pnpm test
-- [ ] Create .github/workflows/ci.yml
+- [x] Create ErrorBoundary component
+- [x] Wrap assessment pages in ErrorBoundary
+- [x] Add skeleton loaders for question and test loading
+- [x] Install and configure sonner toasts
+- [x] Add offline banner component
+- [x] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
+- [x] Audit accessibility (aria-labels, focus ring, contrast)
+- [x] Write Rust unit tests (display, processes, integrity, encryption)
+- [x] Write Python tests (auth, evaluation, integrity)
+- [x] Write React tests (CodeEditor, TestRunner, CrashRecoveryModal)
+- [x] All tests pass with pnpm test
+- [x] Create .github/workflows/ci.yml
 - [ ] CI passes on push to main
-- [ ] Configure Tauri production bundle (fullscreen, no devtools)
-- [ ] Add startup env var validation to FastAPI
-- [ ] Add structured logging (structlog + tracing)
-- [ ] Write root README.md
+- [x] Configure Tauri production bundle (fullscreen, no devtools)
+- [x] Add startup env var validation to FastAPI
+- [x] Add structured logging (structlog + tracing)
+- [x] Write root README.md
 - [ ] cargo tauri build produces working macOS .app
 
 ---
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 124 complete / 143 total
+- Total tasks: 140 complete / 143 total

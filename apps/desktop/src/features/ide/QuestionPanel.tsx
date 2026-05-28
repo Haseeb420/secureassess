@@ -1,8 +1,10 @@
 import ReactMarkdown from 'react-markdown'
 import type { Question } from '@secureassess/shared-types'
+import { SkeletonBlock, SkeletonText } from '../../components/Skeleton'
 
 interface QuestionPanelProps {
   question: Question
+  isLoading?: boolean
 }
 
 const DIFFICULTY_CLASS = {
@@ -17,7 +19,29 @@ const DIFFICULTY_LABEL = {
   hard: 'Hard',
 }
 
-export function QuestionPanel({ question }: QuestionPanelProps) {
+export function QuestionPanel({ question, isLoading = false }: QuestionPanelProps) {
+  if (isLoading) {
+    return (
+      <div className="h-full overflow-y-auto bg-zinc-950 px-5 py-4" aria-busy="true" aria-label="Loading question">
+        <div className="mb-4 flex items-center gap-3">
+          <SkeletonText className="h-5 w-2/3" />
+          <SkeletonBlock width="w-16" height="h-5" className="rounded-full" />
+        </div>
+        <div className="mb-6 flex gap-4">
+          <SkeletonText className="w-20" />
+          <SkeletonText className="w-24" />
+        </div>
+        <div className="mb-4 space-y-2">
+          <SkeletonText />
+          <SkeletonText className="w-5/6" />
+          <SkeletonText className="w-4/5" />
+        </div>
+        <SkeletonBlock height="h-16" className="mb-3" />
+        <SkeletonBlock height="h-16" />
+      </div>
+    )
+  }
+
   return (
     <div className="h-full overflow-y-auto bg-zinc-950 px-5 py-4 text-sm text-zinc-200">
       {/* Title + badge */}

@@ -216,7 +216,7 @@
 - [x] Configure Tauri production bundle (fullscreen, no devtools)
 - [x] Add startup env var validation to FastAPI
 - [x] Add structured logging (structlog + tracing)
-- [~] Write root README.md
+- [x] Write root README.md
 - [ ] cargo tauri build produces working macOS .app
 
 ---

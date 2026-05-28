@@ -162,7 +162,7 @@
 
 ## M8 — Admin Dashboard
 
-- [~] Install TanStack Query, TanStack Table, recharts, lucide-react
+- [x] Install TanStack Query, TanStack Table, recharts, lucide-react
 - [~] Create dashboard layout with sidebar nav
 - [~] Build assessments list page (TanStack Table)
 - [~] Build create assessment form

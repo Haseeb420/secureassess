@@ -187,8 +187,8 @@
 - [x] Build SignedPayload with SHA256 checksum + HMAC
 - [x] Create API integrity verification service
 - [x] Add replay protection (timestamp check)
-- [~] Implement assessment locking in Rust
-- [~] Emit assessment:locked Tauri event
+- [x] Implement assessment locking in Rust
+- [x] Emit assessment:locked Tauri event
 - [~] Build CompletionPage (no back navigation)
 - [~] Add submission_hash deduplication to sync_queue
 - [~] Add idempotency check in API /sync/ingest

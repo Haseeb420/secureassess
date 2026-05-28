@@ -5,8 +5,9 @@ mod sync;
 
 use db::commands::{
     get_active_session, get_code_snapshot, get_latest_snapshot, get_security_events, get_session,
-    get_test_cases, mark_session_complete, save_code_snapshot, save_security_event, save_session,
-    save_session_state, save_snapshot, save_test_cases, update_timer,
+    get_test_cases, lock_assessment, mark_session_complete, save_code_snapshot,
+    save_security_event, save_session, save_session_state, save_snapshot, save_test_cases,
+    update_timer,
 };
 use eval::commands::{run_sample_tests, submit_solution};
 use eval::runtime_check::get_available_runtimes;
@@ -56,6 +57,7 @@ pub fn run() {
             get_session,
             get_active_session,
             mark_session_complete,
+            lock_assessment,
             update_timer,
             // db – snapshot
             save_code_snapshot,

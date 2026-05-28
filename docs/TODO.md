@@ -183,7 +183,7 @@
 
 ## M9 — Submission Integrity
 
-- [~] Implement machine fingerprint (MAC + CPU + hostname hash)
+- [x] Implement machine fingerprint (MAC + CPU + hostname hash)
 - [~] Build SignedPayload with SHA256 checksum + HMAC
 - [~] Create API integrity verification service
 - [~] Add replay protection (timestamp check)

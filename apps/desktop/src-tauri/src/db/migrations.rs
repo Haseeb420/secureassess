@@ -2,8 +2,8 @@ use sqlx::{SqlitePool, Error};
 use log::info;
 
 use super::schema::{
-    CREATE_EVAL_RESULTS, CREATE_EVENTS, CREATE_SESSIONS, CREATE_SNAPSHOTS, CREATE_SYNC_QUEUE,
-    CREATE_TEST_CASES,
+    CREATE_DEVICE_SETTINGS, CREATE_EVAL_RESULTS, CREATE_EVENTS, CREATE_SESSIONS, CREATE_SNAPSHOTS,
+    CREATE_SYNC_QUEUE, CREATE_TEST_CASES,
 };
 
 /// Create the pool and run all schema migrations.
@@ -31,6 +31,9 @@ pub async fn run_migrations(db: &SqlitePool) -> Result<(), Error> {
 
     info!("Running DB migration: evaluation_results");
     sqlx::query(CREATE_EVAL_RESULTS).execute(db).await?;
+
+    info!("Running DB migration: device_settings");
+    sqlx::query(CREATE_DEVICE_SETTINGS).execute(db).await?;
 
     info!("All DB migrations complete");
     Ok(())

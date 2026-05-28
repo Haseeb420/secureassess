@@ -68,3 +68,9 @@ pub const CREATE_EVAL_RESULTS: &str = "
     compile_error TEXT,
     created_at TEXT NOT NULL
   );";
+
+pub const CREATE_DEVICE_SETTINGS: &str = "
+  CREATE TABLE IF NOT EXISTS device_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );";

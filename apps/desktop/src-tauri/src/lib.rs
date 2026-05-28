@@ -14,6 +14,7 @@ use db::encryption::get_db_key;
 use db::migrations::init_pool;
 use db::DbPool;
 use security::display::validate_displays;
+use security::fingerprint::get_machine_fingerprint;
 use security::kiosk::{enter_kiosk_mode, exit_kiosk_mode};
 use security::processes::check_forbidden_processes;
 use tauri::Manager;
@@ -48,6 +49,7 @@ pub fn run() {
             check_forbidden_processes,
             enter_kiosk_mode,
             exit_kiosk_mode,
+            get_machine_fingerprint,
             // db – session
             save_session,
             save_session_state,

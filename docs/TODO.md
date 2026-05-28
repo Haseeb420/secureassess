@@ -149,11 +149,12 @@
 - [x] Create API migration files for evaluation_results and question_submissions
 
 ### Part C — React wiring + submission UI (upcoming)
-- [ ] Create evaluationService.ts in desktop
-- [ ] Wire TestRunner to real Tauri eval commands
-- [ ] Wire ConsoleOutput to real execution results
-- [ ] Wire Monaco markers for compile errors
-- [ ] Create SubmissionModal component
+- [~] Create evaluationService.ts in desktop
+- [~] Wire TestRunner to real Tauri eval commands
+- [~] Wire ConsoleOutput to real execution results
+- [~] Wire Monaco markers for compile errors
+- [~] Create SubmissionModal component
+- [~] Add runtime detection (runtime_check.rs + get_available_runtimes command)
 - [ ] Verify: Python hello world runs correctly
 - [ ] Verify: hidden tests not exposed to candidate
 

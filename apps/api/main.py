@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from routers import assessments, auth, questions, reports, sessions
+from routers import assessments, auth, questions, reports, sessions, sync
 
 app = FastAPI(title="SecureAssess API", version="0.1.0")
 
@@ -9,6 +9,7 @@ app.include_router(assessments.router)
 app.include_router(questions.router)
 app.include_router(sessions.router)
 app.include_router(reports.router)
+app.include_router(sync.router)
 
 
 @app.get("/health")

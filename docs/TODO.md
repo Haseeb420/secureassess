@@ -185,8 +185,8 @@
 
 - [x] Implement machine fingerprint (MAC + CPU + hostname hash)
 - [x] Build SignedPayload with SHA256 checksum + HMAC
-- [~] Create API integrity verification service
-- [~] Add replay protection (timestamp check)
+- [x] Create API integrity verification service
+- [x] Add replay protection (timestamp check)
 - [~] Implement assessment locking in Rust
 - [~] Emit assessment:locked Tauri event
 - [~] Build CompletionPage (no back navigation)

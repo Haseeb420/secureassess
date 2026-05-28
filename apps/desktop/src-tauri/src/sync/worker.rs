@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use chrono::Utc;
-use log::{info, warn};
+use tracing::{info, warn};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 

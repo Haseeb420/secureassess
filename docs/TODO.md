@@ -140,17 +140,19 @@
 - [x] Create eval/local.rs (LocalExecutor with subprocess execution for 6 languages)
 - [x] Write and pass 4 unit tests (python hello world, timeout, runtime error, js hello world)
 
-### Part B — Tauri commands + React wiring (upcoming)
-- [ ] Expose run_code and run_tests Tauri commands
+### Part B — Tauri commands + scoring
+- [~] Add test_cases SQLite table (schema + model + migration)
+- [~] Add evaluation_results SQLite table (schema + model + migration)
+- [~] Add save_test_cases and get_test_cases Tauri commands
+- [~] Add run_sample_tests Tauri command (sample tests, no hidden)
+- [~] Add submit_solution Tauri command (all tests, score, save + sync)
+- [~] Create API migration files for evaluation_results and question_submissions
+
+### Part C — React wiring + submission UI (upcoming)
 - [ ] Create evaluationService.ts in desktop
 - [ ] Wire TestRunner to real Tauri eval commands
 - [ ] Wire ConsoleOutput to real execution results
 - [ ] Wire Monaco markers for compile errors
-
-### Part C — API + submission (upcoming)
-- [ ] Create infra/judge0/ with docker-compose.yml
-- [ ] Create POST /evaluation/run and /evaluation/submit endpoints
-- [ ] Create evaluation_results and question_submissions Supabase tables
 - [ ] Create SubmissionModal component
 - [ ] Verify: Python hello world runs correctly
 - [ ] Verify: hidden tests not exposed to candidate
@@ -220,4 +222,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 87 complete / 130 total
+- Total tasks: 87 complete / 136 total

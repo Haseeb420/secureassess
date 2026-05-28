@@ -3,7 +3,7 @@ use serde_json::json;
 use tauri::State;
 use uuid::Uuid;
 
-use super::models::{AssessmentSession, CodeSnapshot, SecurityEventRow};
+use super::models::{AssessmentSession, CodeSnapshot, SecurityEventRow, TestCaseRow};
 use super::DbPool;
 use crate::sync::queue::enqueue;
 
@@ -280,6 +280,53 @@ pub async fn get_security_events(
          ORDER BY occurred_at ASC",
     )
     .bind(&session_id)
+    .fetch_all(&db.0)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+// ── Test cases ────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn save_test_cases(
+    db: State<'_, DbPool>,
+    question_id: String,
+    test_cases: Vec<TestCaseRow>,
+) -> Result<(), String> {
+    for tc in &test_cases {
+        sqlx::query(
+            "INSERT OR REPLACE INTO test_cases
+               (id, question_id, input, expected_output, is_hidden, time_limit_ms, memory_limit_mb)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        )
+        .bind(&tc.id)
+        .bind(&question_id)
+        .bind(&tc.input)
+        .bind(&tc.expected_output)
+        .bind(tc.is_hidden)
+        .bind(tc.time_limit_ms)
+        .bind(tc.memory_limit_mb)
+        .execute(&db.0)
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_test_cases(
+    db: State<'_, DbPool>,
+    question_id: String,
+    include_hidden: bool,
+) -> Result<Vec<TestCaseRow>, String> {
+    sqlx::query_as::<_, TestCaseRow>(
+        "SELECT id, question_id, input, expected_output, is_hidden, time_limit_ms, memory_limit_mb
+         FROM test_cases
+         WHERE question_id = ?1 AND (is_hidden = 0 OR ?2 = 1)
+         ORDER BY rowid ASC",
+    )
+    .bind(&question_id)
+    .bind(include_hidden as i64)
     .fetch_all(&db.0)
     .await
     .map_err(|e| e.to_string())

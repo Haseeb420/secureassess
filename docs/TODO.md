@@ -162,20 +162,20 @@
 
 ## M8 — Admin Dashboard
 
-- [ ] Install TanStack Query, TanStack Table, recharts, lucide-react
-- [ ] Create dashboard layout with sidebar nav
-- [ ] Build assessments list page (TanStack Table)
-- [ ] Build create assessment form
-- [ ] Build assessment detail page
-- [ ] Build question bank list page with filters
-- [ ] Build create question form (markdown editor)
-- [ ] Build live monitor page (Supabase Realtime)
-- [ ] Build candidate violation drawer
-- [ ] Build candidate report page
-- [ ] Create FastAPI assessments CRUD router
-- [ ] Create FastAPI questions CRUD router
-- [ ] Create FastAPI sessions router
-- [ ] Create FastAPI reports router
+- [~] Install TanStack Query, TanStack Table, recharts, lucide-react
+- [~] Create dashboard layout with sidebar nav
+- [~] Build assessments list page (TanStack Table)
+- [~] Build create assessment form
+- [~] Build assessment detail page
+- [~] Build question bank list page with filters
+- [~] Build create question form (markdown editor)
+- [~] Build live monitor page (Supabase Realtime)
+- [~] Build candidate violation drawer
+- [~] Build candidate report page
+- [~] Create FastAPI assessments CRUD router
+- [~] Create FastAPI questions CRUD router
+- [~] Create FastAPI sessions router
+- [~] Create FastAPI reports router
 - [ ] Verify: admin creates assessment → candidate sees it
 - [ ] Verify: candidate active → admin monitor updates live
 

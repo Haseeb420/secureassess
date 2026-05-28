@@ -1,15 +1,22 @@
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import type { ExecutionResult, Question } from '@secureassess/shared-types'
+import type { Question } from '@secureassess/shared-types'
 import { CodeEditor } from '../features/ide/CodeEditor'
 import { ConsoleOutput } from '../features/ide/ConsoleOutput'
 import { EditorToolbar } from '../features/ide/EditorToolbar'
 import { QuestionPanel } from '../features/ide/QuestionPanel'
+import { SubmissionModal } from '../features/ide/SubmissionModal'
 import { TestRunner } from '../features/ide/TestRunner'
 import { TopBar } from '../components/TopBar'
 import { useAutoSave } from '../features/persistence/useAutoSave'
 import { useAssessmentStore } from '../store/assessmentStore'
+import {
+  runSampleTests,
+  submitSolution,
+  type RunResult,
+  type SubmitResult,
+} from '../features/ide/evaluationService'
 
 const mockQuestion: Question = {
   id: 'q1',
@@ -32,47 +39,11 @@ Output: [0, 1]
 - \`-10^9 <= nums[i] <= 10^9\`
 - Only one valid answer exists.`,
   sampleTests: [
-    {
-      id: 't1',
-      input: '4\n2 7 11 15\n9',
-      expectedOutput: '0 1',
-      isHidden: false,
-    },
-    {
-      id: 't2',
-      input: '3\n3 2 4\n6',
-      expectedOutput: '1 2',
-      isHidden: false,
-    },
-    {
-      id: 't3',
-      input: '2\n3 3\n6',
-      expectedOutput: '0 1',
-      isHidden: true,
-    },
+    { id: 't1', input: '4\n2 7 11 15\n9', expectedOutput: '0 1', isHidden: false },
+    { id: 't2', input: '3\n3 2 4\n6', expectedOutput: '1 2', isHidden: false },
+    { id: 't3', input: '2\n3 3\n6', expectedOutput: '0 1', isHidden: true },
   ],
 }
-
-const MOCK_RESULTS: ExecutionResult[] = [
-  {
-    testCaseId: 't1',
-    passed: true,
-    stdout: '0 1',
-    stderr: '',
-    executionTimeMs: 45,
-    memoryUsedMb: 12,
-    status: 'accepted',
-  },
-  {
-    testCaseId: 't2',
-    passed: false,
-    stdout: '',
-    stderr: '',
-    executionTimeMs: 42,
-    memoryUsedMb: 12,
-    status: 'wrong_answer',
-  },
-]
 
 export function AssessmentPage() {
   const navigate = useNavigate()
@@ -91,7 +62,10 @@ export function AssessmentPage() {
   } = useAssessmentStore()
 
   const [isRunning, setIsRunning] = useState(false)
-  const [testResults, setTestResults] = useState<ExecutionResult[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [runResult, setRunResult] = useState<RunResult | null>(null)
+  const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null)
+  const [compileError, setCompileError] = useState<string | null>(null)
 
   // Decrement timer every second
   useState(() => {
@@ -99,7 +73,6 @@ export function AssessmentPage() {
     return () => clearInterval(id)
   })
 
-  // Auto-save current code (debounce 3s + periodic 30s)
   const { forceSave } = useAutoSave({
     sessionId: assessmentId,
     questionId: mockQuestion.id,
@@ -112,28 +85,80 @@ export function AssessmentPage() {
     appendOutput({ type: 'system', text: '— Saved —' })
   }, [forceSave, appendOutput])
 
-  const handleRun = useCallback(async (): Promise<ExecutionResult[]> => {
+  const handleRun = useCallback(async () => {
     setIsRunning(true)
+    setRunResult(null)
+    setCompileError(null)
     clearOutput()
-    appendOutput({ type: 'system', text: 'Running tests…' })
-    await new Promise((r) => setTimeout(r, 1200))
-    const results = MOCK_RESULTS
-    setTestResults(results)
-    results.forEach((r) => {
-      if (r.stdout) appendOutput({ type: 'stdout', text: r.stdout })
-      if (r.stderr) appendOutput({ type: 'stderr', text: r.stderr })
-    })
-    appendOutput({
-      type: 'system',
-      text: `${results.filter((r) => r.passed).length}/${results.length} tests passed`,
-    })
-    setIsRunning(false)
-    return results
-  }, [appendOutput, clearOutput])
+    appendOutput({ type: 'system', text: 'Running sample tests…' })
 
-  const handleSubmit = useCallback(() => {
+    try {
+      const result = await runSampleTests(
+        mockQuestion.id,
+        currentLanguage,
+        codeByLanguage[currentLanguage],
+      )
+      setRunResult(result)
+
+      if (result.compile_error) {
+        setCompileError(result.compile_error)
+        appendOutput({ type: 'stderr', text: result.compile_error })
+        appendOutput({ type: 'system', text: 'Compilation failed.' })
+      } else {
+        result.outcomes.forEach((o, i) => {
+          if (o.stdout) appendOutput({ type: 'stdout', text: `[Test ${i + 1}] ${o.stdout}` })
+          if (o.stderr) appendOutput({ type: 'stderr', text: `[Test ${i + 1}] ${o.stderr}` })
+        })
+        const passed = result.outcomes.filter((o) => o.passed).length
+        const total = result.outcomes.length
+        appendOutput({
+          type: 'system',
+          text: `${passed}/${total} sample tests passed`,
+        })
+      }
+    } catch (err) {
+      appendOutput({ type: 'stderr', text: String(err) })
+      appendOutput({ type: 'system', text: 'Run failed.' })
+    } finally {
+      setIsRunning(false)
+    }
+  }, [currentLanguage, codeByLanguage, appendOutput, clearOutput])
+
+  const handleSubmit = useCallback(async () => {
+    if (!window.confirm('Submit your solution? This cannot be undone.')) return
+
+    setIsSubmitting(true)
+    appendOutput({ type: 'system', text: 'Submitting solution…' })
+
+    try {
+      const result = await submitSolution(
+        assessmentId ?? 'unknown-session',
+        mockQuestion.id,
+        currentLanguage,
+        codeByLanguage[currentLanguage],
+      )
+      setSubmitResult(result)
+    } catch (err) {
+      appendOutput({ type: 'stderr', text: String(err) })
+      appendOutput({ type: 'system', text: 'Submission failed.' })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [assessmentId, currentLanguage, codeByLanguage, appendOutput])
+
+  const handleFinish = useCallback(() => {
     navigate('/completion')
   }, [navigate])
+
+  const consoleStatus = isRunning || isSubmitting
+    ? 'running'
+    : runResult == null
+      ? 'idle'
+      : runResult.compile_error
+        ? 'error'
+        : runResult.outcomes.every((o) => o.passed)
+          ? 'success'
+          : 'error'
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950">
@@ -144,18 +169,17 @@ export function AssessmentPage() {
         timerSeconds={timerSeconds}
         sessionId={assessmentId}
         onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
       />
 
       <div className="min-h-0 flex-1">
         <PanelGroup direction="horizontal" className="h-full">
-          {/* Left: question */}
           <Panel defaultSize={35} minSize={25}>
             <QuestionPanel question={mockQuestion} />
           </Panel>
 
           <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-600 transition-colors cursor-col-resize" />
 
-          {/* Right: editor + console */}
           <Panel defaultSize={65} minSize={40}>
             <div className="flex h-full flex-col">
               <EditorToolbar
@@ -171,8 +195,12 @@ export function AssessmentPage() {
                   <CodeEditor
                     language={currentLanguage}
                     value={codeByLanguage[currentLanguage]}
-                    onChange={(val) => setCode(currentLanguage, val)}
+                    onChange={(val) => {
+                      setCode(currentLanguage, val)
+                      setCompileError(null)
+                    }}
                     onSave={handleSave}
+                    compileError={compileError}
                   />
                 </Panel>
 
@@ -183,15 +211,7 @@ export function AssessmentPage() {
                     <Panel defaultSize={60}>
                       <ConsoleOutput
                         lines={consoleOutput}
-                        status={
-                          isRunning
-                            ? 'running'
-                            : testResults.length === 0
-                              ? 'idle'
-                              : testResults.every((r) => r.passed)
-                                ? 'success'
-                                : 'error'
-                        }
+                        status={consoleStatus}
                         onClear={clearOutput}
                       />
                     </Panel>
@@ -201,7 +221,7 @@ export function AssessmentPage() {
                     <Panel defaultSize={40} minSize={25}>
                       <TestRunner
                         onRun={handleRun}
-                        results={testResults}
+                        result={runResult}
                         isRunning={isRunning}
                       />
                     </Panel>
@@ -212,6 +232,10 @@ export function AssessmentPage() {
           </Panel>
         </PanelGroup>
       </div>
+
+      {submitResult && (
+        <SubmissionModal result={submitResult} onFinish={handleFinish} />
+      )}
     </div>
   )
 }

@@ -9,6 +9,7 @@ interface TopBarProps {
   timerSeconds: number
   sessionId: string | null
   onSubmit: () => void
+  isSubmitting?: boolean
 }
 
 function formatTime(seconds: number): string {
@@ -24,6 +25,7 @@ export function TopBar({
   timerSeconds,
   sessionId,
   onSubmit,
+  isSubmitting = false,
 }: TopBarProps) {
   const isLow = timerSeconds < 300
   const isExpired = timerSeconds === 0
@@ -56,9 +58,20 @@ export function TopBar({
         <button
           type="button"
           onClick={onSubmit}
-          className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition-opacity hover:opacity-90"
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          Submit
+          {isSubmitting ? (
+            <>
+              <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Submitting…
+            </>
+          ) : (
+            'Submit'
+          )}
         </button>
       </div>
     </div>

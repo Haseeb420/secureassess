@@ -211,12 +211,12 @@
 - [x] Write Python tests (auth, evaluation, integrity)
 - [x] Write React tests (CodeEditor, TestRunner, CrashRecoveryModal)
 - [x] All tests pass with pnpm test
-- [ ] Create .github/workflows/ci.yml
+- [x] Create .github/workflows/ci.yml
 - [ ] CI passes on push to main
-- [ ] Configure Tauri production bundle (fullscreen, no devtools)
-- [ ] Add startup env var validation to FastAPI
-- [ ] Add structured logging (structlog + tracing)
-- [ ] Write root README.md
+- [~] Configure Tauri production bundle (fullscreen, no devtools)
+- [~] Add startup env var validation to FastAPI
+- [~] Add structured logging (structlog + tracing)
+- [~] Write root README.md
 - [ ] cargo tauri build produces working macOS .app
 
 ---

@@ -200,13 +200,13 @@
 
 ## M10 — MVP Hardening
 
-- [ ] Create ErrorBoundary component
-- [ ] Wrap assessment pages in ErrorBoundary
-- [ ] Add skeleton loaders for question and test loading
-- [ ] Install and configure sonner toasts
-- [ ] Add offline banner component
-- [ ] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
-- [ ] Audit accessibility (aria-labels, focus ring, contrast)
+- [~] Create ErrorBoundary component
+- [~] Wrap assessment pages in ErrorBoundary
+- [~] Add skeleton loaders for question and test loading
+- [~] Install and configure sonner toasts
+- [~] Add offline banner component
+- [~] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
+- [~] Audit accessibility (aria-labels, focus ring, contrast)
 - [ ] Write Rust unit tests (display, processes, integrity, encryption)
 - [ ] Write Python tests (auth, evaluation, integrity)
 - [ ] Write React tests (CodeEditor, TestRunner, CrashRecoveryModal)

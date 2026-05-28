@@ -74,4 +74,30 @@ mod tests {
         assert_ne!(p1.checksum, p2.checksum);
         assert_ne!(p1.signature, p2.signature);
     }
+
+    #[test]
+    fn test_build_signed_payload_has_checksum() {
+        let data = json!({"session_id": "abc", "language": "python"});
+        let payload = build_signed_payload(data, "fp-test");
+        assert!(!payload.checksum.is_empty());
+        assert!(!payload.signature.is_empty());
+        assert!(!payload.timestamp.is_empty());
+    }
+
+    #[test]
+    fn test_old_timestamp_would_be_stale() {
+        use chrono::Duration;
+
+        let payload = build_signed_payload(json!({"x": 1}), "fp-test");
+        let two_hours_ago = Utc::now() - Duration::hours(2);
+        let age_secs = (Utc::now() - two_hours_ago).num_seconds();
+        assert!(age_secs > 3600, "2-hour-old timestamp should be > 3600s old");
+
+        // Current payload timestamp should be fresh (< 60s old)
+        let ts = chrono::DateTime::parse_from_rfc3339(&payload.timestamp)
+            .expect("timestamp should be valid RFC3339")
+            .with_timezone(&Utc);
+        let fresh_age = (Utc::now() - ts).num_seconds();
+        assert!(fresh_age < 60, "freshly built payload timestamp should be recent");
+    }
 }

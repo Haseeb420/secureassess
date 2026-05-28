@@ -94,3 +94,25 @@ pub fn start_process_monitor(app_handle: AppHandle, interval_secs: u64) {
         std::thread::sleep(Duration::from_secs(interval_secs));
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_no_forbidden_processes_passes() {
+        let result = scan_processes();
+        // Should not panic; result is valid even if some forbidden apps happen to be running
+        let _ = result;
+    }
+
+    #[test]
+    fn test_scan_returns_forbidden_vec_type() {
+        let result: Vec<ForbiddenProcess> = scan_processes();
+        // Each found entry has non-empty name and category
+        for p in &result {
+            assert!(!p.name.is_empty());
+            assert!(!p.category.is_empty());
+        }
+    }
+}

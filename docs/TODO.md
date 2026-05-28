@@ -207,9 +207,9 @@
 - [x] Add offline banner component
 - [x] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)
 - [x] Audit accessibility (aria-labels, focus ring, contrast)
-- [ ] Write Rust unit tests (display, processes, integrity, encryption)
-- [ ] Write Python tests (auth, evaluation, integrity)
-- [ ] Write React tests (CodeEditor, TestRunner, CrashRecoveryModal)
+- [~] Write Rust unit tests (display, processes, integrity, encryption)
+- [~] Write Python tests (auth, evaluation, integrity)
+- [~] Write React tests (CodeEditor, TestRunner, CrashRecoveryModal)
 - [ ] All tests pass with pnpm test
 - [ ] Create .github/workflows/ci.yml
 - [ ] CI passes on push to main

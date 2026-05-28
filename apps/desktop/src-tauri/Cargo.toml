@@ -33,3 +33,11 @@ sqlx = { version = "0.9", features = ["sqlite", "runtime-tokio", "tls-native-tls
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"
+
+# ── Known advisory: RUSTSEC-2024-0370 (glib VariantStrIter unsoundness) ──────
+# glib 0.18.5 is a Linux-only transitive dependency pulled in by:
+#   tauri → tauri-runtime-wry → wry → gtk / webkit2gtk → glib
+# macOS builds (primary target) do NOT include this code path.
+# Fix requires gtk-rs ecosystem upgrade to 0.20.x; blocked until wry/tauri
+# publishes a release using the new gtk-rs stack.
+# Acknowledged in deny.toml. Remove this comment when glib reaches 0.20+.

@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod judge0;
 pub mod local;
+pub mod runtime_check;
 pub mod types;
 
 pub use types::{ExecutionRequest, ExecutionResult};

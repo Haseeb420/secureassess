@@ -9,6 +9,7 @@ use db::commands::{
     save_session_state, save_snapshot, save_test_cases, update_timer,
 };
 use eval::commands::{run_sample_tests, submit_solution};
+use eval::runtime_check::get_available_runtimes;
 use db::encryption::get_db_key;
 use db::migrations::init_pool;
 use db::DbPool;
@@ -68,6 +69,7 @@ pub fn run() {
             // eval
             run_sample_tests,
             submit_solution,
+            get_available_runtimes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

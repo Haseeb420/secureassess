@@ -64,11 +64,11 @@ pub fn scan_processes() -> Vec<ForbiddenProcess> {
     let mut found = Vec::new();
 
     for (pid, process) in sys.processes() {
-        let name_lower = process.name().to_lowercase();
+        let name_lower = process.name().to_string_lossy().to_lowercase();
         for entry in FORBIDDEN {
             if name_lower.contains(entry.keyword) {
                 found.push(ForbiddenProcess {
-                    name: process.name().to_string(),
+                    name: process.name().to_string_lossy().into_owned(),
                     pid: pid.as_u32(),
                     category: entry.category.to_string(),
                 });

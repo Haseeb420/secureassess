@@ -202,7 +202,7 @@
 
 - [x] Create ErrorBoundary component
 - [x] Wrap assessment pages in ErrorBoundary
-- [~] Add skeleton loaders for question and test loading
+- [x] Add skeleton loaders for question and test loading
 - [~] Install and configure sonner toasts
 - [~] Add offline banner component
 - [~] Add keyboard shortcuts (Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+S)

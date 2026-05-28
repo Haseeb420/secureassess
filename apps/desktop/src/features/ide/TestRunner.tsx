@@ -1,3 +1,4 @@
+import { SkeletonBlock } from '../../components/Skeleton'
 import type { RunResult } from './evaluationService'
 
 interface TestRunnerProps {
@@ -41,7 +42,15 @@ export function TestRunner({ onRun, result, isRunning }: TestRunnerProps) {
         )}
       </button>
 
-      {result && (
+      {isRunning && !result && (
+        <div className="mt-3 space-y-1.5" aria-busy="true" aria-label="Running tests">
+          <SkeletonBlock height="h-8" />
+          <SkeletonBlock height="h-8" />
+          <SkeletonBlock height="h-8" />
+        </div>
+      )}
+
+      {result && !isRunning && (
         <div className="mt-3 flex-1 overflow-y-auto">
           {hasCompileError ? (
             <div className="rounded-md bg-red-950 px-3 py-2 text-xs text-red-300">

@@ -189,7 +189,7 @@
 - [x] Add replay protection (timestamp check)
 - [x] Implement assessment locking in Rust
 - [x] Emit assessment:locked Tauri event
-- [~] Build CompletionPage (no back navigation)
+- [x] Build CompletionPage (no back navigation)
 - [~] Add submission_hash deduplication to sync_queue
 - [~] Add idempotency check in API /sync/ingest
 - [ ] Verify: submit → cannot go back

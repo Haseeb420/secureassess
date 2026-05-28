@@ -1,0 +1,59 @@
+# cargo-deny configuration
+# Run: cargo deny check
+# See: https://embarkstudios.github.io/cargo-deny/
+
+[advisories]
+# vulnerability/yanked/notice accept: "deny" | "warn" | "allow"
+# unmaintained accepts: "all" | "workspace" | "transitive" | "none"
+vulnerability = "warn"
+unmaintained = "none"
+yanked = "deny"
+notice = "warn"
+
+ignore = [
+  # RUSTSEC-2024-0370 — glib VariantStrIter unsoundness
+  #
+  # Affected: glib >= 0.15.0, < 0.20.0  (our lock: 0.18.5)
+  # Fixed in: glib 0.20.0
+  #
+  # Root cause: glib 0.18.5 is a LINUX-ONLY transitive dependency pulled in by
+  #   wry → gtk / webkit2gtk (used by Tauri on Linux for WebView rendering).
+  #   On macOS (our primary target), Tauri uses WKWebView via the system
+  #   framework — glib/gtk/webkit2gtk are never compiled into the macOS binary.
+  #
+  # Why we cannot update today:
+  #   webkit2gtk 2.0.2 (latest on crates.io) hard-requires glib 0.18.x.
+  #   The entire gtk-rs ecosystem (gtk, gio, gdk, gdk-pixbuf, pango, soup3,
+  #   webkit2gtk, javascriptcore-rs) must be updated together to 0.20.x.
+  #   wry / tauri-runtime-wry have not yet released a version that uses the
+  #   newer gtk-rs 0.20.x stack.
+  #
+  # Tracking: https://github.com/tauri-apps/wry/issues — watch for a wry
+  #   release that bumps gtk to 0.20.x; remove this ignore at that point.
+  { id = "RUSTSEC-2024-0370", reason = "Linux-only transitive dep via wry/webkit2gtk; blocked by upstream tauri/wry migration to gtk-rs 0.20.x" },
+]
+
+[licenses]
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-DFS-2016",
+  "CC0-1.0",
+  "MPL-2.0",
+]
+deny = []
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+deny = []
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

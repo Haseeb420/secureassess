@@ -11,6 +11,8 @@ Reads SUPABASE_URL and SUPABASE_SERVICE_KEY from apps/api/.env.
 Requires the actual service_role key (not the anon key).
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import os

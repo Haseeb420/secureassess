@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_KEY: str
     SUPABASE_JWT_SECRET: str
     JUDGE0_URL: str = ""
+    JUDGE0_API_KEY: str = ""
     DATABASE_URL: str = ""
+    ENCRYPTION_SECRET: str = ""
+    JWT_SECRET: str = ""
     LOG_LEVEL: str = "INFO"
 
     @model_validator(mode="after")

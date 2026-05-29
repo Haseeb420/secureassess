@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from core.logging import configure_logging, get_logger
 from routers import assessments, auth, questions, reports, sessions, sync
@@ -7,6 +8,18 @@ configure_logging()
 logger = get_logger()
 
 app = FastAPI(title="SecureAssess API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",   # admin dashboard
+        "http://localhost:5173",   # desktop Vite dev server
+        "tauri://localhost",       # Tauri production
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth.router)
 app.include_router(assessments.router)

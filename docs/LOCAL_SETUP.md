@@ -340,10 +340,18 @@ Expected: `10 passed`
 Follow these steps to run through a complete assessment flow locally.
 
 **1. Create an admin user.**
-Go to your Supabase dashboard → Authentication → Users → Invite user. Enter your email. After confirming, go to Authentication → Users → click the user → Edit user → User metadata and set `{ "role": "admin" }`.
+
+Option A — seed script (fastest):
+```bash
+python scripts/seed_admin.py --email admin@example.com --password YourPassword123!
+```
+> Requires the **service_role** key in `apps/api/.env` (not the anon key). Get it from Supabase dashboard → Project Settings → API → service_role.
+
+Option B — Supabase dashboard:
+Go to Authentication → Users → Invite user. After confirming, click the user → Edit → User metadata and set `{ "role": "admin" }`.
 
 **2. Log in to the admin dashboard.**
-Navigate to `http://localhost:3000`. Log in with the admin email and password.
+Navigate to `http://localhost:3000` — it redirects automatically to `/login`. Enter the admin email and password.
 
 **3. Create a question.**
 Go to Dashboard → Questions → New Question. Fill in:

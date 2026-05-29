@@ -204,7 +204,9 @@ def main() -> None:
             "is_hidden":       hidden,
         })
         label = "hidden" if hidden else "sample"
-        print(f"  [{label}] {inp.split(chr(10))[0]} {inp.split(chr(10))[1]!r[:20]} → {expected!r}")
+        parts = inp.split("\n")
+        snippet = repr(parts[1])[:20]
+        print(f"  [{label}] {parts[0]} {snippet} → {expected!r}")
 
     # 3. Insert assessment
     print("Creating assessment…")

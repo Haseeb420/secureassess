@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import type { Question } from '@secureassess/shared-types'
 import { CodeEditor } from '../features/ide/CodeEditor'
 import { ConsoleOutput } from '../features/ide/ConsoleOutput'
@@ -203,7 +203,7 @@ export function AssessmentPage() {
       />
 
       <div className="min-h-0 flex-1">
-        <PanelGroup direction="horizontal" className="h-full">
+        <PanelGroup orientation="horizontal" className="h-full">
           <Panel defaultSize={35} minSize={25}>
             <QuestionPanel question={mockQuestion} />
           </Panel>
@@ -220,7 +220,7 @@ export function AssessmentPage() {
                 isRunning={isRunning}
               />
 
-              <PanelGroup direction="vertical" className="min-h-0 flex-1">
+              <PanelGroup orientation="vertical" className="min-h-0 flex-1">
                 <Panel defaultSize={65} minSize={30}>
                   <CodeEditor
                     language={currentLanguage}
@@ -237,7 +237,7 @@ export function AssessmentPage() {
                 <PanelResizeHandle className="h-1 bg-zinc-800 hover:bg-zinc-600 transition-colors cursor-row-resize" />
 
                 <Panel defaultSize={35} minSize={15}>
-                  <PanelGroup direction="horizontal" className="h-full">
+                  <PanelGroup orientation="horizontal" className="h-full">
                     <Panel defaultSize={60}>
                       <ConsoleOutput
                         lines={consoleOutput}

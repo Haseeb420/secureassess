@@ -111,7 +111,7 @@ async def get_question(
         supabase.table("questions")
         .select("*")
         .eq("id", question_id)
-        .single()
+        .maybe_single()
         .execute()
     )
     if not result.data:

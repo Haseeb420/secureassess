@@ -61,7 +61,7 @@ function RowActions({ assessment }: { assessment: Assessment }) {
       >
         Archive
       </button>
-      <Link href={`/dashboard/reports/${assessment.id}`} className="text-zinc-400 hover:text-white">
+      <Link href={`/dashboard/assessments/${assessment.id}`} className="text-zinc-400 hover:text-white">
         View Results
       </Link>
     </div>

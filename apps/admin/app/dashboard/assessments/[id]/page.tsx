@@ -34,6 +34,19 @@ const columns = [
     header: 'Score',
     cell: (i) => (i.getValue() != null ? `${i.getValue()}%` : '—'),
   }),
+  col.display({
+    id: 'report',
+    header: '',
+    cell: ({ row }) =>
+      row.original.session_id ? (
+        <Link
+          href={`/dashboard/reports/${row.original.session_id}`}
+          className="text-xs text-blue-400 hover:underline"
+        >
+          Report
+        </Link>
+      ) : null,
+  }),
 ]
 
 export default function AssessmentDetailPage() {

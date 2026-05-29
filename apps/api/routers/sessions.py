@@ -35,7 +35,7 @@ async def get_session(
         supabase.table("assessment_sessions")
         .select("*")
         .eq("id", session_id)
-        .single()
+        .maybe_single()
         .execute()
     )
     if not result.data:

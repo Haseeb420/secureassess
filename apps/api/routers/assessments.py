@@ -85,7 +85,7 @@ async def get_assessment(
         supabase.table("assessments")
         .select("*")
         .eq("id", assessment_id)
-        .single()
+        .maybe_single()
         .execute()
     )
     if not result.data:
@@ -103,6 +103,7 @@ async def get_assessment(
     candidates = [
         {
             "id": s["candidate_id"],
+            "session_id": s["id"],
             "name": s.get("candidate_name", ""),
             "email": s.get("candidate_email", ""),
             "status": s.get("status", "not_started"),

@@ -49,6 +49,7 @@ export interface AssessmentDetail extends Assessment {
 
 export interface CandidateRow {
   id: string
+  session_id: string
   name: string
   email: string
   status: 'not_started' | 'in_progress' | 'completed'

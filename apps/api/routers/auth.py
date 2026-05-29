@@ -57,7 +57,7 @@ async def verify_invite(body: InviteLoginRequest):
         supabase.table("assessment_invites")
         .select("*")
         .eq("token", body.token)
-        .single()
+        .maybe_single()
         .execute()
     )
     if not result.data:

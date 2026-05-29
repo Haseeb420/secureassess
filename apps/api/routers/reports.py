@@ -17,7 +17,7 @@ async def get_report(
         supabase.table("assessment_sessions")
         .select("candidate_name, candidate_email, assessment_title, final_score, status")
         .eq("id", session_id)
-        .single()
+        .maybe_single()
         .execute()
     )
     if not session_result.data:

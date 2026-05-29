@@ -1,9 +1,19 @@
+import { createClient } from './supabase/client'
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const supabase = createClient()
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const authHeader = await getAuthHeader()
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: { 'Content-Type': 'application/json', ...authHeader, ...init?.headers },
   })
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)

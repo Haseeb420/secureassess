@@ -242,10 +242,6 @@ function DrawerContent({
   )
 }
 
-interface SessionDetail extends Session {
-  security_events: import('../../../lib/api').SecurityEvent[]
-}
-
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-sm">

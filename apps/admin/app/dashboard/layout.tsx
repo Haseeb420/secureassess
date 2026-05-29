@@ -1,5 +1,7 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { QueryProvider } from '../../components/QueryProvider'
+import { createClient } from '../../lib/supabase/server'
 
 const NAV = [
   { label: 'Assessments', href: '/dashboard/assessments' },
@@ -8,7 +10,11 @@ const NAV = [
   { label: 'Reports', href: '/dashboard/reports' },
 ]
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
   return (
     <QueryProvider>
       <div className="flex h-screen overflow-hidden">

@@ -1,38 +1,42 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import ExpiredSignatureError, JWTError, jwt
 
-from .config import settings
+from .supabase import get_supabase
 
 bearer_scheme = HTTPBearer()
 
 
-def _decode_token(credentials: HTTPAuthorizationCredentials) -> dict:
+def _get_user(credentials: HTTPAuthorizationCredentials) -> dict:
     token = credentials.credentials
+    supabase = get_supabase()
     try:
-        return jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": False},
-        )
-    except ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
-    except JWTError:
+        response = supabase.auth.get_user(token)
+        user = response.user
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        return {
+            "id": user.id,
+            "email": user.email,
+            "user_metadata": user.user_metadata or {},
+            "app_metadata": user.app_metadata or {},
+        }
+    except HTTPException:
+        raise
+    except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
 def get_current_candidate(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> dict:
-    return _decode_token(credentials)
+    return _get_user(credentials)
 
 
 def get_current_admin(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> dict:
-    payload = _decode_token(credentials)
-    role = payload.get("user_metadata", {}).get("role") or payload.get("app_metadata", {}).get("role")
+    user = _get_user(credentials)
+    role = user["user_metadata"].get("role") or user["app_metadata"].get("role")
     if role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return payload
+    return user

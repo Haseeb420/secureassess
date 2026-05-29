@@ -1,6 +1,7 @@
 services:
   server:
     image: judge0/judge0:1.13.1
+    platform: linux/amd64
     volumes:
       - ./judge0.conf:/judge0.conf:ro
     ports:
@@ -13,6 +14,7 @@ services:
 
   workers:
     image: judge0/judge0:1.13.1
+    platform: linux/amd64
     command: ["./scripts/workers"]
     volumes:
       - ./judge0.conf:/judge0.conf:ro

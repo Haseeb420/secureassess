@@ -106,8 +106,8 @@ export function LoginPage() {
       >
         <div className="w-full max-w-sm">
           {/* Card */}
-          <div className="rounded-2xl border border-brand-border bg-white px-8 py-8 shadow-sm">
-            <div className="mb-7">
+          <div className="rounded-2xl border border-brand-border bg-white shadow-sm" style={{ padding: '32px 32px 36px' }}>
+            <div style={{ marginBottom: '28px' }}>
               <h2 className="text-2xl font-semibold text-brand-navy">Welcome back</h2>
               <p className="mt-1 text-sm text-brand-navy/60">
                 Sign in to continue your assessment
@@ -115,12 +115,12 @@ export function LoginPage() {
             </div>
 
             {/* Segmented tab control */}
-            <div className="mb-6 flex rounded-lg bg-brand-surface p-1 gap-1">
+            <div className="flex rounded-lg bg-brand-surface gap-1" style={{ padding: '4px', marginBottom: '24px' }}>
               <button
                 type="button"
                 onClick={() => switchTab('email')}
                 className={cn(
-                  'flex-1 rounded-md py-1.5 text-sm font-medium transition-all duration-150',
+                  'flex-1 rounded-md py-2 text-sm font-medium transition-all duration-150',
                   activeTab === 'email'
                     ? 'bg-white text-brand-navy shadow-sm'
                     : 'text-brand-navy/50 hover:text-brand-navy/80'
@@ -132,7 +132,7 @@ export function LoginPage() {
                 type="button"
                 onClick={() => switchTab('token')}
                 className={cn(
-                  'flex-1 rounded-md py-1.5 text-sm font-medium transition-all duration-150',
+                  'flex-1 rounded-md py-2 text-sm font-medium transition-all duration-150',
                   activeTab === 'token'
                     ? 'bg-white text-brand-navy shadow-sm'
                     : 'text-brand-navy/50 hover:text-brand-navy/80'
@@ -155,7 +155,7 @@ export function LoginPage() {
 
             {/* Email form */}
             {activeTab === 'email' ? (
-              <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} noValidate className="space-y-4">
+              <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} noValidate className="flex flex-col" style={{ gap: '20px' }}>
                 <FormField
                   label="Email"
                   required
@@ -193,13 +193,13 @@ export function LoginPage() {
                   type="submit"
                   variant="primary"
                   disabled={isLoading}
-                  className="mt-2 w-full"
+                  className="w-full" style={{ marginTop: '8px' }}
                 >
                   {isLoading ? <Spinner /> : 'Sign In'}
                 </Button>
               </form>
             ) : (
-              <form onSubmit={tokenForm.handleSubmit(onTokenSubmit)} noValidate className="space-y-4">
+              <form onSubmit={tokenForm.handleSubmit(onTokenSubmit)} noValidate className="flex flex-col" style={{ gap: '20px' }}>
                 <FormField
                   label="Invite Token"
                   required
@@ -221,7 +221,7 @@ export function LoginPage() {
                   type="submit"
                   variant="primary"
                   disabled={isLoading}
-                  className="mt-2 w-full"
+                  className="w-full" style={{ marginTop: '8px' }}
                 >
                   {isLoading ? <Spinner /> : 'Verify & Continue'}
                 </Button>

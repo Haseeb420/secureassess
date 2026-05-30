@@ -22,6 +22,8 @@
 }
 
 :root {
+  --spacing: 0.25rem;
+
   --color-white:          #FFFFFF;
   --color-surface:        #F7F8FA;
   --color-border:         #E8E9EE;

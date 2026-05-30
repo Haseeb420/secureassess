@@ -1,25 +1,49 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '../../lib/supabase/server'
+"use client"
 
-async function signIn(formData: FormData): Promise<{ error: string } | never> {
-  'use server'
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { Mail, Lock } from "lucide-react"
+import { toast } from "sonner"
+import { signIn } from "@/lib/auth-client"
+import { FormField, Input, Alert, Button } from "@secureassess/ui"
 
-  const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+const schema = z.object({
+  email:    z.string().email("Enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+})
 
-  if (error) return { error: error.message }
-  redirect('/dashboard')
-}
+type FormValues = z.infer<typeof schema>
 
-interface PageProps {
-  searchParams: Promise<{ error?: string }>
-}
+export default function LoginPage() {
+  const router = useRouter()
+  const [serverError, setServerError] = useState("")
 
-export default async function LoginPage({ searchParams }: PageProps) {
-  const params = await searchParams
-  const errorMessage = params?.error
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    mode: "onBlur",
+  })
+
+  const onSubmit = async (data: FormValues) => {
+    setServerError("")
+    const result = await signIn.email({
+      email: data.email,
+      password: data.password,
+      callbackURL: "/dashboard",
+    })
+    if (result.error) {
+      setServerError(result.error.message ?? "Invalid email or password")
+    } else {
+      toast.success("Signed in successfully")
+      router.push("/dashboard")
+    }
+  }
 
   return (
     <div className="min-h-screen bg-brand-surface flex items-center justify-center px-4">
@@ -32,67 +56,46 @@ export default async function LoginPage({ searchParams }: PageProps) {
         <div className="rounded-xl border border-brand-border bg-white shadow-sm p-8">
           <h2 className="mb-6 text-base font-semibold text-brand-navy">Sign in to your account</h2>
 
-          <LoginForm errorMessage={errorMessage} />
+          {serverError && (
+            <Alert variant="error" className="mb-4">{serverError}</Alert>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            <FormField label="Email" required error={errors.email?.message}>
+              <Input
+                type="email"
+                placeholder="admin@example.com"
+                leftIcon={Mail}
+                disabled={isSubmitting}
+                error={!!errors.email}
+                aria-required="true"
+                {...register("email")}
+              />
+            </FormField>
+
+            <FormField label="Password" required error={errors.password?.message}>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                leftIcon={Lock}
+                disabled={isSubmitting}
+                error={!!errors.password}
+                aria-required="true"
+                {...register("password")}
+              />
+            </FormField>
+
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting}
+              className="w-full mt-2"
+            >
+              {isSubmitting ? "Signing in…" : "Sign In"}
+            </Button>
+          </form>
         </div>
       </div>
     </div>
-  )
-}
-
-function LoginForm({ errorMessage }: { errorMessage?: string }) {
-  return (
-    <form
-      action={async (formData: FormData) => {
-        'use server'
-        const result = await signIn(formData)
-        if (result?.error) {
-          redirect(`/login?error=${encodeURIComponent(result.error)}`)
-        }
-      }}
-    >
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="email" className="mb-1 block text-sm font-medium text-brand-navy">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="input"
-            placeholder="admin@example.com"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="mb-1 block text-sm font-medium text-brand-navy">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="input"
-            placeholder="••••••••"
-          />
-        </div>
-      </div>
-
-      {errorMessage && (
-        <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-          {errorMessage}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        className="mt-6 w-full rounded-lg bg-brand-orange py-2.5 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors"
-      >
-        Sign In
-      </button>
-    </form>
   )
 }

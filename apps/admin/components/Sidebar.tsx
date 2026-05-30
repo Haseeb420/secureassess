@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   ClipboardList, HelpCircle, Monitor, BarChart2,
   ChevronLeft, ChevronRight, LogOut, Settings,
 } from 'lucide-react'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { createClient } from '../lib/supabase/client'
+import { useCurrentUser } from '../hooks/useCurrentUser'
+import { signOut } from '../lib/auth-client'
+import { Skeleton } from '@secureassess/ui'
 
 const NAV = [
   { label: 'Assessments', href: '/dashboard/assessments', icon: ClipboardList },
@@ -20,12 +22,11 @@ const NAV = [
 
 const COLLAPSED_KEY = 'sidebar-collapsed'
 
-interface SidebarProps {
-  userEmail: string
-}
-
-export function Sidebar({ userEmail }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { name, email, role, isLoading } = useCurrentUser()
+
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(COLLAPSED_KEY) === 'true'
@@ -39,16 +40,12 @@ export function Sidebar({ userEmail }: SidebarProps) {
     })
   }
 
-  const initials = userEmail
-    .split('@')[0]
-    .slice(0, 2)
-    .toUpperCase()
-
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
+    await signOut()
+    router.push('/login')
   }
+
+  const initials = (name || email || 'U').slice(0, 2).toUpperCase()
 
   return (
     <Tooltip.Provider delayDuration={300}>
@@ -89,15 +86,27 @@ export function Sidebar({ userEmail }: SidebarProps) {
           })}
         </nav>
 
-        {/* Bottom: user + collapse toggle */}
+        {/* Bottom: user + collapse */}
         <div className="border-t border-white/10 p-2 space-y-1">
-          {/* User avatar */}
+          {/* User section */}
           <div className={`flex items-center gap-3 rounded-lg px-3 py-2 ${collapsed ? 'justify-center' : ''}`}>
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-orange text-xs font-semibold text-white">
-              {initials}
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-orange text-xs font-semibold text-white">
+              {isLoading ? '…' : initials}
             </div>
             {!collapsed && (
-              <span className="truncate text-xs text-white/60">{userEmail}</span>
+              <div className="min-w-0 flex-1">
+                {isLoading ? (
+                  <>
+                    <Skeleton className="mb-1 h-3 w-24" />
+                    <Skeleton className="h-2.5 w-16" />
+                  </>
+                ) : (
+                  <>
+                    <p className="truncate text-sm font-medium text-white">{name}</p>
+                    <p className="truncate text-xs capitalize text-white/50">{role}</p>
+                  </>
+                )}
+              </div>
             )}
           </div>
 

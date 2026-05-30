@@ -22,15 +22,15 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const errorMessage = params?.error
 
   return (
-    <div className="min-h-screen bg-brand-navy-dark flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-surface flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-brand-orange">SecureAssess</h1>
-          <p className="mt-1 text-sm text-white/50">Admin Portal</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">SecureAssess</h1>
+          <p className="mt-1 text-sm text-brand-navy/60">Admin Portal</p>
         </div>
 
-        <div className="rounded-lg border border-brand-navy-light bg-brand-navy-mid p-6">
-          <h2 className="mb-6 text-base font-medium text-white">Sign in to your account</h2>
+        <div className="rounded-xl border border-brand-border bg-white shadow-sm p-8">
+          <h2 className="mb-6 text-base font-semibold text-brand-navy">Sign in to your account</h2>
 
           <LoginForm errorMessage={errorMessage} />
         </div>
@@ -52,7 +52,7 @@ function LoginForm({ errorMessage }: { errorMessage?: string }) {
     >
       <div className="space-y-4">
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-zinc-400">
+          <label htmlFor="email" className="mb-1 block text-sm font-medium text-brand-navy">
             Email
           </label>
           <input
@@ -61,12 +61,12 @@ function LoginForm({ errorMessage }: { errorMessage?: string }) {
             type="email"
             required
             autoComplete="email"
-            className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
+            className="input"
             placeholder="admin@example.com"
           />
         </div>
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-zinc-400">
+          <label htmlFor="password" className="mb-1 block text-sm font-medium text-brand-navy">
             Password
           </label>
           <input
@@ -75,19 +75,21 @@ function LoginForm({ errorMessage }: { errorMessage?: string }) {
             type="password"
             required
             autoComplete="current-password"
-            className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500"
+            className="input"
             placeholder="••••••••"
           />
         </div>
       </div>
 
       {errorMessage && (
-        <p className="mt-4 text-sm text-red-400">{errorMessage}</p>
+        <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {errorMessage}
+        </p>
       )}
 
       <button
         type="submit"
-        className="mt-6 w-full rounded-md bg-white py-2 text-sm font-medium text-zinc-900 transition-opacity hover:opacity-90"
+        className="mt-6 w-full rounded-lg bg-brand-orange py-2.5 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors"
       >
         Sign In
       </button>

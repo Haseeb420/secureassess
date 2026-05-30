@@ -50,109 +50,116 @@ export default function NewAssessmentPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl">
-      <h1 className="mb-6 text-xl font-semibold">New Assessment</h1>
+    <div>
+      <div className="border-b border-brand-border bg-white px-8 py-5">
+        <h1 className="text-xl font-semibold text-brand-navy">New Assessment</h1>
+        <p className="mt-0.5 text-sm text-brand-navy/60">Create a new assessment for candidates</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Field label="Title">
-          <input
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="input"
-            placeholder="e.g. Backend Engineering Round 1"
-          />
-        </Field>
+      <div className="p-8 max-w-2xl">
+        <div className="rounded-xl border border-brand-border bg-white shadow-sm p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Field label="Title">
+              <input
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="input"
+                placeholder="e.g. Backend Engineering Round 1"
+              />
+            </Field>
 
-        <Field label="Duration (minutes)">
-          <input
-            type="number"
-            required
-            min={5}
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="input w-32"
-          />
-        </Field>
+            <Field label="Duration (minutes)">
+              <input
+                type="number"
+                required
+                min={5}
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className="input w-32"
+              />
+            </Field>
 
-        <Field label="Allowed Languages">
-          <div className="flex flex-wrap gap-3">
-            {LANGUAGES.map((lang) => (
-              <label key={lang} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={languages.includes(lang)}
-                  onChange={() => toggleLang(lang)}
-                  className="rounded border-zinc-600 bg-zinc-800 text-white"
-                />
-                <span className="text-sm text-zinc-300">{LANGUAGE_LABELS[lang]}</span>
-              </label>
-            ))}
-          </div>
-        </Field>
+            <Field label="Allowed Languages">
+              <div className="flex flex-wrap gap-3">
+                {LANGUAGES.map((lang) => (
+                  <label key={lang} className="flex items-center gap-2 cursor-pointer text-brand-navy text-sm">
+                    <input
+                      type="checkbox"
+                      checked={languages.includes(lang)}
+                      onChange={() => toggleLang(lang)}
+                      style={{ accentColor: '#DE5E1F' }}
+                    />
+                    {LANGUAGE_LABELS[lang]}
+                  </label>
+                ))}
+              </div>
+            </Field>
 
-        <Field label="Security Level">
-          <select
-            value={securityLevel}
-            onChange={(e) => setSecurityLevel(e.target.value as 'standard' | 'strict')}
-            className="input w-48"
-          >
-            <option value="standard">Standard</option>
-            <option value="strict">Strict</option>
-          </select>
-        </Field>
+            <Field label="Security Level">
+              <select
+                value={securityLevel}
+                onChange={(e) => setSecurityLevel(e.target.value as 'standard' | 'strict')}
+                className="input w-48"
+              >
+                <option value="standard">Standard</option>
+                <option value="strict">Strict</option>
+              </select>
+            </Field>
 
-        <Field label="Questions">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search question bank…"
-            className="input mb-2"
-          />
-          <div className="max-h-48 overflow-y-auto rounded-md border border-zinc-700 divide-y divide-zinc-800">
-            {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-zinc-500">No questions found.</p>
-            ) : (
-              filtered.map((q) => (
-                <label key={q.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-zinc-800">
-                  <input
-                    type="checkbox"
-                    checked={questionIds.includes(q.id)}
-                    onChange={() => toggleQuestion(q.id)}
-                    className="rounded border-zinc-600 bg-zinc-800"
-                  />
-                  <span className="text-sm text-zinc-300">{q.title}</span>
-                  <span className="ml-auto text-xs text-zinc-500 capitalize">{q.difficulty}</span>
-                </label>
-              ))
+            <Field label="Questions">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search question bank…"
+                className="input mb-2"
+              />
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-brand-border divide-y divide-brand-border bg-white">
+                {filtered.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-brand-navy/40">No questions found.</p>
+                ) : (
+                  filtered.map((q) => (
+                    <label key={q.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-brand-surface">
+                      <input
+                        type="checkbox"
+                        checked={questionIds.includes(q.id)}
+                        onChange={() => toggleQuestion(q.id)}
+                        style={{ accentColor: '#DE5E1F' }}
+                      />
+                      <span className="text-sm text-brand-navy">{q.title}</span>
+                      <span className="ml-auto text-xs text-brand-navy/40 capitalize">{q.difficulty}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+              {questionIds.length > 0 && (
+                <p className="mt-1 text-xs text-brand-navy/40">{questionIds.length} question(s) selected</p>
+              )}
+            </Field>
+
+            {create.isError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{String(create.error)}</p>
             )}
-          </div>
-          {questionIds.length > 0 && (
-            <p className="mt-1 text-xs text-zinc-500">{questionIds.length} question(s) selected</p>
-          )}
-        </Field>
 
-        {create.isError && (
-          <p className="text-sm text-red-400">{String(create.error)}</p>
-        )}
-
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={create.isPending}
-            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:opacity-90 disabled:opacity-50"
-          >
-            {create.isPending ? 'Creating…' : 'Create Assessment'}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-500"
-          >
-            Cancel
-          </button>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={create.isPending}
+                className="rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors disabled:opacity-50"
+              >
+                {create.isPending ? 'Creating…' : 'Create Assessment'}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="rounded-lg border border-brand-border px-4 py-2 text-sm text-brand-navy hover:border-brand-navy transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   )
 }
@@ -160,7 +167,7 @@ export default function NewAssessmentPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-zinc-300">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-brand-navy">{label}</label>
       {children}
     </div>
   )

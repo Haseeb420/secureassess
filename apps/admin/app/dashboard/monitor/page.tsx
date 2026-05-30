@@ -11,17 +11,10 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
-const STATUS_COLORS: Record<Session['status'], string> = {
-  active: 'bg-brand-navy-mid border-brand-navy-light text-white',
-  idle: 'bg-brand-navy-mid border-brand-navy-light text-white/80',
-  completed: 'bg-brand-navy border-brand-navy-light text-white/50',
-  terminated: 'bg-red-900/30 border-red-800 text-red-300',
-}
-
 const STATUS_DOT: Record<Session['status'], string> = {
-  active: 'bg-green-400',
-  idle: 'bg-brand-orange',
-  completed: 'bg-brand-navy-light',
+  active:     'bg-green-400',
+  idle:       'bg-brand-orange',
+  completed:  'bg-brand-navy/20',
   terminated: 'bg-red-400',
 }
 
@@ -35,7 +28,6 @@ export default function MonitorPage() {
     refetchInterval: 30_000,
   })
 
-  // Subscribe to Supabase Realtime for live session updates
   useEffect(() => {
     const channel = supabase
       .channel('sessions-monitor')
@@ -56,31 +48,22 @@ export default function MonitorPage() {
 
   return (
     <div className="flex h-full">
-      <div className="flex-1 overflow-y-auto p-6">
-        <h1 className="mb-6 text-xl font-semibold">Live Monitor</h1>
+      <div className="flex-1 overflow-y-auto">
+        <div className="border-b border-brand-border bg-white px-8 py-5">
+          <h1 className="text-xl font-semibold text-brand-navy">Live Monitor</h1>
+          <p className="mt-0.5 text-sm text-brand-navy/60">
+            {activeSessions.length} active session{activeSessions.length !== 1 ? 's' : ''}
+          </p>
+        </div>
 
-        {isLoading ? (
-          <p className="text-zinc-500">Loading sessions…</p>
-        ) : activeSessions.length === 0 ? (
-          <p className="text-zinc-500">No active sessions right now.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-4">
-            {activeSessions.map((s) => (
-              <SessionCard
-                key={s.id}
-                session={s}
-                isSelected={selectedId === s.id}
-                onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
-              />
-            ))}
-          </div>
-        )}
-
-        {pastSessions.length > 0 && (
-          <>
-            <h2 className="mb-3 mt-8 text-sm font-medium text-zinc-400">Completed / Terminated</h2>
-            <div className="grid grid-cols-3 gap-4 opacity-60">
-              {pastSessions.map((s) => (
+        <div className="p-8">
+          {isLoading ? (
+            <p className="text-brand-navy/40">Loading sessions…</p>
+          ) : activeSessions.length === 0 ? (
+            <p className="text-brand-navy/40">No active sessions right now.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {activeSessions.map((s) => (
                 <SessionCard
                   key={s.id}
                   session={s}
@@ -89,8 +72,26 @@ export default function MonitorPage() {
                 />
               ))}
             </div>
-          </>
-        )}
+          )}
+
+          {pastSessions.length > 0 && (
+            <>
+              <h2 className="mb-3 mt-8 text-sm font-semibold uppercase tracking-wide text-brand-navy/40">
+                Completed / Terminated
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 opacity-60">
+                {pastSessions.map((s) => (
+                  <SessionCard
+                    key={s.id}
+                    session={s}
+                    isSelected={selectedId === s.id}
+                    onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {selectedId && (
@@ -109,6 +110,13 @@ function SessionCard({
   isSelected: boolean
   onClick: () => void
 }) {
+  const initials = session.candidate_name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
   const progress =
     session.total_questions > 0
       ? Math.round((session.questions_done / session.total_questions) * 100)
@@ -118,25 +126,43 @@ function SessionCard({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg border p-4 text-left transition-all ${STATUS_COLORS[session.status]} ${isSelected ? 'ring-2 ring-white/20' : 'hover:brightness-110'}`}
+      className={`rounded-xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md cursor-pointer ${
+        isSelected
+          ? 'border-brand-orange ring-2 ring-brand-orange/20'
+          : 'border-brand-border hover:border-brand-orange'
+      }`}
     >
-      <div className="mb-2 flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${STATUS_DOT[session.status]}`} />
-        <span className="text-sm font-medium truncate">{session.candidate_name}</span>
-        {session.violation_count > 0 && (
-          <span className="ml-auto rounded bg-brand-orange/20 px-1.5 py-0.5 text-xs text-brand-orange">
-            {session.violation_count}⚠
-          </span>
-        )}
-      </div>
-      <p className="text-xs opacity-70 truncate">{session.assessment_title}</p>
-      <div className="mt-3">
-        <div className="mb-1 flex justify-between text-xs opacity-60">
-          <span>{session.questions_done}/{session.total_questions} questions</span>
-          <span>{progress}%</span>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-navy-pale text-xs font-semibold text-brand-navy">
+            {initials}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-brand-navy truncate max-w-[120px]">
+              {session.candidate_name}
+            </p>
+            <p className="text-xs text-brand-navy/50 truncate max-w-[120px]">
+              {session.assessment_title}
+            </p>
+          </div>
         </div>
-        <div className="h-1 rounded-full bg-brand-navy">
-          <div className="h-1 rounded-full bg-brand-orange" style={{ width: `${progress}%` }} />
+        <div className="flex items-center gap-1.5">
+          <span className={`h-2 w-2 rounded-full ${STATUS_DOT[session.status]}`} />
+          {session.violation_count > 0 && (
+            <span className="rounded-full bg-brand-orange-pale px-2 py-0.5 text-xs font-medium text-brand-orange">
+              {session.violation_count}⚠
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="mb-1 flex justify-between text-xs text-brand-navy/60">
+          <span>Progress</span>
+          <span>{session.questions_done}/{session.total_questions} · {progress}%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-brand-surface">
+          <div className="h-1.5 rounded-full bg-brand-orange transition-all" style={{ width: `${progress}%` }} />
         </div>
       </div>
     </button>
@@ -160,13 +186,13 @@ function RightDrawer({ sessionId, onClose }: { sessionId: string; onClose: () =>
   })
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-brand-navy-light bg-brand-navy">
-      <div className="flex items-center justify-between border-b border-brand-navy-light px-4 py-3">
-        <span className="text-sm font-medium text-white">Session Detail</span>
+    <aside className="fixed right-0 top-0 bottom-0 flex w-80 shrink-0 flex-col border-l border-brand-border bg-white shadow-xl z-40">
+      <div className="flex items-center justify-between border-b border-brand-border px-5 py-4">
+        <span className="font-semibold text-brand-navy">Session Detail</span>
         <button
           type="button"
           onClick={onClose}
-          className="text-white/40 hover:text-white"
+          className="text-brand-navy/40 hover:text-brand-navy"
           aria-label="Close drawer"
         >
           ✕
@@ -174,9 +200,9 @@ function RightDrawer({ sessionId, onClose }: { sessionId: string; onClose: () =>
       </div>
 
       {isLoading ? (
-        <div className="p-4 text-sm text-white/40">Loading…</div>
+        <div className="p-4 text-sm text-brand-navy/40">Loading…</div>
       ) : !data ? (
-        <div className="p-4 text-sm text-red-400">Session not found.</div>
+        <div className="p-4 text-sm text-red-500">Session not found.</div>
       ) : (
         <DrawerContent data={data} terminate={terminate} />
       )}
@@ -193,7 +219,7 @@ function DrawerContent({
 }) {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <div className="space-y-3 border-b border-brand-navy-light p-4">
+      <div className="space-y-3 border-b border-brand-border p-5">
         <InfoRow label="Candidate" value={data.candidate_name} />
         <InfoRow label="Email" value={data.candidate_email} />
         <InfoRow label="Assessment" value={data.assessment_title} />
@@ -201,39 +227,40 @@ function DrawerContent({
         <InfoRow label="Violations" value={String(data.violation_count)} />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-brand-orange">
+      <div className="flex-1 overflow-y-auto p-5">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-brand-navy/50">
           Security Events
         </h3>
         {data.security_events.length === 0 ? (
-          <p className="text-xs text-white/30">No events recorded.</p>
+          <p className="text-xs text-brand-navy/30">No events recorded.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-0">
             {data.security_events.map((ev) => (
-              <li key={ev.id} className="rounded-md bg-brand-navy-mid p-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-brand-orange">{ev.type}</span>
-                  <span className="text-xs text-white/30">
+              <li key={ev.id} className="flex items-start gap-3 border-b border-brand-border py-3 last:border-0">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-orange" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-brand-navy">{ev.type}</p>
+                  {Object.keys(ev.metadata).length > 0 && (
+                    <p className="mt-0.5 text-xs text-brand-navy/60 truncate">
+                      {JSON.stringify(ev.metadata)}
+                    </p>
+                  )}
+                  <p className="mt-0.5 text-xs text-brand-navy/40">
                     {format(new Date(ev.created_at), 'HH:mm:ss')}
-                  </span>
-                </div>
-                {Object.keys(ev.metadata).length > 0 && (
-                  <p className="mt-1 text-xs text-white/40">
-                    {JSON.stringify(ev.metadata)}
                   </p>
-                )}
+                </div>
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <div className="border-t border-brand-navy-light p-4">
+      <div className="border-t border-brand-border p-5">
         <button
           type="button"
           onClick={() => terminate.mutate()}
           disabled={data.status === 'terminated' || data.status === 'completed' || terminate.isPending}
-          className="w-full rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+          className="w-full rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
         >
           {terminate.isPending ? 'Terminating…' : 'Terminate Session'}
         </button>
@@ -245,8 +272,8 @@ function DrawerContent({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-white/50">{label}</span>
-      <span className="text-white text-right">{value}</span>
+      <span className="text-brand-navy/50">{label}</span>
+      <span className="text-brand-navy text-right">{value}</span>
     </div>
   )
 }

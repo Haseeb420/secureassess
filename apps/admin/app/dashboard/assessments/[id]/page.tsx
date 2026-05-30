@@ -13,10 +13,10 @@ import { assessmentsApi, type CandidateRow } from '../../../../lib/api'
 
 const col = createColumnHelper<CandidateRow>()
 
-const STATUS_COLORS: Record<CandidateRow['status'], string> = {
-  not_started: 'bg-zinc-800 text-zinc-400',
-  in_progress: 'bg-blue-900 text-blue-300',
-  completed: 'bg-green-900 text-green-300',
+const STATUS_CLASSES: Record<CandidateRow['status'], string> = {
+  not_started: 'bg-brand-surface text-brand-navy/50',
+  in_progress: 'bg-blue-100 text-blue-700',
+  completed:   'bg-green-100 text-green-700',
 }
 
 const columns = [
@@ -25,7 +25,7 @@ const columns = [
   col.accessor('status', {
     header: 'Status',
     cell: (i) => (
-      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[i.getValue()]}`}>
+      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[i.getValue()]}`}>
         {i.getValue().replace('_', ' ')}
       </span>
     ),
@@ -41,7 +41,7 @@ const columns = [
       row.original.session_id ? (
         <Link
           href={`/dashboard/reports/${row.original.session_id}`}
-          className="text-xs text-blue-400 hover:underline"
+          className="text-xs font-medium text-brand-orange hover:text-brand-orange-light"
         >
           Report
         </Link>
@@ -74,77 +74,76 @@ export default function AssessmentDetailPage() {
   })
 
   if (isLoading) {
-    return <div className="p-6 text-zinc-500">Loading…</div>
+    return <div className="p-8 text-brand-navy/40">Loading…</div>
   }
 
   if (!data) {
-    return <div className="p-6 text-red-400">Assessment not found.</div>
+    return <div className="p-8 text-red-500">Assessment not found.</div>
   }
 
   return (
-    <div className="p-6 max-w-4xl">
-      <div className="mb-6 flex items-start justify-between">
+    <div>
+      <div className="border-b border-brand-border bg-white px-8 py-5 flex items-start justify-between">
         <div>
-          <Link href="/dashboard/assessments" className="mb-1 block text-xs text-zinc-500 hover:text-zinc-300">
+          <Link href="/dashboard/assessments" className="mb-1 block text-xs text-brand-navy/40 hover:text-brand-navy">
             ← Assessments
           </Link>
-          <h1 className="text-xl font-semibold">{data.title}</h1>
+          <h1 className="text-xl font-semibold text-brand-navy">{data.title}</h1>
         </div>
         <button
           type="button"
           onClick={() => archive.mutate()}
           disabled={data.status === 'archived' || archive.isPending}
-          className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 hover:border-red-500 hover:text-red-400 disabled:opacity-40"
+          className="rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-navy/60 hover:border-red-300 hover:text-red-500 disabled:opacity-40 transition-colors"
         >
           {archive.isPending ? 'Archiving…' : 'Archive'}
         </button>
       </div>
 
-      <div className="mb-8 grid grid-cols-3 gap-4">
-        <InfoCard label="Duration" value={`${data.duration_minutes} min`} />
-        <InfoCard label="Status" value={data.status} />
-        <InfoCard label="Security Level" value={data.security_level} />
-        <InfoCard
-          label="Languages"
-          value={data.allowed_languages.join(', ')}
-        />
-        <InfoCard label="Candidates" value={String(data.candidate_count)} />
-      </div>
+      <div className="p-8 max-w-4xl">
+        <div className="mb-6 grid grid-cols-3 gap-4">
+          <InfoCard label="Duration" value={`${data.duration_minutes} min`} />
+          <InfoCard label="Status" value={data.status} />
+          <InfoCard label="Security Level" value={data.security_level} />
+          <InfoCard label="Languages" value={data.allowed_languages.join(', ')} />
+          <InfoCard label="Candidates" value={String(data.candidate_count)} />
+        </div>
 
-      <h2 className="mb-3 text-sm font-medium text-zinc-400">Candidates</h2>
-      <div className="overflow-hidden rounded-lg border border-zinc-800">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-900 text-zinc-400">
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                {hg.headers.map((h) => (
-                  <th key={h.id} className="px-4 py-3 text-left font-medium">
-                    {flexRender(h.column.columnDef.header, h.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-zinc-500">
-                  No candidates invited yet.
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-zinc-900/50">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-zinc-200">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-navy/50">Candidates</h2>
+        <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id} className="border-b border-brand-border bg-brand-surface">
+                  {hg.headers.map((h) => (
+                    <th key={h.id} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-navy/60">
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                    </th>
                   ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-8 text-center text-brand-navy/40">
+                    No candidates invited yet.
+                  </td>
+                </tr>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <tr key={row.id} className="border-b border-brand-border hover:bg-brand-navy-pale transition-colors last:border-0">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-3 text-brand-navy">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
@@ -152,9 +151,9 @@ export default function AssessmentDetailPage() {
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-4 py-3">
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="mt-1 text-sm capitalize text-zinc-200">{value}</p>
+    <div className="rounded-xl border border-brand-border bg-white px-4 py-3 shadow-sm">
+      <p className="text-xs text-brand-navy/50">{label}</p>
+      <p className="mt-1 text-sm capitalize text-brand-navy font-medium">{value}</p>
     </div>
   )
 }

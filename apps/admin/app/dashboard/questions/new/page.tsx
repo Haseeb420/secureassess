@@ -67,198 +67,131 @@ export default function NewQuestionPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl" data-color-mode="dark">
-      <h1 className="mb-6 text-xl font-semibold">New Question</h1>
+    <div>
+      <div className="border-b border-brand-border bg-white px-8 py-5">
+        <h1 className="text-xl font-semibold text-brand-navy">New Question</h1>
+        <p className="mt-0.5 text-sm text-brand-navy/60">Add a question to the bank</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Field label="Title">
-          <input
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="input"
-            placeholder="e.g. Two Sum"
-          />
-        </Field>
+      <div className="p-8 max-w-3xl" data-color-mode="light">
+        <div className="rounded-xl border border-brand-border bg-white shadow-sm p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Field label="Title">
+              <input required value={title} onChange={(e) => setTitle(e.target.value)} className="input" placeholder="e.g. Two Sum" />
+            </Field>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Type">
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as CreateQuestionBody['type'])}
-              className="input"
-            >
-              {TYPES.map((t) => (
-                <option key={t} value={t} className="capitalize">
-                  {t.replace('_', ' ')}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Difficulty">
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as CreateQuestionBody['difficulty'])}
-              className="input capitalize"
-            >
-              {DIFFICULTIES.map((d) => (
-                <option key={d} value={d} className="capitalize">
-                  {d}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Time Limit (ms)">
-            <input
-              type="number"
-              min={100}
-              value={timeLimitMs}
-              onChange={(e) => setTimeLimitMs(Number(e.target.value))}
-              className="input"
-            />
-          </Field>
-          <Field label="Memory Limit (MB)">
-            <input
-              type="number"
-              min={16}
-              value={memoryLimitMb}
-              onChange={(e) => setMemoryLimitMb(Number(e.target.value))}
-              className="input"
-            />
-          </Field>
-        </div>
-
-        <Field label="Tags">
-          <div className="flex gap-2">
-            <input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
-              placeholder="Add tag and press Enter"
-              className="input"
-            />
-            <button
-              type="button"
-              onClick={addTag}
-              className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:border-zinc-500"
-            >
-              Add
-            </button>
-          </div>
-          {tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <span key={tag} className="flex items-center gap-1 rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-300">
-                  {tag}
-                  <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-zinc-500 hover:text-zinc-200">×</button>
-                </span>
-              ))}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Type">
+                <select value={type} onChange={(e) => setType(e.target.value as CreateQuestionBody['type'])} className="input">
+                  {TYPES.map((t) => (
+                    <option key={t} value={t} className="capitalize">{t.replace('_', ' ')}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Difficulty">
+                <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as CreateQuestionBody['difficulty'])} className="input capitalize">
+                  {DIFFICULTIES.map((d) => (
+                    <option key={d} value={d} className="capitalize">{d}</option>
+                  ))}
+                </select>
+              </Field>
             </div>
-          )}
-        </Field>
 
-        <Field label="Description (Markdown)">
-          <MDEditor
-            value={description}
-            onChange={setDescription}
-            height={300}
-            preview="edit"
-          />
-        </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Time Limit (ms)">
+                <input type="number" min={100} value={timeLimitMs} onChange={(e) => setTimeLimitMs(Number(e.target.value))} className="input" />
+              </Field>
+              <Field label="Memory Limit (MB)">
+                <input type="number" min={16} value={memoryLimitMb} onChange={(e) => setMemoryLimitMb(Number(e.target.value))} className="input" />
+              </Field>
+            </div>
 
-        <TestCasesSection
-          label="Sample Test Cases"
-          cases={sampleCases}
-          setCases={setSampleCases}
-          isHidden={false}
-          updateCase={updateCase}
-        />
+            <Field label="Tags">
+              <div className="flex gap-2">
+                <input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
+                  placeholder="Add tag and press Enter"
+                  className="input"
+                />
+                <button type="button" onClick={addTag} className="rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-navy hover:border-brand-navy transition-colors">
+                  Add
+                </button>
+              </div>
+              {tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <span key={tag} className="flex items-center gap-1 rounded-full bg-brand-navy-pale px-2.5 py-0.5 text-xs text-brand-navy">
+                      {tag}
+                      <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-brand-navy/40 hover:text-red-500">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Field>
 
-        <TestCasesSection
-          label="Hidden Test Cases"
-          cases={hiddenCases}
-          setCases={setHiddenCases}
-          isHidden={true}
-          updateCase={updateCase}
-        />
+            <Field label="Description (Markdown)">
+              <MDEditor value={description} onChange={setDescription} height={300} preview="edit" />
+            </Field>
 
-        {create.isError && (
-          <p className="text-sm text-red-400">{String(create.error)}</p>
-        )}
+            <TestCasesSection label="Sample Test Cases" cases={sampleCases} setCases={setSampleCases} isHidden={false} updateCase={updateCase} />
+            <TestCasesSection label="Hidden Test Cases" cases={hiddenCases} setCases={setHiddenCases} isHidden={true} updateCase={updateCase} />
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={create.isPending}
-            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:opacity-90 disabled:opacity-50"
-          >
-            {create.isPending ? 'Creating…' : 'Create Question'}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-500"
-          >
-            Cancel
-          </button>
+            {create.isError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{String(create.error)}</p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button type="submit" disabled={create.isPending} className="rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors disabled:opacity-50">
+                {create.isPending ? 'Creating…' : 'Create Question'}
+              </button>
+              <button type="button" onClick={() => router.back()} className="rounded-lg border border-brand-border px-4 py-2 text-sm text-brand-navy hover:border-brand-navy transition-colors">
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   )
 }
 
 function TestCasesSection({
-  label,
-  cases,
-  setCases,
-  isHidden,
-  updateCase,
+  label, cases, setCases, isHidden, updateCase,
 }: {
   label: string
   cases: TestCase[]
   setCases: React.Dispatch<React.SetStateAction<TestCase[]>>
   isHidden: boolean
-  updateCase: (
-    list: TestCase[],
-    setList: React.Dispatch<React.SetStateAction<TestCase[]>>,
-    idx: number,
-    field: keyof TestCase,
-    value: string | boolean,
-  ) => void
+  updateCase: (list: TestCase[], setList: React.Dispatch<React.SetStateAction<TestCase[]>>, idx: number, field: keyof TestCase, value: string | boolean) => void
 }) {
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <label className="text-sm font-medium text-zinc-300">{label}</label>
+      <div className="mb-3 flex items-center justify-between border-b border-brand-border pb-2">
+        <label className="text-sm font-semibold uppercase tracking-wide text-brand-navy">{label}</label>
         <button
           type="button"
           onClick={() => setCases((prev) => [...prev, { input: '', expected_output: '', is_hidden: isHidden }])}
-          className="text-xs text-zinc-500 hover:text-zinc-300"
+          className="text-xs font-medium text-brand-orange hover:text-brand-orange-light flex items-center gap-1"
         >
           + Add case
         </button>
       </div>
       <div className="space-y-3">
         {cases.map((tc, idx) => (
-          <div key={idx} className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+          <div key={idx} className="rounded-lg border border-brand-border bg-brand-surface p-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">Case {idx + 1}</span>
+              <span className="text-xs font-medium text-brand-navy/50">Case {idx + 1}</span>
               {cases.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setCases(cases.filter((_, i) => i !== idx))}
-                  className="text-xs text-zinc-600 hover:text-red-400"
-                >
+                <button type="button" onClick={() => setCases(cases.filter((_, i) => i !== idx))} className="text-xs text-red-400 hover:text-red-600">
                   Remove
                 </button>
               )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="mb-1 text-xs text-zinc-500">Input</p>
+                <p className="mb-1 text-xs font-medium text-brand-navy/50">Input</p>
                 <textarea
                   value={tc.input}
                   onChange={(e) => updateCase(cases, setCases, idx, 'input', e.target.value)}
@@ -268,7 +201,7 @@ function TestCasesSection({
                 />
               </div>
               <div>
-                <p className="mb-1 text-xs text-zinc-500">Expected Output</p>
+                <p className="mb-1 text-xs font-medium text-brand-navy/50">Expected Output</p>
                 <textarea
                   value={tc.expected_output}
                   onChange={(e) => updateCase(cases, setCases, idx, 'expected_output', e.target.value)}
@@ -288,7 +221,7 @@ function TestCasesSection({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-zinc-300">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-brand-navy">{label}</label>
       {children}
     </div>
   )

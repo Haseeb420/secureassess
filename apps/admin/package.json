@@ -10,6 +10,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@secureassess/shared-types": "workspace:*",
     "@secureassess/ui": "workspace:*",
     "@supabase/ssr": "^0.10.3",
@@ -18,11 +20,13 @@
     "@tanstack/react-table": "^8.21.3",
     "@uiw/react-md-editor": "^4.1.1",
     "date-fns": "^4.3.0",
+    "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

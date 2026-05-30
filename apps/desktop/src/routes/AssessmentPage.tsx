@@ -263,6 +263,15 @@ export function AssessmentPage() {
         </PanelGroup>
       </div>
 
+      {/* VS Code–style status bar */}
+      <div className="flex h-6 shrink-0 items-center gap-4 bg-brand-navy-light px-4 text-xs text-white/50" aria-hidden="true">
+        <span>{currentLanguage}</span>
+        <span>·</span>
+        <span>{isRunning || isSubmitting ? '⟳ Running…' : 'Ready'}</span>
+        <span>·</span>
+        <span className="ml-auto">Ctrl+Enter: Run · Ctrl+Shift+Enter: Submit · Ctrl+S: Save</span>
+      </div>
+
       {submitResult && (
         <SubmissionModal result={submitResult} onFinish={handleFinish} />
       )}

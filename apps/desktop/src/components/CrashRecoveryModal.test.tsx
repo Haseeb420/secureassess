@@ -32,13 +32,12 @@ describe('CrashRecoveryModal', () => {
         onAbandon={vi.fn()}
       />,
     )
-    await userEvent.click(screen.getByText('Resume Assessment'))
+    await userEvent.click(screen.getByText('Resume Assessment →'))
     expect(onResume).toHaveBeenCalledOnce()
   })
 
-  it('calls onAbandon after confirming abandon', async () => {
+  it('calls onAbandon after confirming abandon in dialog', async () => {
     const onAbandon = vi.fn()
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(
       <CrashRecoveryModal
         session={mockSession}
@@ -46,8 +45,11 @@ describe('CrashRecoveryModal', () => {
         onAbandon={onAbandon}
       />,
     )
+    // Click outer Abandon button to open confirm dialog
     await userEvent.click(screen.getByText('Abandon'))
+    // Click the confirm "Abandon" button inside the dialog
+    const abandonButtons = screen.getAllByText('Abandon')
+    await userEvent.click(abandonButtons[abandonButtons.length - 1])
     expect(onAbandon).toHaveBeenCalledOnce()
-    vi.restoreAllMocks()
   })
 })

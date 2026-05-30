@@ -6,7 +6,6 @@ import {
   Bot,
   CheckCircle,
   CheckCircle2,
-  Globe,
   Loader2,
   Monitor,
   RefreshCw,
@@ -34,7 +33,6 @@ interface CheckState {
 interface ValidationState {
   display:       CheckState
   screenRec:     CheckState
-  browsers:      CheckState
   aiTools:       CheckState
   remoteAccess:  CheckState
   system:        CheckState
@@ -43,7 +41,6 @@ interface ValidationState {
 const INITIAL: ValidationState = {
   display:      { status: 'pending' },
   screenRec:    { status: 'pending' },
-  browsers:     { status: 'pending' },
   aiTools:      { status: 'pending' },
   remoteAccess: { status: 'pending' },
   system:       { status: 'pending' },
@@ -52,7 +49,6 @@ const INITIAL: ValidationState = {
 const CHECKING: ValidationState = {
   display:      { status: 'checking' },
   screenRec:    { status: 'checking' },
-  browsers:     { status: 'checking' },
   aiTools:      { status: 'checking' },
   remoteAccess: { status: 'checking' },
   system:       { status: 'checking' },
@@ -70,12 +66,6 @@ const CHECK_META = [
     label: 'No screen recording',
     Icon: Video,
     fixHint: 'Close QuickTime Player, OBS, Loom, or any screen recording app.',
-  },
-  {
-    key: 'browsers' as const,
-    label: 'No browsers open',
-    Icon: Globe,
-    fixHint: 'Quit Chrome, Firefox, Safari, and any other browsers.',
   },
   {
     key: 'aiTools' as const,
@@ -103,18 +93,13 @@ const STEPS: Step[] = ['Display', 'Applications', 'System']
 
 function getActiveStep(state: ValidationState): Step {
   if (state.display.status === 'checking' || state.screenRec.status === 'checking') return 'Display'
-  if (
-    state.browsers.status === 'checking' ||
-    state.aiTools.status === 'checking' ||
-    state.remoteAccess.status === 'checking'
-  )
-    return 'Applications'
+  if (state.aiTools.status === 'checking' || state.remoteAccess.status === 'checking') return 'Applications'
   return 'System'
 }
 
 function getStepStatus(step: Step, state: ValidationState): 'pending' | 'checking' | 'pass' | 'fail' {
   const displayKeys: (keyof ValidationState)[] = ['display', 'screenRec']
-  const appKeys: (keyof ValidationState)[] = ['browsers', 'aiTools', 'remoteAccess']
+  const appKeys: (keyof ValidationState)[] = ['aiTools', 'remoteAccess']
   const sysKeys: (keyof ValidationState)[] = ['system']
 
   const keys = step === 'Display' ? displayKeys : step === 'Applications' ? appKeys : sysKeys
@@ -164,7 +149,6 @@ export function PreAssessmentPage() {
       const externalDisplay = violations.some((v) => v.type === 'ExternalDisplay')
       const screenRec = violations.some((v) => v.type === 'ScreenRecording')
 
-      const browserProcs = processes.filter((p) => p.category === 'browser')
       const aiProcs = processes.filter((p) => p.category === 'ai')
       const remoteProcs = processes.filter((p) => p.category === 'remote')
 
@@ -176,9 +160,6 @@ export function PreAssessmentPage() {
             : { status: 'pass' },
         screenRec: screenRec
           ? { status: 'fail', detail: 'Stop screen recording or screen-sharing, then click Re-check.' }
-          : { status: 'pass' },
-        browsers: browserProcs.length > 0
-          ? { status: 'fail', detail: `Close ${browserProcs.map((p) => p.name).join(', ')}, then click Re-check.` }
           : { status: 'pass' },
         aiTools: aiProcs.length > 0
           ? { status: 'fail', detail: `Close ${aiProcs.map((p) => p.name).join(', ')}, then click Re-check.` }
@@ -192,7 +173,6 @@ export function PreAssessmentPage() {
       setState({
         display:      { status: 'pass' },
         screenRec:    { status: 'pass' },
-        browsers:     { status: 'pass' },
         aiTools:      { status: 'pass' },
         remoteAccess: { status: 'pass' },
         system:       { status: 'pass' },

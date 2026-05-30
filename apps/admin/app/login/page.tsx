@@ -22,14 +22,14 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const errorMessage = params?.error
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-navy-dark flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-white">SecureAssess</h1>
-          <p className="mt-1 text-sm text-zinc-500">Admin Portal</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-orange">SecureAssess</h1>
+          <p className="mt-1 text-sm text-white/50">Admin Portal</p>
         </div>
 
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6">
+        <div className="rounded-lg border border-brand-navy-light bg-brand-navy-mid p-6">
           <h2 className="mb-6 text-base font-medium text-white">Sign in to your account</h2>
 
           <LoginForm errorMessage={errorMessage} />

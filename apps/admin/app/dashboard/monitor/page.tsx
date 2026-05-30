@@ -12,17 +12,17 @@ const supabase = createClient(
 )
 
 const STATUS_COLORS: Record<Session['status'], string> = {
-  active: 'bg-green-900/60 border-green-700 text-green-200',
-  idle: 'bg-yellow-900/60 border-yellow-700 text-yellow-200',
-  completed: 'bg-zinc-800 border-zinc-700 text-zinc-400',
-  terminated: 'bg-red-900/60 border-red-700 text-red-300',
+  active: 'bg-brand-navy-mid border-brand-navy-light text-white',
+  idle: 'bg-brand-navy-mid border-brand-navy-light text-white/80',
+  completed: 'bg-brand-navy border-brand-navy-light text-white/50',
+  terminated: 'bg-red-900/30 border-red-800 text-red-300',
 }
 
 const STATUS_DOT: Record<Session['status'], string> = {
   active: 'bg-green-400',
-  idle: 'bg-yellow-400',
-  completed: 'bg-zinc-500',
-  terminated: 'bg-red-500',
+  idle: 'bg-brand-orange',
+  completed: 'bg-brand-navy-light',
+  terminated: 'bg-red-400',
 }
 
 export default function MonitorPage() {
@@ -124,7 +124,7 @@ function SessionCard({
         <span className={`h-2 w-2 rounded-full ${STATUS_DOT[session.status]}`} />
         <span className="text-sm font-medium truncate">{session.candidate_name}</span>
         {session.violation_count > 0 && (
-          <span className="ml-auto rounded bg-red-800 px-1.5 py-0.5 text-xs text-red-200">
+          <span className="ml-auto rounded bg-brand-orange/20 px-1.5 py-0.5 text-xs text-brand-orange">
             {session.violation_count}⚠
           </span>
         )}
@@ -135,8 +135,8 @@ function SessionCard({
           <span>{session.questions_done}/{session.total_questions} questions</span>
           <span>{progress}%</span>
         </div>
-        <div className="h-1 rounded-full bg-black/30">
-          <div className="h-1 rounded-full bg-white/40" style={{ width: `${progress}%` }} />
+        <div className="h-1 rounded-full bg-brand-navy">
+          <div className="h-1 rounded-full bg-brand-orange" style={{ width: `${progress}%` }} />
         </div>
       </div>
     </button>
@@ -160,13 +160,13 @@ function RightDrawer({ sessionId, onClose }: { sessionId: string; onClose: () =>
   })
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-800 bg-[#111]">
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-        <span className="text-sm font-medium text-zinc-200">Session Detail</span>
+    <aside className="flex w-80 shrink-0 flex-col border-l border-brand-navy-light bg-brand-navy">
+      <div className="flex items-center justify-between border-b border-brand-navy-light px-4 py-3">
+        <span className="text-sm font-medium text-white">Session Detail</span>
         <button
           type="button"
           onClick={onClose}
-          className="text-zinc-500 hover:text-zinc-200"
+          className="text-white/40 hover:text-white"
           aria-label="Close drawer"
         >
           ✕
@@ -174,7 +174,7 @@ function RightDrawer({ sessionId, onClose }: { sessionId: string; onClose: () =>
       </div>
 
       {isLoading ? (
-        <div className="p-4 text-sm text-zinc-500">Loading…</div>
+        <div className="p-4 text-sm text-white/40">Loading…</div>
       ) : !data ? (
         <div className="p-4 text-sm text-red-400">Session not found.</div>
       ) : (
@@ -193,7 +193,7 @@ function DrawerContent({
 }) {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <div className="space-y-3 border-b border-zinc-800 p-4">
+      <div className="space-y-3 border-b border-brand-navy-light p-4">
         <InfoRow label="Candidate" value={data.candidate_name} />
         <InfoRow label="Email" value={data.candidate_email} />
         <InfoRow label="Assessment" value={data.assessment_title} />
@@ -202,23 +202,23 @@ function DrawerContent({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-brand-orange">
           Security Events
         </h3>
         {data.security_events.length === 0 ? (
-          <p className="text-xs text-zinc-600">No events recorded.</p>
+          <p className="text-xs text-white/30">No events recorded.</p>
         ) : (
           <ul className="space-y-2">
             {data.security_events.map((ev) => (
-              <li key={ev.id} className="rounded-md bg-zinc-900 p-2">
+              <li key={ev.id} className="rounded-md bg-brand-navy-mid p-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-red-400">{ev.type}</span>
-                  <span className="text-xs text-zinc-600">
+                  <span className="text-xs font-medium text-brand-orange">{ev.type}</span>
+                  <span className="text-xs text-white/30">
                     {format(new Date(ev.created_at), 'HH:mm:ss')}
                   </span>
                 </div>
                 {Object.keys(ev.metadata).length > 0 && (
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-white/40">
                     {JSON.stringify(ev.metadata)}
                   </p>
                 )}
@@ -228,12 +228,12 @@ function DrawerContent({
         )}
       </div>
 
-      <div className="border-t border-zinc-800 p-4">
+      <div className="border-t border-brand-navy-light p-4">
         <button
           type="button"
           onClick={() => terminate.mutate()}
           disabled={data.status === 'terminated' || data.status === 'completed' || terminate.isPending}
-          className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-40"
+          className="w-full rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-40"
         >
           {terminate.isPending ? 'Terminating…' : 'Terminate Session'}
         </button>
@@ -245,8 +245,8 @@ function DrawerContent({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-zinc-500">{label}</span>
-      <span className="text-zinc-200 text-right">{value}</span>
+      <span className="text-white/50">{label}</span>
+      <span className="text-white text-right">{value}</span>
     </div>
   )
 }

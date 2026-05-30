@@ -22,7 +22,7 @@ const columns = [
         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
           i.getValue() === 'active'
             ? 'bg-green-900 text-green-300'
-            : 'bg-zinc-800 text-zinc-400'
+            : 'bg-brand-navy text-white/50'
         }`}
       >
         {i.getValue()}
@@ -57,11 +57,11 @@ function RowActions({ assessment }: { assessment: Assessment }) {
         type="button"
         onClick={() => archive.mutate()}
         disabled={assessment.status === 'archived' || archive.isPending}
-        className="text-zinc-400 hover:text-red-400 disabled:opacity-40"
+        className="text-white/50 hover:text-red-400 disabled:opacity-40"
       >
         Archive
       </button>
-      <Link href={`/dashboard/assessments/${assessment.id}`} className="text-zinc-400 hover:text-white">
+      <Link href={`/dashboard/assessments/${assessment.id}`} className="text-white/50 hover:text-white">
         View Results
       </Link>
     </div>
@@ -94,9 +94,9 @@ export default function AssessmentsPage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-zinc-800">
+      <div className="overflow-hidden rounded-lg border border-brand-navy-light">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-900 text-zinc-400">
+          <thead className="bg-brand-navy text-white/60 text-xs uppercase tracking-wider">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((h) => (
@@ -107,7 +107,7 @@ export default function AssessmentsPage() {
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-brand-navy-light">
             {isLoading ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-8 text-center text-zinc-500">
@@ -122,7 +122,7 @@ export default function AssessmentsPage() {
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-zinc-900/50">
+                <tr key={row.id} className="bg-brand-navy-mid hover:bg-brand-navy-light">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-4 py-3 text-zinc-200">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

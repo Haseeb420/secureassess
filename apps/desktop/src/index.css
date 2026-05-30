@@ -2,9 +2,24 @@
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "../../../packages/ui/src";
+
+@theme {
+  --color-brand-white:         #FFFFFF;
+  --color-brand-surface:       #F7F8FA;
+  --color-brand-border:        #E8E9EE;
+  --color-brand-navy:          #2A2A47;
+  --color-brand-navy-light:    #3A3A60;
+  --color-brand-navy-pale:     #EEEEF5;
+  --color-brand-orange:        #DE5E1F;
+  --color-brand-orange-light:  #F06B28;
+  --color-brand-orange-pale:   #FFF0E8;
+  --color-editor-bg:           #1E1E2E;
+  --color-editor-surface:      #262637;
+  --color-editor-border:       #383850;
+  --color-editor-text:         #CDD6F4;
+}
 
 :root {
   --color-white:          #FFFFFF;

@@ -8,9 +8,11 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-white text-brand-navy">
+    <div className="flex flex-col h-screen bg-white text-brand-navy">
       <OfflineBanner />
-      {children}
+      <div className="flex flex-1 flex-col min-h-0">
+        {children}
+      </div>
       <Toaster position="top-right" richColors />
     </div>
   )

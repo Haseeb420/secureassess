@@ -76,7 +76,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex flex-1 overflow-hidden">
       {/* Left: brand panel */}
       <div className="hidden w-[45%] flex-col bg-brand-navy md:flex">
         {/* Logo + name */}

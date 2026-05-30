@@ -241,6 +241,28 @@
 
 ---
 
+## Better Auth (feat/better-auth)
+
+- [x] Install better-auth + pg in admin; better-auth in desktop
+- [x] Generate BETTER_AUTH_SECRET and add env vars to admin .env.local
+- [x] Create apps/admin/lib/auth.ts — Better Auth server instance (pg adapter, admin plugin, trusted origins)
+- [x] Create apps/admin/app/api/auth/[...all]/route.ts — Next.js route handler
+- [x] Create apps/admin/lib/auth-client.ts — admin auth client with adminClient plugin
+- [x] Create apps/admin/hooks/useCurrentUser.ts — session hook with role, name, isAdmin, isProctor
+- [x] Update middleware.ts — lightweight Edge cookie-presence check (no Node.js APIs)
+- [x] Update dashboard layout — full session validation + role check in Node.js server component
+- [x] Update login page — client component with react-hook-form, signIn.email(), Alert on error
+- [x] Update Sidebar — use useCurrentUser hook, show name/role/initials, signOut()
+- [x] Update api.ts — use Better Auth session.token as Bearer token for FastAPI
+- [x] Create apps/api/core/better_auth.py — FastAPI session validator (looks up token in session table)
+- [x] Update apps/api/core/dependencies.py — use Better Auth validators
+- [x] Remove apps/admin/lib/supabase/ (auth-only files); keep @supabase/supabase-js for Realtime
+- [x] Fix kysely version mismatch (pin 0.28.17) for Turbopack compatibility
+- [ ] Run Better Auth DB migration: npx @better-auth/cli generate → apply SQL in Supabase
+- [ ] Create first admin user in Supabase (INSERT INTO "user" ...)
+
+---
+
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 155 complete / 158 total
+- Total tasks: 170 complete / 172 total

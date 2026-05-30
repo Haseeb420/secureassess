@@ -1,6 +1,4 @@
-use std::path::Path;
 use sqlx::{SqlitePool, Error};
-use sqlx::sqlite::SqliteConnectOptions;
 use tracing::info;
 
 use super::schema::{
@@ -9,11 +7,8 @@ use super::schema::{
 };
 
 /// Create the pool and run all schema migrations.
-pub async fn init_pool(db_path: &Path) -> Result<SqlitePool, Error> {
-    let opts = SqliteConnectOptions::new()
-        .filename(db_path)
-        .create_if_missing(true);
-    let pool = SqlitePool::connect_with(opts).await?;
+pub async fn init_pool(db_url: &str) -> Result<SqlitePool, Error> {
+    let pool = SqlitePool::connect(db_url).await?;
     run_migrations(&pool).await?;
     Ok(pool)
 }

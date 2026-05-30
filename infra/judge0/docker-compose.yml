@@ -8,7 +8,6 @@ services:
       - "2358:2358"
     privileged: true
     restart: unless-stopped
-    cpus: 0.5
     depends_on:
       - db
       - redis
@@ -21,7 +20,6 @@ services:
       - ./judge0.conf:/judge0.conf:ro
     privileged: true
     restart: unless-stopped
-    cpus: 1.5
     depends_on:
       - db
       - redis

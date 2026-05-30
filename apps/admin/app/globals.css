@@ -32,11 +32,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-*:focus-visible {
-  outline: 2px solid #DE5E1F;
-  outline-offset: 2px;
-}
-
 @layer components {
   .input {
     width: 100%;

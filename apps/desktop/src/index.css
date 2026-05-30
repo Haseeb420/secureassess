@@ -31,11 +31,6 @@ body {
   color: #DE5E1F;
 }
 
-*:focus-visible {
-  outline: 2px solid #DE5E1F;
-  outline-offset: 2px;
-}
-
 #root {
   width: 100%;
   min-height: 100svh;

@@ -57,40 +57,22 @@ const FORBIDDEN: &[ForbiddenEntry] = &[
     ForbiddenEntry { keyword: "zed",             category: "external_ide" },
 ];
 
-// Substrings that mark a process as a subprocess/helper rather than a user-facing app.
-// We skip these so that e.g. 50 "Google Chrome Helper (Renderer)" processes don't
-// appear as 50 separate violations — only the main "Google Chrome" process is reported.
-const HELPER_PATTERNS: &[&str] = &["Helper", "_handler", "Extension", "Service"];
-
 pub fn scan_processes() -> Vec<ForbiddenProcess> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    // Track which keywords have already produced an entry so we report each
-    // forbidden app exactly once regardless of how many processes it spawns.
-    let mut seen: std::collections::HashSet<&'static str> = std::collections::HashSet::new();
-    let mut found: Vec<ForbiddenProcess> = Vec::new();
+    let mut found = Vec::new();
 
     for (pid, process) in sys.processes() {
-        let name = process.name().to_string_lossy().into_owned();
-        let name_lower = name.to_lowercase();
-
-        // Skip subprocess helpers — they share the parent app's keyword but
-        // are not themselves something the user can close.
-        if HELPER_PATTERNS.iter().any(|p| name.contains(p)) {
-            continue;
-        }
-
+        let name_lower = process.name().to_string_lossy().to_lowercase();
         for entry in FORBIDDEN {
             if name_lower.contains(entry.keyword) {
-                if seen.insert(entry.keyword) {
-                    found.push(ForbiddenProcess {
-                        name,
-                        pid: pid.as_u32(),
-                        category: entry.category.to_string(),
-                    });
-                }
-                break; // only one keyword match per process
+                found.push(ForbiddenProcess {
+                    name: process.name().to_string_lossy().into_owned(),
+                    pid: pid.as_u32(),
+                    category: entry.category.to_string(),
+                });
+                break; // one category match per process is enough
             }
         }
     }

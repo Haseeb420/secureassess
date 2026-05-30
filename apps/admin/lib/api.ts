@@ -56,22 +56,6 @@ export interface CandidateRow {
   score: number | null
 }
 
-export interface Invite {
-  id: string
-  token: string
-  candidate_email: string
-  candidate_name: string
-  expires_at: number
-  used_at: number | null
-  created_at: string
-}
-
-export interface CreateInviteBody {
-  candidate_email: string
-  candidate_name?: string
-  expires_in_hours?: number
-}
-
 export const assessmentsApi = {
   list: () => apiFetch<Assessment[]>('/assessments'),
   create: (body: CreateAssessmentBody) =>
@@ -84,9 +68,6 @@ export const assessmentsApi = {
       method: 'PATCH',
       body: JSON.stringify({ status: 'archived' }),
     }),
-  listInvites: (id: string) => apiFetch<Invite[]>(`/assessments/${id}/invites`),
-  createInvite: (id: string, body: CreateInviteBody) =>
-    apiFetch<Invite>(`/assessments/${id}/invites`, { method: 'POST', body: JSON.stringify(body) }),
 }
 
 // ── Questions ─────────────────────────────────────────────────────────────────

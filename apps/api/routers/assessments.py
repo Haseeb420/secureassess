@@ -1,9 +1,7 @@
-import secrets
-import time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from core.dependencies import get_current_admin
 from core.supabase import get_supabase
@@ -146,61 +144,3 @@ async def delete_assessment(
 ):
     supabase = get_supabase()
     supabase.table("assessments").delete().eq("id", assessment_id).execute()
-
-
-# ── Invites ───────────────────────────────────────────────────────────────────
-
-class InviteCreate(BaseModel):
-    candidate_email: EmailStr
-    candidate_name: str = ""
-    expires_in_hours: int = 48
-
-
-@router.get("/{assessment_id}/invites")
-async def list_invites(
-    assessment_id: str,
-    _admin: dict = Depends(get_current_admin),
-):
-    supabase = get_supabase()
-    result = (
-        supabase.table("assessment_invites")
-        .select("id, token, candidate_email, expires_at, used_at, created_at")
-        .eq("assessment_id", assessment_id)
-        .order("created_at", desc=True)
-        .execute()
-    )
-    return result.data or []
-
-
-@router.post("/{assessment_id}/invites", status_code=status.HTTP_201_CREATED)
-async def create_invite(
-    assessment_id: str,
-    body: InviteCreate,
-    _admin: dict = Depends(get_current_admin),
-):
-    supabase = get_supabase()
-
-    check = supabase.table("assessments").select("id").eq("id", assessment_id).execute()
-    if not check.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
-
-    token = secrets.token_urlsafe(32)
-    expires_at = int(time.time()) + body.expires_in_hours * 3600
-
-    row: dict = {
-        "assessment_id": assessment_id,
-        "token": token,
-        "candidate_email": str(body.candidate_email),
-        "expires_at": expires_at,
-    }
-    if body.candidate_name:
-        row["candidate_name"] = body.candidate_name
-
-    result = (
-        supabase.table("assessment_invites")
-        .insert(row)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create invite")
-    return result.data[0]

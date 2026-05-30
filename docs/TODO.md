@@ -221,26 +221,6 @@
 
 ---
 
-## UI Production Polish (feat/ui-production-polish)
-
-- [x] Add zod schemas to shared-types (loginSchema, inviteTokenSchema)
-- [x] Build shared UI component library (Input, FormField, Alert, Badge, EmptyState, Skeleton, ConfirmDialog)
-- [x] Rebuild desktop LoginPage with react-hook-form, zod validation, accessible inputs
-- [x] Rebuild PreAssessmentPage with animated check rows and actionable error messages
-- [x] Polish TopBar with ConfirmDialog on submit, timer color transitions
-- [x] Update SyncIndicator with text label
-- [x] Improve OfflineBanner with framer-motion slide and WifiOff icon
-- [x] Update ErrorBoundary with brand styling and restart button
-- [x] Add VS Code-style status bar to AssessmentPage
-- [x] Add collapsible sidebar with active route detection, tooltip on icons, user section, logout
-- [x] Add PageHeader component for all admin pages
-- [x] Rebuild assessments list with search bar, filter pills, skeleton rows, empty state, icon actions
-- [x] Add stats bar (Active / Violations / Submitted / Terminated) to monitor page
-- [x] Accessibility pass: global focus rings, aria-labels, error announcements, role=alert
-- [x] Micro-animations: page transitions (framer-motion), staggered check rows, error messages
-
----
-
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 155 complete / 158 total
+- Total tasks: 140 complete / 143 total

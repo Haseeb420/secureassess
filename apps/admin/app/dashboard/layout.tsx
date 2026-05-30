@@ -1,7 +1,14 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { QueryProvider } from '../../components/QueryProvider'
-import { Sidebar } from '../../components/Sidebar'
 import { createClient } from '../../lib/supabase/server'
+
+const NAV = [
+  { label: 'Assessments', href: '/dashboard/assessments' },
+  { label: 'Questions', href: '/dashboard/questions' },
+  { label: 'Monitor', href: '/dashboard/monitor' },
+  { label: 'Reports', href: '/dashboard/reports' },
+]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -11,7 +18,28 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <QueryProvider>
       <div className="flex h-screen overflow-hidden">
-        <Sidebar userEmail={user.email ?? ''} />
+        {/* Sidebar */}
+        <aside className="flex w-60 shrink-0 flex-col bg-brand-navy">
+          <div className="px-6 py-5 border-b border-white/10">
+            <span className="text-lg font-bold text-white">SecureAssess</span>
+          </div>
+          <nav className="flex-1 px-3 py-4 space-y-0.5">
+            {NAV.map(({ label, href }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <div className="border-t border-white/10 px-4 py-3">
+            <p className="text-xs text-white/30 truncate">{user.email}</p>
+          </div>
+        </aside>
+
+        {/* Main */}
         <main className="flex-1 overflow-y-auto bg-brand-surface text-brand-navy">
           {children}
         </main>

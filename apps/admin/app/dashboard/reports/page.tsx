@@ -35,7 +35,7 @@ export default function ReportsPage() {
           </div>
         ) : sessions.length === 0 ? (
           <EmptyState
-            icon={<FileText size={36} />}
+            icon={FileText}
             title="No completed assessments"
             description="Reports will appear here once candidates finish their assessments."
           />

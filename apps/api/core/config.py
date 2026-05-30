@@ -7,6 +7,7 @@ class Settings(BaseSettings):
 
     SUPABASE_URL: str
     SUPABASE_SERVICE_KEY: str
+    SUPABASE_ANON_KEY: str = ""
     SUPABASE_JWT_SECRET: str
     JUDGE0_URL: str = ""
     JUDGE0_API_KEY: str = ""

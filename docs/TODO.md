@@ -263,6 +263,29 @@
 
 ---
 
+## feat/desktop-ui-overhaul
+
+- [x] Install @fontsource/inter; update index.css with brand tokens, editor colors, scrollbars, prose styles
+- [x] Update tailwind.config.cjs with editor color theme extension
+- [x] Rebuild AppShell — include OfflineBanner, move Toaster here
+- [x] Rebuild OfflineBanner — back-online state with green/amber variants and framer-motion slide
+- [x] Rebuild ViolationBanner — framer-motion slide, dismiss button, violation count badge
+- [x] Rebuild CrashRecoveryModal — navy header, ConfirmDialog for abandon, polished layout
+- [x] Rebuild LoginPage — two-column split with brand navy panel, feature list, dot-toggle tabs
+- [x] Rebuild PreAssessmentPage — 6 check cards (display, screen rec, browsers, AI, remote, system), step pills, fix hints, sticky action bar
+- [x] Update CodeEditor — custom secureassess-dark theme, cursor position status line, font size prop
+- [x] Update EditorToolbar — language selector with dot indicator, A+/A- font size, reset code, keyboard shortcuts popover
+- [x] Update LanguageSelector — styled native select with language color dot
+- [x] Rebuild ConsoleOutput — dark zone (#1E1E2E), structured output with animated rows, clear button
+- [x] Rebuild QuestionPanel — sticky header, three tabs (Problem/Examples/My Runs), prose-content markdown styles
+- [x] Rebuild TopBar — SVG timer ring with color transitions, centered title, ShieldCheck logo mark
+- [x] Rebuild SubmissionModal — animated SVG score ring, next/finish footer, navy header
+- [x] Rebuild CompletionPage — animated SVG checkmark, staggered content reveal, session stats pills
+- [x] Update AssessmentPage — ViolationBanner wired, run history passed to QuestionPanel, font size state, reset code handler
+- [x] Fix tests for updated component text/interaction patterns
+
+---
+
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 170 complete / 172 total
+- Total tasks: 188 complete / 190 total

@@ -8,11 +8,12 @@ module.exports = {
     extend: {
       colors: {
         brand: {
+          white:          '#FFFFFF',
+          surface:        '#F7F8FA',
+          border:         '#E8E9EE',
           navy:           '#2A2A47',
           'navy-light':   '#3A3A60',
           'navy-pale':    '#EEEEF5',
-          'navy-dark':    '#1A1A30',
-          'navy-mid':     '#22223A',
           orange:         '#DE5E1F',
           'orange-light': '#F06B28',
           'orange-pale':  '#FFF0E8',

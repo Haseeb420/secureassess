@@ -20,7 +20,7 @@ export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
       value={value}
       onChange={(e) => onChange(e.target.value as Language)}
       aria-label="Programming language"
-      className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-sm text-zinc-200 outline-none focus:ring-2 focus:ring-blue-500"
+      className="rounded-md border border-brand-navy-light bg-brand-navy-mid px-2 py-1 text-sm text-white outline-none focus:ring-2 focus:ring-brand-orange"
     >
       {LANGUAGE_LABELS.map((lang) => (
         <option key={lang.value} value={lang.value}>

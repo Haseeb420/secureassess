@@ -7,13 +7,13 @@ export function SyncIndicator() {
   let label: string
 
   if (!isOnline) {
-    color = 'bg-red-500'
+    color = 'bg-red-400'
     label = `Offline — ${pendingCount} item${pendingCount !== 1 ? 's' : ''} pending`
   } else if (pendingCount > 0) {
-    color = 'bg-yellow-400'
+    color = 'bg-brand-orange'
     label = `Syncing — ${pendingCount} item${pendingCount !== 1 ? 's' : ''} pending`
   } else {
-    color = 'bg-green-500'
+    color = 'bg-green-400'
     label = lastSyncAt ? `Synced at ${new Date(lastSyncAt).toLocaleTimeString()}` : 'Synced'
   }
 

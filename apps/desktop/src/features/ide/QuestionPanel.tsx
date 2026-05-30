@@ -8,9 +8,9 @@ interface QuestionPanelProps {
 }
 
 const DIFFICULTY_CLASS = {
-  easy: 'bg-green-900 text-green-300',
-  medium: 'bg-yellow-900 text-yellow-300',
-  hard: 'bg-red-900 text-red-300',
+  easy: 'bg-green-900/50 text-green-300',
+  medium: 'bg-brand-orange/20 text-brand-orange',
+  hard: 'bg-red-900/50 text-red-300',
 }
 
 const DIFFICULTY_LABEL = {
@@ -22,7 +22,7 @@ const DIFFICULTY_LABEL = {
 export function QuestionPanel({ question, isLoading = false }: QuestionPanelProps) {
   if (isLoading) {
     return (
-      <div className="h-full overflow-y-auto bg-zinc-950 px-5 py-4" aria-busy="true" aria-label="Loading question">
+      <div className="h-full overflow-y-auto bg-brand-navy-dark px-5 py-4" aria-busy="true" aria-label="Loading question">
         <div className="mb-4 flex items-center gap-3">
           <SkeletonText className="h-5 w-2/3" />
           <SkeletonBlock width="w-16" height="h-5" className="rounded-full" />
@@ -43,7 +43,7 @@ export function QuestionPanel({ question, isLoading = false }: QuestionPanelProp
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-zinc-950 px-5 py-4 text-sm text-zinc-200">
+    <div className="h-full overflow-y-auto bg-brand-navy-dark px-5 py-4 text-sm text-white/80">
       {/* Title + badge */}
       <div className="mb-3 flex items-start gap-3">
         <h2 className="flex-1 text-base font-semibold text-white leading-snug">
@@ -57,7 +57,7 @@ export function QuestionPanel({ question, isLoading = false }: QuestionPanelProp
       </div>
 
       {/* Limits */}
-      <div className="mb-4 flex gap-4 text-xs text-zinc-500">
+      <div className="mb-4 flex gap-4 text-xs text-white/40">
         <span>Time: {question.timeLimitMs}ms</span>
         <span>Memory: {question.memoryLimitMb}MB</span>
       </div>
@@ -70,24 +70,24 @@ export function QuestionPanel({ question, isLoading = false }: QuestionPanelProp
       {/* Sample tests */}
       {question.sampleTests.filter((t) => !t.isHidden).length > 0 && (
         <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-orange">
             Sample Tests
           </h3>
           <div className="space-y-4">
             {question.sampleTests
               .filter((t) => !t.isHidden)
               .map((test, i) => (
-                <div key={test.id} className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
-                  <p className="mb-1 text-xs font-medium text-zinc-400">Test {i + 1}</p>
+                <div key={test.id} className="rounded-md border border-brand-navy-light bg-brand-navy-mid p-3">
+                  <p className="mb-1 text-xs font-medium text-white/60">Test {i + 1}</p>
                   <div className="mb-2">
-                    <p className="mb-0.5 text-xs text-zinc-500">Input:</p>
-                    <pre className="overflow-x-auto rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-200">
+                    <p className="mb-0.5 text-xs text-white/40">Input:</p>
+                    <pre className="overflow-x-auto rounded bg-brand-navy px-3 py-2 text-xs text-white/80">
                       {test.input}
                     </pre>
                   </div>
                   <div>
-                    <p className="mb-0.5 text-xs text-zinc-500">Expected Output:</p>
-                    <pre className="overflow-x-auto rounded bg-zinc-800 px-3 py-2 text-xs text-zinc-200">
+                    <p className="mb-0.5 text-xs text-white/40">Expected Output:</p>
+                    <pre className="overflow-x-auto rounded bg-brand-navy px-3 py-2 text-xs text-white/80">
                       {test.expectedOutput}
                     </pre>
                   </div>

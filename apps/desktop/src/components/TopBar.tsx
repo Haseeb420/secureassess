@@ -37,18 +37,18 @@ export function TopBar({
   }, [isExpired, onSubmit])
 
   return (
-    <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
-      <span className="text-sm text-zinc-400">{candidateName}</span>
+    <div className="flex shrink-0 items-center justify-between border-b border-brand-navy-light bg-brand-navy px-4 py-2">
+      <span className="text-sm text-white/70">{candidateName}</span>
 
       <div className="flex items-center gap-4">
-        <span className="text-sm text-zinc-300">
+        <span className="text-sm text-white/70">
           Question {questionIndex} of {totalQuestions}
         </span>
         <span
           aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
           aria-live="off"
           className={`font-mono text-sm font-semibold tabular-nums ${
-            isLow ? 'text-red-400' : 'text-white'
+            isLow ? 'text-brand-orange font-bold' : 'text-white'
           }`}
         >
           {formatTime(timerSeconds)}
@@ -62,7 +62,7 @@ export function TopBar({
           onClick={onSubmit}
           disabled={isSubmitting}
           aria-label={isSubmitting ? 'Submitting assessment…' : 'Submit assessment (Ctrl+Shift+Enter)'}
-          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 transition-opacity hover:opacity-90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex items-center gap-1.5 rounded-md bg-brand-orange hover:bg-brand-orange-light px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-orange"
         >
           {isSubmitting ? (
             <>

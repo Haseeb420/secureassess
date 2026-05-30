@@ -42,26 +42,26 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-navy-dark flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Title */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-white">SecureAssess</h1>
-          <p className="mt-1 text-sm text-zinc-500">Secure Software Engineering Assessment</p>
+          <p className="mt-1 text-sm text-white/50">Secure Software Engineering Assessment</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6">
+        <div className="rounded-lg border border-brand-navy-light bg-brand-navy-mid p-6">
           {/* Mode toggle */}
-          <div className="mb-6 flex rounded-md border border-zinc-700 p-0.5">
+          <div className="mb-6 flex rounded-md border border-brand-navy-light p-0.5">
             <button
               type="button"
               onClick={() => { setMode('email'); setValidationError(null) }}
               disabled={isLoading}
               className={`flex-1 rounded py-1.5 text-sm font-medium transition-colors ${
                 mode === 'email'
-                  ? 'bg-zinc-700 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-brand-navy text-white'
+                  : 'text-white/50 hover:text-white'
               }`}
             >
               Login with Email
@@ -72,8 +72,8 @@ export function LoginPage() {
               disabled={isLoading}
               className={`flex-1 rounded py-1.5 text-sm font-medium transition-colors ${
                 mode === 'token'
-                  ? 'bg-zinc-700 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-brand-navy text-white'
+                  : 'text-white/50 hover:text-white'
               }`}
             >
               Login with Invite Token
@@ -95,7 +95,7 @@ export function LoginPage() {
                     disabled={isLoading}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500 disabled:opacity-50"
+                    className="w-full rounded-md border border-brand-navy-light bg-brand-navy px-3 py-2 text-sm text-white placeholder-white/40 outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange disabled:opacity-50"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -110,7 +110,7 @@ export function LoginPage() {
                     disabled={isLoading}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500 disabled:opacity-50"
+                    className="w-full rounded-md border border-brand-navy-light bg-brand-navy px-3 py-2 text-sm text-white placeholder-white/40 outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange disabled:opacity-50"
                     placeholder="••••••••"
                   />
                 </div>
@@ -123,7 +123,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-6 flex w-full items-center justify-center rounded-md bg-white py-2 text-sm font-medium text-zinc-900 transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-6 flex w-full items-center justify-center rounded-md bg-brand-orange hover:bg-brand-orange-light py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
               >
                 {isLoading ? <Spinner /> : 'Sign In'}
               </button>
@@ -144,7 +144,7 @@ export function LoginPage() {
                   disabled={isLoading}
                   value={inviteToken}
                   onChange={(e) => setInviteToken(e.target.value)}
-                  className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500 disabled:opacity-50"
+                  className="w-full rounded-md border border-brand-navy-light bg-brand-navy px-3 py-2 text-sm text-white placeholder-white/40 outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange disabled:opacity-50"
                   placeholder="Paste your invite token here"
                 />
               </div>
@@ -156,7 +156,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-6 flex w-full items-center justify-center rounded-md bg-white py-2 text-sm font-medium text-zinc-900 transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-6 flex w-full items-center justify-center rounded-md bg-brand-orange hover:bg-brand-orange-light py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
               >
                 {isLoading ? <Spinner /> : 'Verify Token'}
               </button>

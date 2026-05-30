@@ -35,11 +35,11 @@ export function ViolationBanner({ violation, violationCount }: ViolationBannerPr
     <div
       role="alert"
       aria-live="assertive"
-      className="fixed inset-x-0 top-0 z-50 flex items-center justify-between bg-red-600 px-4 py-2.5 text-sm font-medium text-white"
+      className="fixed inset-x-0 top-0 z-50 flex items-center justify-between bg-brand-orange px-4 py-2.5 text-sm font-medium text-white"
     >
       <span>{getMessage(violation)}</span>
       {violationCount > 1 && (
-        <span className="ml-4 rounded bg-red-800 px-2 py-0.5 text-xs">
+        <span className="ml-4 rounded bg-brand-orange-light px-2 py-0.5 text-xs">
           {violationCount} violations
         </span>
       )}

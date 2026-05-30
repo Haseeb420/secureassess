@@ -115,6 +115,56 @@ async def get_question(
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+    question = result.data[0]
+
+    cases = (
+        supabase.table("test_cases")
+        .select("id, input, expected_output, is_hidden")
+        .eq("question_id", question_id)
+        .execute()
+    ).data or []
+    question["test_cases"] = cases
+    return question
+
+
+@router.put("/{question_id}")
+async def update_question(
+    question_id: str,
+    body: QuestionCreate,
+    _admin: dict = Depends(get_current_admin),
+):
+    supabase = get_supabase()
+
+    result = (
+        supabase.table("questions")
+        .update({
+            "title": body.title,
+            "description": body.description,
+            "type": body.type,
+            "difficulty": body.difficulty,
+            "time_limit_ms": body.time_limit_ms,
+            "memory_limit_mb": body.memory_limit_mb,
+            "tags": body.tags,
+        })
+        .eq("id", question_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+
+    # Replace test cases: delete all then re-insert
+    supabase.table("test_cases").delete().eq("question_id", question_id).execute()
+    if body.test_cases:
+        supabase.table("test_cases").insert([
+            {
+                "question_id": question_id,
+                "input": tc.input,
+                "expected_output": tc.expected_output,
+                "is_hidden": tc.is_hidden,
+            }
+            for tc in body.test_cases
+        ]).execute()
+
     return result.data[0]
 
 

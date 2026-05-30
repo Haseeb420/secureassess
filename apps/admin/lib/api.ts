@@ -100,6 +100,11 @@ export interface CreateQuestionBody {
   test_cases: TestCase[]
 }
 
+export interface QuestionDetail extends Question {
+  description: string
+  test_cases: (TestCase & { id: string })[]
+}
+
 export const questionsApi = {
   list: (params?: { type?: string; difficulty?: string; tags?: string }) => {
     const qs = new URLSearchParams(
@@ -109,7 +114,9 @@ export const questionsApi = {
   },
   create: (body: CreateQuestionBody) =>
     apiFetch<Question>('/questions', { method: 'POST', body: JSON.stringify(body) }),
-  get: (id: string) => apiFetch<Question>(`/questions/${id}`),
+  get: (id: string) => apiFetch<QuestionDetail>(`/questions/${id}`),
+  update: (id: string, body: CreateQuestionBody) =>
+    apiFetch<Question>(`/questions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
 }
 
 // ── Sessions ──────────────────────────────────────────────────────────────────

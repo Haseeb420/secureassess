@@ -3,7 +3,6 @@ mod eval;
 mod security;
 mod sync;
 
-use tracing_subscriber::EnvFilter;
 use db::commands::{
     get_active_session, get_code_snapshot, get_latest_snapshot, get_security_events, get_session,
     get_test_cases, lock_assessment, mark_session_complete, save_code_snapshot,
@@ -23,12 +22,6 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {

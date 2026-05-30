@@ -1,3 +1,6 @@
+import hashlib
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase_auth.errors import AuthApiError
 
@@ -63,18 +66,33 @@ async def verify_invite(body: InviteLoginRequest):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
 
     invite = result.data[0]
-    import time
 
     if invite.get("used_at") or invite.get("expires_at", 0) < int(time.time()):
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Invite has expired")
 
-    # Auto-sign-in with the linked candidate credentials via magic link exchange
-    # Return invite details so the desktop can proceed with assessment load
-    return {
-        "assessment_id": invite["assessment_id"],
-        "candidate_email": invite["candidate_email"],
-        "expires_at": invite["expires_at"],
-    }
+    email = invite["candidate_email"]
+    name = invite.get("candidate_name") or email.split("@")[0]
+    # Stable credential: SHA-256 of the token — token IS the authentication secret
+    password = hashlib.sha256(body.token.encode()).hexdigest()
+
+    try:
+        auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+    except AuthApiError:
+        # Candidate account doesn't exist yet — create it then sign in
+        supabase.auth.admin.create_user({
+            "email": email,
+            "password": password,
+            "email_confirm": True,
+            "user_metadata": {"name": name, "assessment_id": invite["assessment_id"]},
+        })
+        auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+
+    if not auth_response.session:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create session")
+
+    supabase.table("assessment_invites").update({"used_at": int(time.time())}).eq("token", body.token).execute()
+
+    return _build_login_response(auth_response.session)
 
 
 @router.post("/refresh", response_model=LoginResponse)

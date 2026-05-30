@@ -1,3 +1,7 @@
+import { AlertTriangle } from 'lucide-react'
+import { Button, ConfirmDialog } from '@secureassess/ui'
+import { useState } from 'react'
+
 interface AssessmentSession {
   id: string
   assessment_id: string
@@ -17,65 +21,80 @@ function formatTime(seconds: number): string {
 }
 
 export function CrashRecoveryModal({ session, onResume, onAbandon }: CrashRecoveryModalProps) {
-  const handleAbandon = () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to abandon this session? All unsaved work will be lost.',
-    )
-    if (confirmed) onAbandon()
-  }
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy/50 px-4 backdrop-blur-sm"
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby="crash-recovery-title"
-    >
-      <div className="w-full max-w-md rounded-xl border border-brand-border bg-white shadow-xl p-8">
-        <div className="mb-1 flex items-center gap-2">
-          <span className="text-amber-500 text-lg" aria-hidden="true">⚠</span>
-          <h2 id="crash-recovery-title" className="text-xl font-semibold text-brand-navy">
-            Unfinished Assessment Found
-          </h2>
-        </div>
-        <p className="mt-2 mb-6 text-sm text-brand-navy/70">
-          A previous session was interrupted. You can resume where you left off.
-        </p>
-
-        <div className="mb-6 rounded-lg border border-brand-border bg-brand-surface p-4 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-brand-navy/50">Assessment ID</span>
-            <span className="font-mono text-brand-navy/80 text-xs">{session.assessment_id}</span>
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy/70 px-4 backdrop-blur-sm"
+        aria-modal="true"
+        role="dialog"
+        aria-labelledby="crash-recovery-title"
+      >
+        <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center gap-3 bg-brand-navy px-6 py-4">
+            <AlertTriangle size={18} className="text-brand-orange shrink-0" aria-hidden="true" />
+            <h2 id="crash-recovery-title" className="text-white font-semibold">
+              Unfinished Assessment Found
+            </h2>
           </div>
-          <div className="flex justify-between">
-            <span className="text-brand-navy/50">Time remaining</span>
-            <span
-              className={`font-mono font-semibold tabular-nums ${
-                session.timer_remaining_secs < 300 ? 'text-brand-orange' : 'text-brand-navy'
-              }`}
+
+          {/* Body */}
+          <div className="px-6 py-6">
+            <p className="text-brand-navy/70 text-sm">
+              You were in the middle of an assessment when the app closed.
+            </p>
+
+            <div className="mt-4 rounded-xl border border-brand-border bg-brand-surface p-4">
+              <p className="text-brand-navy font-medium text-sm">{session.assessment_id}</p>
+              <p
+                className={[
+                  'mt-1 font-mono text-2xl font-bold tabular-nums',
+                  session.timer_remaining_secs < 300 ? 'text-brand-orange' : 'text-brand-navy',
+                ].join(' ')}
+              >
+                {formatTime(session.timer_remaining_secs)}
+              </p>
+              <p className="mt-0.5 text-brand-navy/50 text-xs">time remaining</p>
+            </div>
+
+            <p className="mt-4 text-brand-navy/60 text-xs">
+              Your code was auto-saved. You can resume exactly where you left off.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="flex gap-3 border-t border-brand-border bg-brand-surface px-6 py-4">
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => setConfirmOpen(true)}
             >
-              {formatTime(session.timer_remaining_secs)}
-            </span>
+              Abandon
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={onResume}
+              className="flex-1"
+            >
+              Resume Assessment →
+            </Button>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={onResume}
-            className="w-full rounded-lg bg-brand-orange hover:bg-brand-orange-light px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-brand-orange"
-          >
-            Resume Assessment
-          </button>
-          <button
-            type="button"
-            onClick={handleAbandon}
-            className="w-full rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            Abandon
-          </button>
         </div>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Abandon assessment?"
+        description="This will end your assessment permanently. All unsaved progress will be lost and you will not be able to resume."
+        confirmLabel="Abandon"
+        cancelLabel="Keep going"
+        variant="danger"
+        onConfirm={() => { setConfirmOpen(false); onAbandon() }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </>
   )
 }

@@ -3,13 +3,32 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Key } from 'lucide-react'
+import {
+  AlertCircle,
+  Clock,
+  Key,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Wifi,
+} from 'lucide-react'
 import { toast } from 'sonner'
-import { loginSchema, inviteTokenSchema, type LoginFormValues, type InviteTokenFormValues } from '@secureassess/shared-types'
-import { FormField, Input, Alert, Button } from '@secureassess/ui'
+import {
+  loginSchema,
+  inviteTokenSchema,
+  type LoginFormValues,
+  type InviteTokenFormValues,
+} from '@secureassess/shared-types'
+import { FormField, Input, Button } from '@secureassess/ui'
 import { useAuth } from '../features/auth/useAuth'
 
 type Tab = 'email' | 'token'
+
+const FEATURES = [
+  { icon: ShieldCheck, label: 'Secure environment monitoring' },
+  { icon: Clock,       label: 'Auto-saves your progress' },
+  { icon: Wifi,        label: 'Works offline, syncs automatically' },
+]
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -57,44 +76,85 @@ export function LoginPage() {
   }
 
   return (
-    <motion.div
-      className="min-h-screen bg-brand-surface flex items-center justify-center px-4"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">SecureAssess</h1>
-          <p className="mt-1 text-sm text-brand-navy/60">Secure software engineering assessment</p>
+    <div className="flex h-screen overflow-hidden">
+      {/* Left: brand panel */}
+      <div className="hidden w-[45%] flex-col bg-brand-navy md:flex">
+        {/* Logo + name */}
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-orange/20">
+            <ShieldCheck size={28} className="text-brand-orange" aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">SecureAssess</h1>
+          <p className="mt-1 text-sm text-white/50">Trusted assessment platform</p>
         </div>
 
-        <div className="rounded-xl border border-brand-border bg-white shadow-sm p-8">
-          {/* Tab bar */}
-          <div className="mb-6 flex border-b border-brand-border">
-            {(['email', 'token'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => switchTab(tab)}
-                className={[
-                  'flex-1 pb-2.5 text-sm font-medium transition-colors',
-                  activeTab === tab
-                    ? 'border-b-2 border-brand-orange text-brand-orange'
-                    : 'text-brand-navy/50 hover:text-brand-navy',
-                ].join(' ')}
-              >
-                {tab === 'email' ? 'Email & Password' : 'Invite Token'}
-              </button>
-            ))}
+        {/* Feature list */}
+        <div className="px-12 pb-14 space-y-4">
+          {FEATURES.map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-3">
+              <Icon size={16} className="shrink-0 text-brand-orange" aria-hidden="true" />
+              <span className="text-sm text-white/70">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: form */}
+      <motion.div
+        className="flex flex-1 flex-col items-center justify-center bg-white px-8"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="w-full max-w-sm">
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold text-brand-navy">Welcome back</h2>
+            <p className="mt-1 text-sm text-brand-navy/60">
+              Sign in to continue your assessment
+            </p>
           </div>
 
+          {/* Tab toggle */}
+          <div className="mb-6 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => switchTab('email')}
+              className={[
+                'text-sm transition-colors',
+                activeTab === 'email'
+                  ? 'font-medium text-brand-orange underline underline-offset-4'
+                  : 'text-brand-navy/50 hover:text-brand-navy',
+              ].join(' ')}
+            >
+              Email
+            </button>
+            <span className="text-brand-navy/30" aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={() => switchTab('token')}
+              className={[
+                'text-sm transition-colors',
+                activeTab === 'token'
+                  ? 'font-medium text-brand-orange underline underline-offset-4'
+                  : 'text-brand-navy/50 hover:text-brand-navy',
+              ].join(' ')}
+            >
+              Invite Token
+            </button>
+          </div>
+
+          {/* Server error */}
           {serverError && (
-            <Alert variant="error" className="mb-4">
-              {serverError}
-            </Alert>
+            <div
+              role="alert"
+              className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+            >
+              <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-500" aria-hidden="true" />
+              <p className="text-sm text-red-700">{serverError}</p>
+            </div>
           )}
 
+          {/* Email form */}
           {activeTab === 'email' ? (
             <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} noValidate className="space-y-4">
               <FormField
@@ -134,7 +194,7 @@ export function LoginPage() {
                 type="submit"
                 variant="primary"
                 disabled={isLoading}
-                className="w-full mt-2 active:scale-[0.97]"
+                className="mt-2 w-full"
               >
                 {isLoading ? <Spinner /> : 'Sign In'}
               </Button>
@@ -148,11 +208,12 @@ export function LoginPage() {
                 hint="Paste the token from your assessment invitation email"
               >
                 <Input
-                  placeholder="xxxx-xxxx-xxxx"
+                  placeholder="xxxx-xxxx-xxxx-xxxx"
                   leftIcon={Key}
                   disabled={isLoading}
                   error={!!tokenForm.formState.errors.token}
                   aria-required="true"
+                  className="font-mono tracking-wider"
                   {...tokenForm.register('token')}
                 />
               </FormField>
@@ -161,15 +222,19 @@ export function LoginPage() {
                 type="submit"
                 variant="primary"
                 disabled={isLoading}
-                className="w-full mt-2 active:scale-[0.97]"
+                className="mt-2 w-full"
               >
-                {isLoading ? <Spinner /> : 'Verify Token'}
+                {isLoading ? <Spinner /> : 'Verify & Continue'}
               </Button>
             </form>
           )}
+
+          <p className="mt-6 text-center text-xs text-brand-navy/40">
+            Need help? Contact your assessment coordinator.
+          </p>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   )
 }
 

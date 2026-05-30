@@ -8,9 +8,9 @@ interface QuestionPanelProps {
 }
 
 const DIFFICULTY_CLASS = {
-  easy: 'bg-green-900/50 text-green-300',
-  medium: 'bg-brand-orange/20 text-brand-orange',
-  hard: 'bg-red-900/50 text-red-300',
+  easy:   'bg-green-100 text-green-700',
+  medium: 'bg-brand-orange-pale text-brand-orange',
+  hard:   'bg-red-100 text-red-700',
 }
 
 const DIFFICULTY_LABEL = {
@@ -22,7 +22,7 @@ const DIFFICULTY_LABEL = {
 export function QuestionPanel({ question, isLoading = false }: QuestionPanelProps) {
   if (isLoading) {
     return (
-      <div className="h-full overflow-y-auto bg-brand-navy-dark px-5 py-4" aria-busy="true" aria-label="Loading question">
+      <div className="h-full overflow-y-auto bg-brand-surface px-5 py-4" aria-busy="true" aria-label="Loading question">
         <div className="mb-4 flex items-center gap-3">
           <SkeletonText className="h-5 w-2/3" />
           <SkeletonBlock width="w-16" height="h-5" className="rounded-full" />
@@ -43,10 +43,10 @@ export function QuestionPanel({ question, isLoading = false }: QuestionPanelProp
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-brand-navy-dark px-5 py-4 text-sm text-white/80">
+    <div className="h-full overflow-y-auto border-r border-brand-border bg-white px-6 py-4 text-sm">
       {/* Title + badge */}
       <div className="mb-3 flex items-start gap-3">
-        <h2 className="flex-1 text-base font-semibold text-white leading-snug">
+        <h2 className="flex-1 text-lg font-semibold leading-snug text-brand-navy">
           {question.title}
         </h2>
         <span
@@ -57,37 +57,37 @@ export function QuestionPanel({ question, isLoading = false }: QuestionPanelProp
       </div>
 
       {/* Limits */}
-      <div className="mb-4 flex gap-4 text-xs text-white/40">
+      <div className="mb-4 flex gap-4 text-xs text-brand-navy/40">
         <span>Time: {question.timeLimitMs}ms</span>
         <span>Memory: {question.memoryLimitMb}MB</span>
       </div>
 
       {/* Description */}
-      <div className="prose prose-invert prose-sm max-w-none mb-6">
+      <div className="prose prose-sm max-w-none mb-6 text-brand-navy/80">
         <ReactMarkdown>{question.description}</ReactMarkdown>
       </div>
 
       {/* Sample tests */}
       {question.sampleTests.filter((t) => !t.isHidden).length > 0 && (
         <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-orange">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-navy">
             Sample Tests
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {question.sampleTests
               .filter((t) => !t.isHidden)
               .map((test, i) => (
-                <div key={test.id} className="rounded-md border border-brand-navy-light bg-brand-navy-mid p-3">
-                  <p className="mb-1 text-xs font-medium text-white/60">Test {i + 1}</p>
+                <div key={test.id} className="rounded-lg border border-brand-border bg-brand-surface p-3">
+                  <p className="mb-2 text-xs font-medium text-brand-navy/50">Test {i + 1}</p>
                   <div className="mb-2">
-                    <p className="mb-0.5 text-xs text-white/40">Input:</p>
-                    <pre className="overflow-x-auto rounded bg-brand-navy px-3 py-2 text-xs text-white/80">
+                    <p className="mb-0.5 text-xs font-medium text-brand-navy/50">Input:</p>
+                    <pre className="overflow-x-auto rounded font-mono text-xs text-brand-navy/80">
                       {test.input}
                     </pre>
                   </div>
                   <div>
-                    <p className="mb-0.5 text-xs text-white/40">Expected Output:</p>
-                    <pre className="overflow-x-auto rounded bg-brand-navy px-3 py-2 text-xs text-white/80">
+                    <p className="mb-0.5 text-xs font-medium text-brand-navy/50">Expected Output:</p>
+                    <pre className="overflow-x-auto rounded font-mono text-xs text-brand-navy/80">
                       {test.expectedOutput}
                     </pre>
                   </div>

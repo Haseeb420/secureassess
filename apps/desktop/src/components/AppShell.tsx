@@ -6,7 +6,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-brand-navy-dark text-white" style={{ fontFamily: 'system-ui, sans-serif' }}>
+    <div className="min-h-screen bg-white text-brand-navy" style={{ fontFamily: 'system-ui, sans-serif' }}>
       {children}
     </div>
   )

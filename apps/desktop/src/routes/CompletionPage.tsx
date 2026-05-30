@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 
 export function CompletionPage() {
-  // Block back navigation — push the completion entry on every popstate
   useEffect(() => {
     window.history.pushState(null, '', '/completion')
     const handlePop = () => window.history.pushState(null, '', '/completion')
@@ -10,11 +9,11 @@ export function CompletionPage() {
   }, [])
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-brand-navy-dark">
-      <div className="text-center">
-        <div className="mb-6 text-7xl text-brand-orange">✓</div>
-        <h1 className="mb-3 text-3xl font-semibold text-white">Assessment Submitted</h1>
-        <p className="text-white/60">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-brand-surface">
+      <div className="rounded-xl border border-brand-border bg-white shadow-sm p-12 text-center max-w-sm mx-4">
+        <div className="text-6xl text-brand-orange">✓</div>
+        <h1 className="mt-4 text-2xl font-semibold text-brand-navy">Assessment Submitted</h1>
+        <p className="mt-2 text-sm leading-relaxed text-brand-navy/60">
           Your answers have been recorded. You may close this window.
         </p>
       </div>

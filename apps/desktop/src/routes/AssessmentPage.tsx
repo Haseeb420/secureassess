@@ -191,7 +191,7 @@ export function AssessmentPage() {
           : 'error'
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950">
+    <div className="flex h-screen flex-col bg-white">
       <TopBar
         candidateName={candidate?.name ?? candidate?.email ?? 'Candidate'}
         questionIndex={1}
@@ -208,7 +208,7 @@ export function AssessmentPage() {
             <QuestionPanel question={mockQuestion} />
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-600 transition-colors cursor-col-resize" />
+          <PanelResizeHandle className="w-1 bg-brand-border hover:bg-brand-orange transition-colors cursor-col-resize" />
 
           <Panel defaultSize={65} minSize={40}>
             <div className="flex h-full flex-col">
@@ -234,7 +234,7 @@ export function AssessmentPage() {
                   />
                 </Panel>
 
-                <PanelResizeHandle className="h-1 bg-zinc-800 hover:bg-zinc-600 transition-colors cursor-row-resize" />
+                <PanelResizeHandle className="h-1 bg-brand-border hover:bg-brand-orange transition-colors cursor-row-resize" />
 
                 <Panel defaultSize={35} minSize={15}>
                   <PanelGroup orientation="horizontal" className="h-full">
@@ -246,7 +246,7 @@ export function AssessmentPage() {
                       />
                     </Panel>
 
-                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-600 transition-colors cursor-col-resize" />
+                    <PanelResizeHandle className="w-1 bg-brand-border hover:bg-brand-orange transition-colors cursor-col-resize" />
 
                     <Panel defaultSize={40} minSize={25}>
                       <TestRunner

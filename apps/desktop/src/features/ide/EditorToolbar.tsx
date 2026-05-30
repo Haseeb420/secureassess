@@ -17,7 +17,7 @@ export function EditorToolbar({
   isRunning,
 }: EditorToolbarProps) {
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-brand-navy-light bg-brand-navy px-3 py-1.5">
+    <div className="flex shrink-0 items-center gap-2 border-b border-brand-border bg-brand-surface px-4 py-2">
       <LanguageSelector value={language} onChange={onLanguageChange} />
 
       <div className="ml-auto flex items-center gap-2">
@@ -25,7 +25,7 @@ export function EditorToolbar({
           type="button"
           onClick={onSave}
           aria-label="Save code (Ctrl+S)"
-          className="rounded-md border border-brand-navy-light px-3 py-1 text-xs text-white transition-colors hover:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange"
+          className="rounded border border-brand-border bg-white px-3 py-1.5 text-xs text-brand-navy transition-colors hover:border-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-orange"
         >
           Save
         </button>
@@ -35,7 +35,7 @@ export function EditorToolbar({
           onClick={onRun}
           disabled={isRunning}
           aria-label={isRunning ? 'Running tests…' : 'Run sample tests (Ctrl+Enter)'}
-          className="flex items-center gap-1.5 rounded-md bg-brand-orange hover:bg-brand-orange-light px-3 py-1 text-xs font-medium text-white transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-orange"
+          className="flex items-center gap-1.5 rounded bg-brand-orange hover:bg-brand-orange-light px-4 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-orange"
         >
           {isRunning ? (
             <>

@@ -12,16 +12,16 @@ interface ConsoleOutputProps {
 }
 
 const STATUS_BADGE: Record<ConsoleOutputProps['status'], { label: string; className: string }> = {
-  idle: { label: 'idle', className: 'bg-brand-navy text-white/50' },
-  running: { label: 'running', className: 'bg-brand-orange/20 text-brand-orange' },
-  success: { label: 'success', className: 'bg-green-900/40 text-green-400' },
-  error: { label: 'error', className: 'bg-red-900/40 text-red-400' },
+  idle:    { label: 'idle',    className: 'text-white/40' },
+  running: { label: 'running', className: 'text-brand-orange' },
+  success: { label: 'success', className: 'text-green-400' },
+  error:   { label: 'error',   className: 'text-red-400' },
 }
 
 const LINE_CLASS: Record<OutputLine['type'], string> = {
   stdout: 'text-white/90',
   stderr: 'text-red-400',
-  system: 'text-brand-orange/70',
+  system: 'text-brand-orange/70 italic',
 }
 
 export function ConsoleOutput({ lines, status, onClear }: ConsoleOutputProps) {
@@ -34,14 +34,12 @@ export function ConsoleOutput({ lines, status, onClear }: ConsoleOutputProps) {
   const badge = STATUS_BADGE[status]
 
   return (
-    <div className="flex h-full flex-col bg-brand-navy-dark border-t border-brand-navy-light">
+    <div className="flex h-full flex-col bg-brand-navy text-white font-mono text-sm">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-brand-navy-light px-3 py-1.5">
+      <div className="flex shrink-0 items-center justify-between bg-brand-navy-light px-4 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium font-mono text-brand-navy-pale">Console</span>
-          <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>
-            {badge.label}
-          </span>
+          <span className="text-xs uppercase tracking-wider text-white/60">Console</span>
+          <span className={`text-xs font-medium ${badge.className}`}>{badge.label}</span>
         </div>
         <button
           type="button"
@@ -54,7 +52,7 @@ export function ConsoleOutput({ lines, status, onClear }: ConsoleOutputProps) {
       </div>
 
       {/* Output */}
-      <div className="flex-1 overflow-y-auto p-3 font-mono text-xs leading-5">
+      <div className="flex-1 overflow-y-auto px-4 py-3 leading-5">
         {lines.length === 0 ? (
           <span className="text-white/30">No output yet.</span>
         ) : (

@@ -26,6 +26,12 @@ const INITIAL_STATE: ValidationState = {
   forbiddenFound: [],
 }
 
+const ROW_CLASS: Record<CheckState['status'], string> = {
+  pass:    'bg-green-50 border-green-200',
+  fail:    'bg-red-50 border-red-200',
+  pending: 'bg-brand-surface border-brand-border',
+}
+
 export function PreAssessmentPage() {
   const navigate = useNavigate()
   const [state, setState] = useState<ValidationState>(INITIAL_STATE)
@@ -36,7 +42,6 @@ export function PreAssessmentPage() {
     setIsChecking(true)
     setState(INITIAL_STATE)
 
-    // Run both checks in parallel
     const [displayResult, processes] = await Promise.allSettled([
       validateDisplays(),
       checkForbiddenProcesses(),
@@ -45,7 +50,6 @@ export function PreAssessmentPage() {
     setState((prev) => {
       const next = { ...prev }
 
-      // Display check
       if (displayResult.status === 'fulfilled') {
         const result = displayResult.value as ValidationResult
         const multiDisplay = result.violations.some((v) => v.type === 'MultipleDisplays')
@@ -64,11 +68,10 @@ export function PreAssessmentPage() {
           ? { status: 'fail', detail: 'Screen recording software detected.' }
           : { status: 'pass' }
       } else {
-        next.display = { status: 'pass' } // allow through if command unavailable (dev)
+        next.display = { status: 'pass' }
         next.screenRecording = { status: 'pass' }
       }
 
-      // Process check
       if (processes.status === 'fulfilled') {
         const found = processes.value as ForbiddenProcess[]
         if (found.length > 0) {
@@ -111,34 +114,22 @@ export function PreAssessmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-navy-dark flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-surface flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-white">SecureAssess</h1>
-          <p className="mt-1 text-sm text-white/50">Pre-Assessment Validation</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">SecureAssess</h1>
+          <p className="mt-1 text-sm text-brand-navy/60">Pre-Assessment Validation</p>
         </div>
 
-        <div className="rounded-lg border border-brand-navy-light bg-brand-navy-mid p-6">
-          <h2 className="mb-4 text-sm font-medium text-white uppercase tracking-wider">
+        <div className="rounded-xl border border-brand-border bg-white shadow-sm p-6">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-brand-navy">
             System Checks
           </h2>
 
-          <div className="space-y-3">
-            <CheckRow
-              label="Single display connected"
-              state={state.display}
-              loading={isChecking}
-            />
-            <CheckRow
-              label="No screen recording active"
-              state={state.screenRecording}
-              loading={isChecking}
-            />
-            <CheckRow
-              label="No forbidden applications running"
-              state={state.processes}
-              loading={isChecking}
-            />
+          <div className="space-y-2">
+            <CheckRow label="Single display connected" state={state.display} loading={isChecking} />
+            <CheckRow label="No screen recording active" state={state.screenRecording} loading={isChecking} />
+            <CheckRow label="No forbidden applications running" state={state.processes} loading={isChecking} />
           </div>
 
           <div className="mt-6 flex gap-3">
@@ -146,7 +137,7 @@ export function PreAssessmentPage() {
               type="button"
               onClick={runValidations}
               disabled={isChecking}
-              className="rounded-md border border-brand-orange px-4 py-2 text-sm text-brand-orange transition-colors hover:bg-brand-orange/10 disabled:opacity-50"
+              className="rounded-lg border border-brand-border bg-white px-4 py-2 text-sm text-brand-navy transition-colors hover:border-brand-navy disabled:opacity-50"
             >
               {isChecking ? 'Checking…' : 'Re-check'}
             </button>
@@ -155,7 +146,9 @@ export function PreAssessmentPage() {
               type="button"
               onClick={handleStart}
               disabled={!allPassed || isChecking || isStarting}
-              className="flex-1 rounded-md bg-brand-orange hover:bg-brand-orange-light py-2 text-sm font-medium text-white transition-colors disabled:bg-brand-navy-light disabled:text-white/40 disabled:cursor-not-allowed"
+              className="flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors
+                enabled:bg-brand-orange enabled:hover:bg-brand-orange-light enabled:text-white
+                disabled:bg-brand-border disabled:text-brand-navy/30 disabled:cursor-not-allowed"
             >
               {isStarting ? 'Starting…' : 'Start Assessment'}
             </button>
@@ -173,15 +166,16 @@ interface CheckRowProps {
 }
 
 function CheckRow({ label, state, loading }: CheckRowProps) {
+  const effectiveStatus = loading ? 'pending' : state.status
   return (
-    <div>
-      <div className="flex items-center gap-3">
-        <StatusIcon status={loading ? 'pending' : state.status} />
-        <span className="text-sm text-white">{label}</span>
+    <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${ROW_CLASS[effectiveStatus]}`}>
+      <StatusIcon status={effectiveStatus} />
+      <div className="flex-1">
+        <span className="text-sm font-medium text-brand-navy">{label}</span>
+        {!loading && state.status === 'fail' && state.detail && (
+          <p className="mt-0.5 text-xs text-red-500">{state.detail}</p>
+        )}
       </div>
-      {!loading && state.status === 'fail' && state.detail && (
-        <p className="ml-7 mt-0.5 text-xs text-red-400">{state.detail}</p>
-      )}
     </div>
   )
 }
@@ -189,9 +183,9 @@ function CheckRow({ label, state, loading }: CheckRowProps) {
 function StatusIcon({ status }: { status: CheckState['status'] }) {
   if (status === 'pending') {
     return (
-      <span className="flex h-5 w-5 items-center justify-center">
+      <span className="mt-0.5 flex h-4 w-4 items-center justify-center">
         <svg
-          className="h-4 w-4 animate-spin text-zinc-500"
+          className="h-4 w-4 animate-spin text-brand-navy/30"
           viewBox="0 0 24 24"
           fill="none"
           aria-hidden="true"
@@ -203,7 +197,7 @@ function StatusIcon({ status }: { status: CheckState['status'] }) {
     )
   }
   if (status === 'pass') {
-    return <span className="text-base leading-none text-green-400">✓</span>
+    return <span className="mt-0.5 text-base leading-none text-green-600">✓</span>
   }
-  return <span className="text-base leading-none text-red-400">✗</span>
+  return <span className="mt-0.5 text-base leading-none text-red-500">✗</span>
 }

@@ -37,7 +37,7 @@ export function TopBar({
   }, [isExpired, onSubmit])
 
   return (
-    <div className="flex shrink-0 items-center justify-between border-b border-brand-navy-light bg-brand-navy px-4 py-2">
+    <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-brand-navy px-6 py-3">
       <span className="text-sm text-white/70">{candidateName}</span>
 
       <div className="flex items-center gap-4">
@@ -47,8 +47,8 @@ export function TopBar({
         <span
           aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
           aria-live="off"
-          className={`font-mono text-sm font-semibold tabular-nums ${
-            isLow ? 'text-brand-orange font-bold' : 'text-white'
+          className={`font-mono text-lg font-medium tabular-nums ${
+            isLow ? 'animate-pulse font-bold text-brand-orange' : 'text-white'
           }`}
         >
           {formatTime(timerSeconds)}
@@ -62,7 +62,7 @@ export function TopBar({
           onClick={onSubmit}
           disabled={isSubmitting}
           aria-label={isSubmitting ? 'Submitting assessment…' : 'Submit assessment (Ctrl+Shift+Enter)'}
-          className="flex items-center gap-1.5 rounded-md bg-brand-orange hover:bg-brand-orange-light px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-orange"
+          className="flex items-center gap-1.5 rounded-lg bg-brand-orange hover:bg-brand-orange-light px-4 py-1.5 text-sm font-medium text-white transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-orange"
         >
           {isSubmitting ? (
             <>

@@ -34,7 +34,12 @@ pub fn run() {
             }
 
             let key = get_db_key();
-            let db_url = format!("sqlite:secureassess_{}.db", &key[..8]);
+            let app_data_dir = app.path().app_data_dir()
+                .expect("failed to get app data dir");
+            std::fs::create_dir_all(&app_data_dir)
+                .expect("failed to create app data dir");
+            let db_path = app_data_dir.join(format!("secureassess_{}.db", &key[..8]));
+            let db_url = format!("sqlite:{}", db_path.display());
             let pool = tauri::async_runtime::block_on(init_pool(&db_url))
                 .expect("Failed to initialize database");
             app.manage(DbPool(pool));

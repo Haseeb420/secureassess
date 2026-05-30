@@ -1,41 +1,27 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from "next/server"
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+// Middleware runs on the Edge runtime — no Node.js APIs, no pg, no database access.
+// Cookie-presence check only. Full session validation + role-based routing
+// happens in the dashboard layout (server component, Node.js runtime).
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          )
-        },
-      },
-    },
-  )
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  if (pathname.startsWith("/api/auth")) return NextResponse.next()
 
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    return NextResponse.redirect(loginUrl)
+  if (pathname.startsWith("/dashboard")) {
+    const sessionCookie =
+      request.cookies.get("better-auth.session_token") ??
+      request.cookies.get("__Secure-better-auth.session_token")
+
+    if (!sessionCookie) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
   }
 
-  return supabaseResponse
+  return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ["/dashboard/:path*", "/api/auth/:path*"],
 }

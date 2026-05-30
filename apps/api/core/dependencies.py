@@ -1,42 +1,13 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Request
 
-from .supabase import get_supabase
-
-bearer_scheme = HTTPBearer()
+from .better_auth import get_session_user, require_admin
 
 
-def _get_user(credentials: HTTPAuthorizationCredentials) -> dict:
-    token = credentials.credentials
-    supabase = get_supabase()
-    try:
-        response = supabase.auth.get_user(token)
-        user = response.user
-        if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        return {
-            "id": user.id,
-            "email": user.email,
-            "user_metadata": user.user_metadata or {},
-            "app_metadata": user.app_metadata or {},
-        }
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+def get_current_candidate(request: Request) -> dict:
+    """Validate any authenticated user (admin, proctor, or candidate)."""
+    return get_session_user(request)
 
 
-def get_current_candidate(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-) -> dict:
-    return _get_user(credentials)
-
-
-def get_current_admin(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-) -> dict:
-    user = _get_user(credentials)
-    role = user["user_metadata"].get("role") or user["app_metadata"].get("role")
-    if role != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return user
+def get_current_admin(request: Request) -> dict:
+    """Validate admin or proctor session."""
+    return require_admin(request)

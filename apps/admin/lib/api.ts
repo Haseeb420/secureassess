@@ -1,11 +1,12 @@
-import { createClient } from './supabase/client'
+import { getSession } from './auth-client'
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  const supabase = createClient()
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.access_token
+  const { data } = await getSession()
+  // Use the Better Auth session token as a Bearer token for the FastAPI backend.
+  // FastAPI validates it by looking up the token in the `session` table.
+  const token = data?.session?.token
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

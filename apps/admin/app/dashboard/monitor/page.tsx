@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@supabase/supabase-js'
+import { Monitor } from 'lucide-react'
 import { sessionsApi, type Session, type SessionDetail } from '../../../lib/api'
+import { PageHeader } from '../../../components/PageHeader'
 import { format } from 'date-fns'
 
 const supabase = createClient(
@@ -49,18 +51,41 @@ export default function MonitorPage() {
   return (
     <div className="flex h-full">
       <div className="flex-1 overflow-y-auto">
-        <div className="border-b border-brand-border bg-white px-8 py-5">
-          <h1 className="text-xl font-semibold text-brand-navy">Live Monitor</h1>
-          <p className="mt-0.5 text-sm text-brand-navy/60">
-            {activeSessions.length} active session{activeSessions.length !== 1 ? 's' : ''}
-          </p>
+        <PageHeader
+          title="Live Monitor"
+          subtitle={`${activeSessions.length} active session${activeSessions.length !== 1 ? 's' : ''}`}
+        />
+
+        {/* Stats bar */}
+        <div className="grid grid-cols-4 gap-4 px-8 pt-6">
+          {[
+            { label: 'Active', value: activeSessions.filter(s => s.status === 'active').length, dot: 'bg-green-400' },
+            { label: 'Violations', value: sessions.reduce((n, s) => n + s.violation_count, 0), dot: 'bg-brand-orange' },
+            { label: 'Submitted', value: pastSessions.filter(s => s.status === 'completed').length, dot: 'bg-brand-navy/30' },
+            { label: 'Terminated', value: pastSessions.filter(s => s.status === 'terminated').length, dot: 'bg-red-400' },
+          ].map((stat) => (
+            <div key={stat.label} className="flex items-center gap-3 rounded-xl border border-brand-border bg-white px-4 py-3 shadow-sm">
+              <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${stat.dot}`} aria-hidden="true" />
+              <div>
+                <p className="text-xl font-bold text-brand-navy">{stat.value}</p>
+                <p className="text-xs text-brand-navy/50">{stat.label}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="p-8">
           {isLoading ? (
-            <p className="text-brand-navy/40">Loading sessions…</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-40 rounded-xl border border-brand-border bg-white animate-pulse" />
+              ))}
+            </div>
           ) : activeSessions.length === 0 ? (
-            <p className="text-brand-navy/40">No active sessions right now.</p>
+            <div className="flex flex-col items-center justify-center py-20 text-brand-navy/40">
+              <Monitor size={40} className="mb-3" aria-hidden="true" />
+              <p className="text-sm font-medium">No active assessments</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {activeSessions.map((s) => (

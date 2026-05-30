@@ -164,7 +164,7 @@ async def list_invites(
     supabase = get_supabase()
     result = (
         supabase.table("assessment_invites")
-        .select("id, token, candidate_email, candidate_name, expires_at, used_at, created_at")
+        .select("id, token, candidate_email, expires_at, used_at, created_at")
         .eq("assessment_id", assessment_id)
         .order("created_at", desc=True)
         .execute()
@@ -187,15 +187,18 @@ async def create_invite(
     token = secrets.token_urlsafe(32)
     expires_at = int(time.time()) + body.expires_in_hours * 3600
 
+    row: dict = {
+        "assessment_id": assessment_id,
+        "token": token,
+        "candidate_email": str(body.candidate_email),
+        "expires_at": expires_at,
+    }
+    if body.candidate_name:
+        row["candidate_name"] = body.candidate_name
+
     result = (
         supabase.table("assessment_invites")
-        .insert({
-            "assessment_id": assessment_id,
-            "token": token,
-            "candidate_email": str(body.candidate_email),
-            "candidate_name": body.candidate_name,
-            "expires_at": expires_at,
-        })
+        .insert(row)
         .execute()
     )
     if not result.data:

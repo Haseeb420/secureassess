@@ -69,7 +69,7 @@ function RowActions({ assessment }: { assessment: Assessment }) {
 }
 
 export default function AssessmentsPage() {
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, error } = useQuery({
     queryKey: ['assessments'],
     queryFn: assessmentsApi.list,
   })
@@ -87,6 +87,12 @@ export default function AssessmentsPage() {
           + New Assessment
         </Link>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-md border border-red-800 bg-red-950/40 px-4 py-3 text-sm text-red-400">
+          {String(error)}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-zinc-800">
         <table className="w-full text-sm">

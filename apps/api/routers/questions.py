@@ -111,12 +111,11 @@ async def get_question(
         supabase.table("questions")
         .select("*")
         .eq("id", question_id)
-        .maybe_single()
         .execute()
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
-    return result.data
+    return result.data[0]
 
 
 @router.patch("/{question_id}")

@@ -13,37 +13,36 @@ async def get_report(
 ):
     supabase = get_supabase()
 
-    session_result = (
+    session_rows = (
         supabase.table("assessment_sessions")
         .select("candidate_name, candidate_email, assessment_title, final_score, status")
         .eq("id", session_id)
-        .maybe_single()
         .execute()
-    )
-    if not session_result.data:
+    ).data or []
+
+    if not session_rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    session = session_result.data
+    session = session_rows[0]
 
-    submissions_result = (
+    submissions = (
         supabase.table("question_submissions")
         .select("question_id, question_title, submitted_at, score, passed_tests, total_tests")
         .eq("session_id", session_id)
         .order("submitted_at")
         .execute()
-    )
+    ).data or []
 
-    events_result = (
+    events = (
         supabase.table("security_events")
         .select("type, created_at")
         .eq("session_id", session_id)
         .order("created_at")
         .execute()
-    )
+    ).data or []
 
-    # Aggregate violations by type
     violation_map: dict[str, dict] = {}
-    for ev in events_result.data or []:
+    for ev in events:
         t = ev["type"]
         if t not in violation_map:
             violation_map[t] = {"type": t, "count": 0, "first_occurrence": ev["created_at"]}
@@ -55,6 +54,6 @@ async def get_report(
         "candidate_email": session.get("candidate_email", ""),
         "assessment_title": session.get("assessment_title", ""),
         "final_score": session.get("final_score") or 0,
-        "submissions": submissions_result.data or [],
+        "submissions": submissions,
         "violations": list(violation_map.values()),
     }

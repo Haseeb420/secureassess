@@ -57,13 +57,12 @@ async def verify_invite(body: InviteLoginRequest):
         supabase.table("assessment_invites")
         .select("*")
         .eq("token", body.token)
-        .maybe_single()
         .execute()
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
 
-    invite = result.data
+    invite = result.data[0]
     import time
 
     if invite.get("used_at") or invite.get("expires_at", 0) < int(time.time()):

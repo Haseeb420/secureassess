@@ -85,13 +85,12 @@ async def get_assessment(
         supabase.table("assessments")
         .select("*")
         .eq("id", assessment_id)
-        .maybe_single()
         .execute()
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
 
-    assessment = result.data
+    assessment = result.data[0]
 
     # Fetch candidates for this assessment
     sessions_result = (

@@ -35,13 +35,12 @@ async def get_session(
         supabase.table("assessment_sessions")
         .select("*")
         .eq("id", session_id)
-        .maybe_single()
         .execute()
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    session = result.data
+    session = result.data[0]
 
     events_result = (
         supabase.table("security_events")

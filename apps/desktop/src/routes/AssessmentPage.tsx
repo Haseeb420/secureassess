@@ -74,11 +74,10 @@ export function AssessmentPage() {
 
   const { violationCount, lastViolation } = useSecurityMonitor({ enabled: true })
 
-  // Decrement timer every second
-  useState(() => {
+  useEffect(() => {
     const id = setInterval(() => decrementTimer(), 1000)
     return () => clearInterval(id)
-  })
+  }, [decrementTimer])
 
   const { forceSave } = useAutoSave({
     sessionId: assessmentId,

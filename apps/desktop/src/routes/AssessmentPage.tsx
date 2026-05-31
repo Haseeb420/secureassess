@@ -8,7 +8,8 @@ import { ConsoleOutput } from '../features/ide/ConsoleOutput'
 import { EditorToolbar } from '../features/ide/EditorToolbar'
 import { QuestionPanel } from '../features/ide/QuestionPanel'
 import { SubmissionModal } from '../features/ide/SubmissionModal'
-import { TestRunner } from '../features/ide/TestRunner'
+import { ViolationBanner } from '../features/security/ViolationBanner'
+import { useSecurityMonitor } from '../features/security/useSecurityMonitor'
 import { TopBar } from '../components/TopBar'
 import { useAutoSave } from '../features/persistence/useAutoSave'
 import { useAssessmentStore } from '../store/assessmentStore'
@@ -18,6 +19,7 @@ import {
   type RunResult,
   type SubmitResult,
 } from '../features/ide/evaluationService'
+import { defaultTemplates } from '../features/ide/templates'
 
 const mockQuestion: Question = {
   id: 'q1',
@@ -67,6 +69,10 @@ export function AssessmentPage() {
   const [runResult, setRunResult] = useState<RunResult | null>(null)
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null)
   const [compileError, setCompileError] = useState<string | null>(null)
+  const [fontSize, setFontSize] = useState(14)
+  const [runHistory, setRunHistory] = useState<RunResult[]>([])
+
+  const { violationCount, lastViolation } = useSecurityMonitor({ enabled: true })
 
   // Decrement timer every second
   useState(() => {
@@ -100,6 +106,7 @@ export function AssessmentPage() {
         codeByLanguage[currentLanguage],
       )
       setRunResult(result)
+      setRunHistory((h) => [result, ...h].slice(0, 20))
 
       if (result.compile_error) {
         setCompileError(result.compile_error)
@@ -112,10 +119,7 @@ export function AssessmentPage() {
         })
         const passed = result.outcomes.filter((o) => o.passed).length
         const total = result.outcomes.length
-        appendOutput({
-          type: 'system',
-          text: `${passed}/${total} sample tests passed`,
-        })
+        appendOutput({ type: 'system', text: `${passed}/${total} sample tests passed` })
       }
     } catch (err) {
       appendOutput({ type: 'stderr', text: String(err) })
@@ -126,8 +130,6 @@ export function AssessmentPage() {
   }, [currentLanguage, codeByLanguage, appendOutput, clearOutput])
 
   const handleSubmit = useCallback(async () => {
-    if (!window.confirm('Submit your solution? This cannot be undone.')) return
-
     setIsSubmitting(true)
     appendOutput({ type: 'system', text: 'Submitting solution…' })
 
@@ -147,7 +149,11 @@ export function AssessmentPage() {
     }
   }, [assessmentId, currentLanguage, codeByLanguage, appendOutput])
 
-  // Navigate to completion when the Rust layer locks the assessment
+  const handleResetCode = useCallback(() => {
+    setCode(currentLanguage, defaultTemplates[currentLanguage])
+    setCompileError(null)
+  }, [currentLanguage, setCode])
+
   useEffect(() => {
     const unlisten = listen('assessment:locked', () => {
       navigate('/completion', { replace: true })
@@ -155,12 +161,10 @@ export function AssessmentPage() {
     return () => { unlisten.then((fn) => fn()) }
   }, [navigate])
 
-  // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
-
       if (e.shiftKey && e.key === 'Enter') {
         e.preventDefault()
         handleSubmit()
@@ -191,37 +195,49 @@ export function AssessmentPage() {
           : 'error'
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="flex h-screen flex-col overflow-hidden">
+      {/* Violation banner — fixed above top bar */}
+      <ViolationBanner violation={lastViolation} violationCount={violationCount} />
+
       <TopBar
         candidateName={candidate?.name ?? candidate?.email ?? 'Candidate'}
+        assessmentTitle="Assessment"
         questionIndex={1}
         totalQuestions={1}
         timerSeconds={timerSeconds}
+        timerTotalSeconds={3600}
         sessionId={assessmentId}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       />
 
+      {/* Main layout */}
       <div className="min-h-0 flex-1">
         <PanelGroup orientation="horizontal" className="h-full">
-          <Panel defaultSize={35} minSize={25}>
-            <QuestionPanel question={mockQuestion} />
+          <Panel defaultSize={38} minSize={28} maxSize={50}>
+            <QuestionPanel
+              question={mockQuestion}
+              runHistory={runHistory}
+            />
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-brand-border hover:bg-brand-orange transition-colors cursor-col-resize" />
+          <PanelResizeHandle className="w-1.5 cursor-col-resize bg-brand-border transition-colors hover:bg-brand-orange" />
 
-          <Panel defaultSize={65} minSize={40}>
+          <Panel defaultSize={62} minSize={50}>
             <div className="flex h-full flex-col">
               <EditorToolbar
                 language={currentLanguage}
                 onLanguageChange={setLanguage}
                 onRun={handleRun}
                 onSave={handleSave}
+                onResetCode={handleResetCode}
                 isRunning={isRunning}
+                fontSize={fontSize}
+                onFontSizeChange={setFontSize}
               />
 
               <PanelGroup orientation="vertical" className="min-h-0 flex-1">
-                <Panel defaultSize={65} minSize={30}>
+                <Panel defaultSize={72} minSize={30}>
                   <CodeEditor
                     language={currentLanguage}
                     value={codeByLanguage[currentLanguage]}
@@ -231,31 +247,18 @@ export function AssessmentPage() {
                     }}
                     onSave={handleSave}
                     compileError={compileError}
+                    fontSize={fontSize}
                   />
                 </Panel>
 
-                <PanelResizeHandle className="h-1 bg-brand-border hover:bg-brand-orange transition-colors cursor-row-resize" />
+                <PanelResizeHandle className="h-1.5 cursor-row-resize bg-brand-border transition-colors hover:bg-brand-orange" />
 
-                <Panel defaultSize={35} minSize={15}>
-                  <PanelGroup orientation="horizontal" className="h-full">
-                    <Panel defaultSize={60}>
-                      <ConsoleOutput
-                        lines={consoleOutput}
-                        status={consoleStatus}
-                        onClear={clearOutput}
-                      />
-                    </Panel>
-
-                    <PanelResizeHandle className="w-1 bg-brand-border hover:bg-brand-orange transition-colors cursor-col-resize" />
-
-                    <Panel defaultSize={40} minSize={25}>
-                      <TestRunner
-                        onRun={handleRun}
-                        result={runResult}
-                        isRunning={isRunning}
-                      />
-                    </Panel>
-                  </PanelGroup>
+                <Panel defaultSize={28} minSize={15}>
+                  <ConsoleOutput
+                    lines={consoleOutput}
+                    status={consoleStatus}
+                    onClear={clearOutput}
+                  />
                 </Panel>
               </PanelGroup>
             </div>
@@ -263,13 +266,20 @@ export function AssessmentPage() {
         </PanelGroup>
       </div>
 
-      {/* VS Code–style status bar */}
-      <div className="flex h-6 shrink-0 items-center gap-4 bg-brand-navy-light px-4 text-xs text-white/50" aria-hidden="true">
+      {/* Bottom status bar */}
+      <div
+        className="flex h-[22px] shrink-0 items-center gap-6 border-t border-white/10 bg-brand-navy px-4 text-xs font-mono text-white/40"
+        aria-hidden="true"
+      >
+        <span>
+          {isRunning || isSubmitting ? 'Running…' : 'Ready'}
+        </span>
         <span>{currentLanguage}</span>
-        <span>·</span>
-        <span>{isRunning || isSubmitting ? '⟳ Running…' : 'Ready'}</span>
-        <span>·</span>
-        <span className="ml-auto">Ctrl+Enter: Run · Ctrl+Shift+Enter: Submit · Ctrl+S: Save</span>
+        {timerSeconds < 300 && (
+          <span className="ml-auto text-brand-orange">
+            {Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2, '0')} remaining
+          </span>
+        )}
       </div>
 
       {submitResult && (

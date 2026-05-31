@@ -2,6 +2,16 @@ import { getSession } from './auth-client'
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 async function getAuthHeader(): Promise<Record<string, string>> {
   const { data } = await getSession()
   // Use the Better Auth session token as a Bearer token for the FastAPI backend.
@@ -18,7 +28,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   })
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)
-    throw new Error(text)
+    throw new ApiError(text, res.status)
   }
   return res.json() as Promise<T>
 }

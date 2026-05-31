@@ -4,7 +4,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase_auth.errors import AuthApiError
 
-from core.dependencies import bearer_scheme, get_current_candidate
+from core.dependencies import get_current_candidate
 from core.supabase import get_supabase
 from schemas.auth import (
     InviteLoginRequest,

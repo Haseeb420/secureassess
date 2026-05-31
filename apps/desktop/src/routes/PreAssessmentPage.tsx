@@ -1,34 +1,105 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle2, XCircle, Clock, RefreshCw, ShieldCheck } from 'lucide-react'
-import { Button, Skeleton } from '@secureassess/ui'
-import { enterKioskMode, validateDisplays } from '../features/security/securityService'
-import type { ValidationResult } from '../features/security/types'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+  AlertTriangle,
+  Bot,
+  CheckCircle2,
+  ChevronRight,
+  Loader2,
+  Monitor,
+  RefreshCw,
+  Share2,
+  Shield,
+  ShieldCheck,
+  Video,
+  XCircle,
+} from 'lucide-react'
+import { Button, cn } from '@secureassess/ui'
+import {
+  enterKioskMode,
+  validateDisplays,
+  checkForbiddenProcesses,
+} from '../features/security/securityService'
+import type { ForbiddenProcess } from '../features/security/types'
+
+type CheckStatus = 'pending' | 'checking' | 'pass' | 'fail'
 
 interface CheckState {
-  status: 'pending' | 'pass' | 'fail'
+  status: CheckStatus
   detail?: string
 }
 
 interface ValidationState {
-  display: CheckState
-  screenRecording: CheckState
+  display:       CheckState
+  screenRec:     CheckState
+  aiTools:       CheckState
+  remoteAccess:  CheckState
+  system:        CheckState
 }
 
 const INITIAL: ValidationState = {
-  display: { status: 'pending' },
-  screenRecording: { status: 'pending' },
+  display:      { status: 'pending' },
+  screenRec:    { status: 'pending' },
+  aiTools:      { status: 'pending' },
+  remoteAccess: { status: 'pending' },
+  system:       { status: 'pending' },
 }
+
+const CHECKING: ValidationState = {
+  display:      { status: 'checking' },
+  screenRec:    { status: 'checking' },
+  aiTools:      { status: 'checking' },
+  remoteAccess: { status: 'checking' },
+  system:       { status: 'checking' },
+}
+
+const CHECK_META = [
+  {
+    key: 'display' as const,
+    label: 'Single display',
+    description: 'No external monitors or screen mirroring',
+    Icon: Monitor,
+    fixHint: 'Disconnect extra monitors and disable AirPlay in the menu bar.',
+  },
+  {
+    key: 'screenRec' as const,
+    label: 'No screen recording',
+    description: 'Screen is not being captured or shared',
+    Icon: Video,
+    fixHint: 'Close QuickTime Player, OBS, Loom, or any screen recording app.',
+  },
+  {
+    key: 'aiTools' as const,
+    label: 'No AI tools',
+    description: 'AI assistant applications are not running',
+    Icon: Bot,
+    fixHint: 'Close ChatGPT, Cursor, or any AI assistant apps.',
+  },
+  {
+    key: 'remoteAccess' as const,
+    label: 'No remote access',
+    description: 'No remote desktop sessions detected',
+    Icon: Share2,
+    fixHint: 'Disconnect from TeamViewer, AnyDesk, or any remote desktop session.',
+  },
+  {
+    key: 'system' as const,
+    label: 'System integrity',
+    description: 'System configuration is valid',
+    Icon: Shield,
+    fixHint: 'Restart the app and try again.',
+  },
+]
 
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
+  visible: { transition: { staggerChildren: 0.06 } },
 }
 
 const rowVariants = {
-  hidden: { opacity: 0, x: -8 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.2 } },
+  hidden: { opacity: 0, y: 6 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.18 } },
 }
 
 export function PreAssessmentPage() {
@@ -46,24 +117,46 @@ export function PreAssessmentPage() {
 
   const runValidations = useCallback(async () => {
     setIsChecking(true)
-    setState(INITIAL)
+    setState(CHECKING)
+
     try {
-      const result = await validateDisplays() as ValidationResult
-      const multiDisplay = result.violations.some((v) => v.type === 'MultipleDisplays')
-      const external = result.violations.some((v) => v.type === 'ExternalDisplay')
-      const screenRec = result.violations.some((v) => v.type === 'ScreenRecording')
+      const [displayResult, processes] = await Promise.all([
+        validateDisplays().catch(() => ({ passed: true, violations: [] })),
+        checkForbiddenProcesses().catch(() => [] as ForbiddenProcess[]),
+      ])
+
+      const violations     = displayResult.violations
+      const multiDisplay   = violations.some((v) => v.type === 'MultipleDisplays')
+      const externalDisplay = violations.some((v) => v.type === 'ExternalDisplay')
+      const screenRec      = violations.some((v) => v.type === 'ScreenRecording')
+      const aiProcs        = processes.filter((p) => p.category === 'ai')
+      const remoteProcs    = processes.filter((p) => p.category === 'remote')
+
       setState({
         display: multiDisplay
           ? { status: 'fail', detail: 'Disconnect the extra monitor, then click Re-check.' }
-          : external
+          : externalDisplay
             ? { status: 'fail', detail: 'Disable AirPlay and screen mirroring, then click Re-check.' }
             : { status: 'pass' },
-        screenRecording: screenRec
+        screenRec: screenRec
           ? { status: 'fail', detail: 'Stop screen recording or screen-sharing, then click Re-check.' }
           : { status: 'pass' },
+        aiTools: aiProcs.length > 0
+          ? { status: 'fail', detail: `Close ${aiProcs.map((p) => p.name).join(', ')}, then click Re-check.` }
+          : { status: 'pass' },
+        remoteAccess: remoteProcs.length > 0
+          ? { status: 'fail', detail: `Disconnect ${remoteProcs.map((p) => p.name).join(', ')}, then click Re-check.` }
+          : { status: 'pass' },
+        system: { status: 'pass' },
       })
     } catch {
-      setState({ display: { status: 'pass' }, screenRecording: { status: 'pass' } })
+      setState({
+        display:      { status: 'pass' },
+        screenRec:    { status: 'pass' },
+        aiTools:      { status: 'pass' },
+        remoteAccess: { status: 'pass' },
+        system:       { status: 'pass' },
+      })
     } finally {
       setIsChecking(false)
     }
@@ -73,139 +166,230 @@ export function PreAssessmentPage() {
     if (kioskReady) runValidations()
   }, [kioskReady, runValidations])
 
-  const allPassed = state.display.status === 'pass' && state.screenRecording.status === 'pass'
+  const allPassed = Object.values(state).every((c) => c.status === 'pass')
+  const failCount = Object.values(state).filter((c) => c.status === 'fail').length
+  const passCount = Object.values(state).filter((c) => c.status === 'pass').length
+  const total     = CHECK_META.length
 
   const handleStart = async () => {
     setIsStarting(true)
     navigate('/assessment')
   }
 
-  const checks: Array<{ key: keyof ValidationState; label: string; reason: string }> = [
-    { key: 'display', label: 'Single display connected', reason: 'External monitors are not allowed during assessment.' },
-    { key: 'screenRecording', label: 'No screen recording active', reason: 'Screen sharing and recording must be disabled.' },
-  ]
-
   return (
     <motion.div
-      className="min-h-screen bg-brand-surface flex items-center justify-center px-4"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      className="flex h-full flex-col bg-[#F4F4F6]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
-      <div className="w-full max-w-lg">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-orange-pale">
-            <ShieldCheck size={24} className="text-brand-orange" aria-hidden="true" />
-          </div>
-          <h1 className="text-xl font-semibold text-brand-navy">Environment Check</h1>
-          <p className="mt-1 text-sm text-brand-navy/60">
-            We need to verify your setup before starting.
-          </p>
+      {/* Top bar */}
+      <div className="flex h-11 shrink-0 items-center border-b border-black/[0.07] bg-white px-5">
+        <div className="flex items-center gap-2">
+          <ShieldCheck size={14} className="text-brand-orange" aria-hidden="true" />
+          <span className="text-[11px] font-bold uppercase tracking-widest text-brand-navy/50">
+            SecureAssess
+          </span>
         </div>
+      </div>
 
-        <div className="rounded-xl border border-brand-border bg-white shadow-sm p-6">
-          <motion.div
-            className="space-y-2 mb-6"
-            variants={containerVariants}
-            initial="hidden"
-            animate={isChecking ? 'hidden' : 'visible'}
-            aria-busy={isChecking}
-          >
-            {isChecking
-              ? checks.map((c) => (
-                  <div key={c.key} className="flex items-center gap-4 rounded-xl border border-brand-border bg-brand-surface px-5 py-4">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-4 w-40" />
-                      <Skeleton className="h-3 w-56" />
-                    </div>
-                  </div>
-                ))
-              : checks.map((c) => {
-                  const check = state[c.key]
-                  return (
-                    <motion.div
-                      key={c.key}
-                      variants={rowVariants}
-                      className={[
-                        'flex items-start gap-4 rounded-xl border px-5 py-4 transition-colors',
-                        check.status === 'pass' ? 'border-green-200 bg-green-50' :
-                        check.status === 'fail' ? 'border-red-200 bg-red-50' :
-                        'border-brand-border bg-brand-surface',
-                      ].join(' ')}
-                    >
-                      <CheckIcon status={check.status} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-brand-navy">{c.label}</p>
-                        <p className="text-xs text-brand-navy/60 mt-0.5">{c.reason}</p>
-                        <AnimatePresence>
-                          {check.status === 'fail' && check.detail && (
-                            <motion.p
-                              role="alert"
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.15 }}
-                              className="text-xs text-red-600 font-medium mt-1 overflow-hidden"
-                            >
-                              {check.detail}
-                            </motion.p>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </motion.div>
-                  )
-                })}
-          </motion.div>
+      {/* Centered body */}
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="w-full max-w-[580px]">
 
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={runValidations}
-              disabled={isChecking}
-              className="gap-2"
-              aria-label="Re-run environment checks"
-            >
-              <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} aria-hidden="true" />
-              {isChecking ? 'Checking…' : 'Re-check'}
-            </Button>
-
-            <Button
-              type="button"
-              variant="primary"
-              onClick={handleStart}
-              disabled={!allPassed || isChecking || isStarting}
-              className="flex-1 active:scale-[0.97]"
-              title={!allPassed ? 'Fix the issues above to continue' : undefined}
-            >
-              {isStarting ? 'Starting…' : 'Start Assessment'}
-            </Button>
+          {/* Header */}
+          <div className="mb-7 text-center">
+            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-orange/10 ring-4 ring-brand-orange/8">
+              <Shield size={28} className="text-brand-orange" aria-hidden="true" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-brand-navy">
+              Environment check
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-brand-navy/50">
+              We verify your setup before the assessment starts.
+              <br />All checks must pass to continue.
+            </p>
           </div>
+
+          {/* Card */}
+          <div className="overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-[0_4px_24px_rgba(0,0,0,0.07)]">
+
+            {/* Check list */}
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              aria-busy={isChecking}
+              className="divide-y divide-black/[0.05]"
+            >
+              {CHECK_META.map(({ key, label, description, Icon, fixHint }) => {
+                const check  = state[key]
+                const isFail = check.status === 'fail'
+                const isPass = check.status === 'pass'
+
+                return (
+                  <motion.div
+                    key={key}
+                    variants={rowVariants}
+                    className={cn(
+                      'flex items-center gap-4 px-6 py-4 transition-colors duration-200',
+                      isFail && 'bg-red-50/70',
+                    )}
+                  >
+                    {/* Icon column */}
+                    <div
+                      className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors duration-200',
+                        check.status === 'checking' ? 'bg-amber-50'
+                          : isPass                  ? 'bg-emerald-50'
+                          : isFail                  ? 'bg-red-100'
+                          : 'bg-black/[0.04]',
+                      )}
+                    >
+                      {check.status === 'checking' ? (
+                        <Loader2 size={18} className="animate-spin text-amber-500" aria-label="Checking" />
+                      ) : isPass ? (
+                        <CheckCircle2 size={18} className="text-emerald-500" aria-label="Passed" />
+                      ) : isFail ? (
+                        <XCircle size={18} className="text-red-500" aria-label="Failed" />
+                      ) : (
+                        <Icon size={18} className="text-brand-navy/25" aria-hidden="true" />
+                      )}
+                    </div>
+
+                    {/* Text column */}
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        'text-sm font-semibold',
+                        isFail ? 'text-red-700' : 'text-brand-navy',
+                      )}>
+                        {label}
+                      </p>
+                      <AnimatePresence mode="wait">
+                        {isFail ? (
+                          <motion.div
+                            key="fail"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            <p className="mt-0.5 text-xs leading-relaxed text-red-600/80">
+                              {check.detail ?? fixHint}
+                            </p>
+                          </motion.div>
+                        ) : (
+                          <motion.p
+                            key="sub"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.1 }}
+                            className="mt-0.5 text-xs text-brand-navy/40"
+                          >
+                            {check.status === 'pending'  ? 'Waiting…'
+                              : check.status === 'checking' ? 'Checking…'
+                              : description}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Status badge */}
+                    <div className="shrink-0">
+                      {isPass && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200/60">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          Passed
+                        </span>
+                      )}
+                      {isFail && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-semibold text-red-600 ring-1 ring-red-200/60">
+                          <AlertTriangle size={10} />
+                          Fix needed
+                        </span>
+                      )}
+                      {(check.status === 'checking' || check.status === 'pending') && (
+                        <span className="inline-flex h-7 w-16 animate-pulse rounded-full bg-black/[0.06]" aria-hidden="true" />
+                      )}
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-black/[0.06] bg-[#FAFAFA] px-6 py-4">
+              {/* Summary */}
+              <div className="flex items-center gap-2.5">
+                {isChecking ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin text-brand-navy/30" />
+                    <span className="text-xs text-brand-navy/40">Checking your environment…</span>
+                  </>
+                ) : allPassed ? (
+                  <>
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                    <span className="text-xs font-semibold text-emerald-700">All {total} checks passed</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
+                    <span className="text-xs font-semibold text-red-600">
+                      {failCount} issue{failCount !== 1 ? 's' : ''} found · {passCount}/{total} passed
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={runValidations}
+                  disabled={isChecking}
+                  className="gap-1.5 py-2 text-xs"
+                  aria-label="Re-run environment checks"
+                >
+                  <RefreshCw
+                    size={12}
+                    className={cn(isChecking && 'animate-spin')}
+                    aria-hidden="true"
+                  />
+                  Re-check
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleStart}
+                  disabled={!allPassed || isChecking || isStarting}
+                  className="gap-1.5 py-2 text-xs"
+                  title={!allPassed ? 'Fix the issues above to continue' : undefined}
+                >
+                  {isStarting ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                      Starting…
+                    </>
+                  ) : (
+                    <>
+                      Start Assessment
+                      <ChevronRight size={13} aria-hidden="true" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-note */}
+          <p className="mt-4 text-center text-[11px] text-brand-navy/30">
+            Your proctor is monitoring this session. Do not close or minimize this window.
+          </p>
         </div>
       </div>
     </motion.div>
-  )
-}
-
-function CheckIcon({ status }: { status: CheckState['status'] }) {
-  if (status === 'pass') {
-    return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100">
-        <CheckCircle2 size={20} className="text-green-600" aria-label="Pass" />
-      </div>
-    )
-  }
-  if (status === 'fail') {
-    return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
-        <XCircle size={20} className="text-red-500" aria-label="Fail" />
-      </div>
-    )
-  }
-  return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-surface">
-      <Clock size={20} className="text-brand-navy/40" aria-label="Pending" />
-    </div>
   )
 }

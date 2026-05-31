@@ -30,15 +30,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           type={inputType}
           className={cn(
-            'w-full rounded-lg border bg-white px-3 py-2 text-sm text-brand-navy',
+            'w-full rounded-lg border bg-white text-sm text-brand-navy',
             'placeholder-brand-navy/30 outline-none transition-colors',
             'focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20',
             'disabled:cursor-not-allowed disabled:opacity-50',
             error ? 'border-red-400 focus:border-red-400 focus:ring-red-200' : 'border-brand-border',
-            LeftIcon && 'pl-9',
-            (RightIcon || isPassword) && 'pr-9',
             className,
           )}
+          style={{
+            paddingTop: '10px',
+            paddingBottom: '10px',
+            paddingLeft: LeftIcon ? '36px' : '12px',
+            paddingRight: (RightIcon || isPassword) ? '36px' : '12px',
+          }}
           {...props}
         />
         {isPassword && (

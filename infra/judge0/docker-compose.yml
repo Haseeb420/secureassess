@@ -2,45 +2,67 @@ services:
   server:
     image: judge0/judge0:1.13.1
     platform: linux/amd64
-    volumes:
-      - ./judge0.conf:/judge0.conf:ro
+    container_name: judge0-server
     ports:
       - "2358:2358"
+    volumes:
+      - ./judge0.conf:/judge0.conf:ro
+    environment:
+      - JUDGE0_CONFIG_FILE=/judge0.conf
     privileged: true
     restart: unless-stopped
     cpus: 0.5
     depends_on:
       - db
       - redis
+    networks:
+      - judge0
 
   workers:
     image: judge0/judge0:1.13.1
     platform: linux/amd64
+    container_name: judge0-workers
     command: ["./scripts/workers"]
     volumes:
       - ./judge0.conf:/judge0.conf:ro
+    environment:
+      - JUDGE0_CONFIG_FILE=/judge0.conf
     privileged: true
     restart: unless-stopped
     cpus: 1.5
     depends_on:
       - db
       - redis
+    networks:
+      - judge0
 
   db:
-    image: postgres:16
-    volumes:
-      - judge0-db:/var/lib/postgresql/data/
+    image: postgres:13
+    container_name: judge0-db
     environment:
       POSTGRES_USER: judge0
       POSTGRES_PASSWORD: judge0secret
       POSTGRES_DB: judge0
+    volumes:
+      - judge0-db:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - judge0
 
   redis:
     image: redis:7
-    command: ["redis-server", "--appendonly", "yes"]
+    container_name: judge0-redis
+    command: redis-server --appendonly yes
     volumes:
       - judge0-redis:/data
+    restart: unless-stopped
+    networks:
+      - judge0
 
 volumes:
   judge0-db:
   judge0-redis:
+
+networks:
+  judge0:
+    driver: bridge

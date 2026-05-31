@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
-from core.dependencies import get_current_admin
+from core.dependencies import get_current_admin, get_current_candidate
 from core.supabase import get_supabase
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])

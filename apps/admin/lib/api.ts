@@ -55,6 +55,7 @@ export interface CreateAssessmentBody {
 }
 
 export interface AssessmentDetail extends Assessment {
+  question_ids: string[]
   candidates: CandidateRow[]
 }
 

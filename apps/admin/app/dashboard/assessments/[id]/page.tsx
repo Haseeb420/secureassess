@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -8,9 +8,9 @@ import { format, fromUnixTime } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock, Shield, Code, Users, ArrowLeft, UserPlus,
-  Check, Copy, BarChart2, AlertCircle,
+  Check, Copy, BarChart2, AlertCircle, FileCode2, Search, X, Plus,
 } from 'lucide-react'
-import { assessmentsApi, type CandidateRow, type Invite } from '../../../../lib/api'
+import { assessmentsApi, questionsApi, type CandidateRow, type Invite, type Question } from '../../../../lib/api'
 import { InviteDialog } from '../../../../components/InviteDialog'
 
 const CANDIDATE_STATUS = {
@@ -89,7 +89,7 @@ export default function AssessmentDetailPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const [showInviteDialog, setShowInviteDialog] = useState(false)
-  const [activeTab, setActiveTab] = useState<'candidates' | 'invites'>('candidates')
+  const [activeTab, setActiveTab] = useState<'candidates' | 'questions' | 'invites'>('candidates')
 
   const { data, isLoading } = useQuery({
     queryKey: ['assessments', id],
@@ -204,20 +204,24 @@ export default function AssessmentDetailPage() {
       <div className="p-8 max-w-5xl space-y-6">
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-brand-border">
-          {(['candidates', 'invites'] as const).map((tab) => (
+          {([
+            { key: 'candidates', label: 'Candidates', count: data.candidate_count },
+            { key: 'questions',  label: 'Questions',  count: data.question_ids?.length ?? 0 },
+            { key: 'invites',    label: 'Invites',    count: invites.length },
+          ] as const).map(({ key, label, count }) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={key}
+              onClick={() => setActiveTab(key)}
               className={[
-                'relative px-4 py-2.5 text-sm font-medium transition-colors capitalize',
-                activeTab === tab ? 'text-brand-navy' : 'text-brand-navy/50 hover:text-brand-navy/70',
+                'relative px-4 py-2.5 text-sm font-medium transition-colors',
+                activeTab === key ? 'text-brand-navy' : 'text-brand-navy/50 hover:text-brand-navy/70',
               ].join(' ')}
             >
-              {tab}
+              {label}
               <span className="ml-1.5 rounded-full bg-brand-surface px-1.5 py-0.5 text-xs text-brand-navy/50 tabular-nums">
-                {tab === 'candidates' ? data.candidate_count : invites.length}
+                {count}
               </span>
-              {activeTab === tab && (
+              {activeTab === key && (
                 <motion.div
                   layoutId="tab-indicator"
                   className="absolute inset-x-0 -bottom-px h-0.5 bg-brand-orange rounded-full"
@@ -276,6 +280,13 @@ export default function AssessmentDetailPage() {
                 )}
               </div>
             </motion.section>
+          )}
+
+          {activeTab === 'questions' && (
+            <QuestionsTab
+              assessmentId={id}
+              initialQuestionIds={data.question_ids ?? []}
+            />
           )}
 
           {activeTab === 'invites' && (
@@ -339,6 +350,250 @@ export default function AssessmentDetailPage() {
         />
       )}
     </motion.div>
+  )
+}
+
+const DIFFICULTY_BADGE: Record<string, string> = {
+  easy:   'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  medium: 'bg-amber-50 text-amber-700 ring-amber-200',
+  hard:   'bg-red-50 text-red-600 ring-red-200',
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  coding:        'Coding',
+  debugging:     'Debugging',
+  sql:           'SQL',
+  mcq:           'MCQ',
+  system_design: 'System Design',
+}
+
+function QuestionsTab({
+  assessmentId,
+  initialQuestionIds,
+}: {
+  assessmentId: string
+  initialQuestionIds: string[]
+}) {
+  const qc = useQueryClient()
+  const [questionIds, setQuestionIds] = useState<string[]>(initialQuestionIds)
+  const [search, setSearch] = useState('')
+  const [dirty, setDirty] = useState(false)
+
+  useEffect(() => {
+    setQuestionIds(initialQuestionIds)
+    setDirty(false)
+  }, [initialQuestionIds.join(',')])
+
+  const { data: allQuestions = [], isLoading } = useQuery({
+    queryKey: ['questions'],
+    queryFn: () => questionsApi.list(),
+  })
+
+  const save = useMutation({
+    mutationFn: () => assessmentsApi.patch(assessmentId, { question_ids: questionIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['assessments', assessmentId] })
+      setDirty(false)
+    },
+  })
+
+  const toggle = (id: string) => {
+    setQuestionIds((prev) =>
+      prev.includes(id) ? prev.filter((q) => q !== id) : [...prev, id],
+    )
+    setDirty(true)
+  }
+
+  const attached = allQuestions.filter((q) => questionIds.includes(q.id))
+  const available = allQuestions.filter(
+    (q) => !questionIds.includes(q.id) && q.title.toLowerCase().includes(search.toLowerCase()),
+  )
+
+  return (
+    <motion.section
+      key="questions"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.15 }}
+      className="space-y-4"
+    >
+      {/* Attached questions */}
+      <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-brand-border bg-brand-surface/70 px-5 py-2.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-brand-navy/50">
+            Attached Questions
+          </span>
+          <span className="tabular-nums text-xs text-brand-navy/40">{questionIds.length} total</span>
+        </div>
+
+        {isLoading ? (
+          <div className="animate-pulse">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-3.5 border-b border-brand-border last:border-0">
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 w-48 bg-brand-border rounded" />
+                  <div className="h-3 w-24 bg-brand-border/60 rounded" />
+                </div>
+                <div className="h-5 w-14 bg-brand-border/60 rounded-full" />
+                <div className="h-5 w-16 bg-brand-border/60 rounded-full" />
+                <div className="h-6 w-6 bg-brand-border/60 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : attached.length === 0 ? (
+          <div className="flex flex-col items-center py-12 text-center">
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-surface border border-brand-border">
+              <FileCode2 size={20} className="text-brand-navy/25" />
+            </div>
+            <p className="text-sm font-medium text-brand-navy/60">No questions attached</p>
+            <p className="text-xs text-brand-navy/40 mt-1">Add questions from the bank below.</p>
+          </div>
+        ) : (
+          <motion.div
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+            initial="hidden"
+            animate="show"
+          >
+            {attached.map((q) => (
+              <motion.div
+                key={q.id}
+                variants={{ hidden: { opacity: 0, x: -4 }, show: { opacity: 1, x: 0, transition: { duration: 0.12 } } }}
+                className="flex items-center gap-4 border-b border-brand-border px-5 py-3.5 last:border-0"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-brand-navy truncate">{q.title}</p>
+                  <p className="text-xs text-brand-navy/40 mt-0.5">{TYPE_LABEL[q.type] ?? q.type}</p>
+                </div>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ring-1 ring-inset ${DIFFICULTY_BADGE[q.difficulty] ?? 'bg-brand-surface text-brand-navy/50 ring-brand-border'}`}>
+                  {q.difficulty}
+                </span>
+                {q.tags.length > 0 && (
+                  <div className="hidden sm:flex items-center gap-1">
+                    {q.tags.slice(0, 2).map((tag) => (
+                      <span key={tag} className="rounded-full bg-brand-surface border border-brand-border px-2 py-0.5 text-[10px] text-brand-navy/50">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => toggle(q.id)}
+                  aria-label={`Remove ${q.title}`}
+                  className="rounded-md p-1.5 text-brand-navy/30 hover:bg-red-50 hover:text-red-500 transition-colors"
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </div>
+
+      {/* Question bank picker */}
+      <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+        <div className="border-b border-brand-border bg-brand-surface/70 px-5 py-2.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Add from Question Bank</span>
+        </div>
+        <div className="p-4">
+          <div className="relative mb-3">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/35" aria-hidden="true" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search questions…"
+              className="w-full rounded-lg border border-brand-border bg-white py-2.5 pl-9 pr-3 text-sm text-brand-navy placeholder-brand-navy/30 outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
+            />
+          </div>
+          <div className="max-h-56 overflow-y-auto rounded-lg border border-brand-border divide-y divide-brand-border bg-white">
+            {isLoading ? (
+              <div className="animate-pulse">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-4 w-4 bg-brand-border rounded" />
+                    <div className="flex-1 h-3.5 bg-brand-border rounded" />
+                    <div className="h-4 w-14 bg-brand-border/60 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : available.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-brand-navy/40">
+                {search ? `No questions match "${search}"` : allQuestions.length === questionIds.length ? 'All questions are already attached.' : 'No questions in the bank yet.'}
+              </div>
+            ) : (
+              available.map((q) => (
+                <label
+                  key={q.id}
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition-colors"
+                >
+                  <div className="h-4 w-4 shrink-0 rounded border-2 border-brand-border bg-white flex items-center justify-center" aria-hidden="true" />
+                  <span className="flex-1 text-sm text-brand-navy">{q.title}</span>
+                  <span className="text-xs text-brand-navy/40">{TYPE_LABEL[q.type] ?? q.type}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ring-1 ring-inset ${DIFFICULTY_BADGE[q.difficulty] ?? 'bg-brand-surface text-brand-navy/50 ring-brand-border'}`}>
+                    {q.difficulty}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggle(q.id)}
+                    aria-label={`Add ${q.title}`}
+                    className="rounded-md p-1 text-brand-navy/40 hover:bg-brand-orange-pale hover:text-brand-orange transition-colors"
+                  >
+                    <Plus size={14} aria-hidden="true" />
+                  </button>
+                </label>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Save bar */}
+      <AnimatePresence>
+        {dirty && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center justify-between rounded-xl border border-brand-orange/30 bg-brand-orange-pale px-5 py-3.5"
+          >
+            <p className="text-sm text-brand-navy/70">You have unsaved changes to the question list.</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => { setQuestionIds(initialQuestionIds); setDirty(false) }}
+                className="rounded-lg border border-brand-border bg-white px-3.5 py-2 text-sm text-brand-navy/60 hover:text-brand-navy transition-colors"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={() => save.mutate()}
+                disabled={save.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors shadow-sm disabled:opacity-50"
+              >
+                {save.isPending ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Saving…
+                  </>
+                ) : 'Save Changes'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {save.isError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
+          <span className="font-medium">Error: </span>{String(save.error)}
+        </div>
+      )}
+    </motion.section>
   )
 }
 

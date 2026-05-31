@@ -263,8 +263,8 @@ export function PreAssessmentPage() {
       </div>
 
       {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-lg px-4 py-10">
+      <div className="flex flex-1 items-center justify-center overflow-y-auto px-4 py-8">
+        <div className="w-full max-w-lg">
 
           {/* Phase chip */}
           <div

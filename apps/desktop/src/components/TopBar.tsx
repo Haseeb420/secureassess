@@ -212,8 +212,8 @@ export function TopBar({
                 />
               </svg>
               <span
-                className={`absolute text-[11px] font-bold ${timerNumClass(timerSeconds)}`}
-                style={SYNE}
+                className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${timerNumClass(timerSeconds)}`}
+                style={{ ...SYNE, letterSpacing: '-0.01em' }}
                 aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
                 aria-live="off"
               >

@@ -216,7 +216,7 @@ export function AssessmentPage() {
       {/* Main layout */}
       <div className="min-h-0 flex-1">
         <PanelGroup orientation="horizontal" className="h-full">
-          <Panel defaultSize={38} minSize={28} maxSize={50}>
+          <Panel defaultSize="38%" minSize="28%" maxSize="50%">
             <QuestionPanel
               question={mockQuestion}
               runHistory={runHistory}
@@ -225,7 +225,7 @@ export function AssessmentPage() {
 
           <PanelResizeHandle className="w-1.5 cursor-col-resize bg-brand-border transition-colors hover:bg-brand-orange" />
 
-          <Panel defaultSize={62} minSize={50}>
+          <Panel defaultSize="62%" minSize="50%">
             <div className="flex h-full flex-col">
               <EditorToolbar
                 language={currentLanguage}
@@ -239,7 +239,7 @@ export function AssessmentPage() {
               />
 
               <PanelGroup orientation="vertical" className="min-h-0 flex-1">
-                <Panel defaultSize={72} minSize={30}>
+                <Panel defaultSize="72%" minSize="30%">
                   <CodeEditor
                     language={currentLanguage}
                     value={codeByLanguage[currentLanguage]}
@@ -255,7 +255,7 @@ export function AssessmentPage() {
 
                 <PanelResizeHandle className="h-1.5 cursor-row-resize bg-brand-border transition-colors hover:bg-brand-orange" />
 
-                <Panel defaultSize={28} minSize={15}>
+                <Panel defaultSize="28%" minSize="15%">
                   <ConsoleOutput
                     lines={consoleOutput}
                     status={consoleStatus}

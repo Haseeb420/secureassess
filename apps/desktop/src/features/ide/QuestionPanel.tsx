@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { ArrowDown, Clock } from 'lucide-react'
+import { ArrowDown, Clock, History } from 'lucide-react'
+import { cn } from '@secureassess/ui'
 import type { Question } from '@secureassess/shared-types'
 import { SkeletonBlock, SkeletonText } from '../../components/Skeleton'
 import type { RunResult } from './evaluationService'
@@ -13,22 +14,22 @@ interface QuestionPanelProps {
 
 type Tab = 'problem' | 'examples' | 'runs'
 
-const DIFFICULTY_BADGE = {
-  easy:   'border-green-200 bg-green-50 text-green-700',
-  medium: 'border-brand-orange/30 bg-brand-orange-pale text-brand-orange',
-  hard:   'border-red-200 bg-red-50 text-red-600',
+const DIFFICULTY_BADGE: Record<Question['difficulty'], string> = {
+  easy:   'bg-green-50 text-green-700 border-green-200',
+  medium: 'bg-orange-50 text-brand-orange border-orange-200',
+  hard:   'bg-red-50 text-red-600 border-red-200',
 }
 
-const DIFFICULTY_LABEL = {
-  easy: 'Easy',
+const DIFFICULTY_LABEL: Record<Question['difficulty'], string> = {
+  easy:   'Easy',
   medium: 'Medium',
-  hard: 'Hard',
+  hard:   'Hard',
 }
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'problem',  label: 'Problem'  },
   { key: 'examples', label: 'Examples' },
-  { key: 'runs',     label: 'My Runs'  },
+  { key: 'runs',     label: 'Runs'     },
 ]
 
 export function QuestionPanel({ question, isLoading = false, runHistory = [] }: QuestionPanelProps) {
@@ -37,147 +38,207 @@ export function QuestionPanel({ question, isLoading = false, runHistory = [] }: 
   if (isLoading) {
     return (
       <div className="flex h-full flex-col bg-white" aria-busy="true" aria-label="Loading question">
-        <div className="border-b border-brand-border px-5 py-3">
-          <SkeletonText className="h-5 w-2/3 mb-2" />
-          <div className="flex gap-2">
-            <SkeletonBlock width="w-16" height="h-5" className="rounded-full" />
+        <div className="px-5 pt-4 pb-0">
+          <div className="flex items-center gap-2 mb-2">
+            <SkeletonBlock width="w-14" height="h-5" className="rounded-full" />
             <SkeletonBlock width="w-14" height="h-5" className="rounded-full" />
           </div>
+          <SkeletonText className="h-5 w-3/4 mb-1" />
+          <div className="h-px bg-brand-border mt-3" />
         </div>
-        <div className="px-5 py-4 space-y-2">
+        <div className="px-5 py-5 space-y-2">
           <SkeletonText />
           <SkeletonText className="w-5/6" />
           <SkeletonText className="w-4/5" />
-          <SkeletonBlock height="h-16" className="mt-3" />
+          <SkeletonBlock height="h-16" className="mt-3 rounded-xl" />
         </div>
       </div>
     )
   }
 
   const visibleSamples = question.sampleTests.filter((t) => !t.isHidden)
+  const timeLimitSec = Math.round(question.timeLimitMs / 1000)
 
   return (
     <div className="flex h-full flex-col bg-white">
-      {/* Header — sticky */}
-      <div className="sticky top-0 z-10 border-b border-brand-border bg-white px-5 py-3">
-        <h2 className="line-clamp-2 text-base font-semibold leading-snug text-brand-navy">
-          {question.title}
-        </h2>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span
-            className={[
-              'rounded-full border px-2.5 py-0.5 text-xs font-medium',
-              DIFFICULTY_BADGE[question.difficulty],
-            ].join(' ')}
-          >
-            {DIFFICULTY_LABEL[question.difficulty]}
-          </span>
-          <span className="rounded-full border border-brand-border bg-brand-surface px-2.5 py-0.5 text-xs text-brand-navy/60">
-            Coding
-          </span>
-          <span className="flex items-center gap-1 text-xs text-brand-navy/50">
-            <Clock size={11} aria-hidden="true" />
-            {question.timeLimitMs / 1000}s limit
-          </span>
+      {/* Sticky header + tab bar */}
+      <div className="sticky top-0 z-10 bg-white">
+        {/* Header */}
+        <div className="px-5 pt-4 pb-0">
+          {/* Meta row */}
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className={cn(
+                'font-dm-mono text-xs rounded-full px-2.5 py-0.5 border',
+                DIFFICULTY_BADGE[question.difficulty],
+              )}
+            >
+              {DIFFICULTY_LABEL[question.difficulty]}
+            </span>
+            <span className="font-dm-mono text-xs rounded-full bg-brand-surface text-brand-navy/60 border border-brand-border px-2.5 py-0.5">
+              Coding
+            </span>
+            <div className="ml-auto flex items-center gap-1">
+              <Clock size={12} className="text-brand-navy/40" aria-hidden="true" />
+              <span className="font-dm-mono text-xs text-brand-navy/40">{timeLimitSec}s</span>
+            </div>
+          </div>
+
+          {/* Title */}
+          <h2 className="font-syne text-lg font-bold text-brand-navy leading-snug">
+            {question.title}
+          </h2>
+
+          {/* Divider */}
+          <div className="h-px bg-brand-border mt-3" />
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex px-4 bg-white border-b border-brand-border" role="tablist">
+          {TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === key}
+              onClick={() => setActiveTab(key)}
+              className={cn(
+                'relative font-dm-sans text-sm px-3 py-2.5 cursor-pointer transition-colors',
+                activeTab === key
+                  ? 'text-brand-navy font-medium'
+                  : 'text-brand-navy/50 hover:text-brand-navy/80',
+              )}
+            >
+              {label}
+              {key === 'runs' && runHistory.length > 0 && (
+                <span className="ml-1.5 font-dm-mono text-xs text-brand-orange">
+                  {runHistory.length}
+                </span>
+              )}
+              {activeTab === key && (
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-orange"
+                />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Tab bar — sticky */}
-      <div className="sticky top-[65px] z-10 flex border-b border-brand-border bg-brand-surface">
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={[
-              'px-4 py-2.5 text-sm transition-colors',
-              activeTab === key
-                ? 'border-b-2 border-brand-orange bg-white text-brand-orange'
-                : 'text-brand-navy/60 hover:text-brand-navy',
-            ].join(' ')}
-          >
-            {label}
-            {key === 'runs' && runHistory.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-brand-orange-pale px-1.5 py-0.5 text-xs text-brand-orange">
-                {runHistory.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-5 py-5">
+        {/* Problem tab */}
         {activeTab === 'problem' && (
-          <div className="px-5 py-4">
-            <article className="prose-content">
-              <ReactMarkdown>{question.description}</ReactMarkdown>
-            </article>
-          </div>
+          <article className="prose prose-sm max-w-none prose-question">
+            <ReactMarkdown>{question.description}</ReactMarkdown>
+          </article>
         )}
 
+        {/* Examples tab */}
         {activeTab === 'examples' && (
-          <div className="px-5 py-4 space-y-3">
+          <div>
             {visibleSamples.length === 0 ? (
-              <p className="text-sm text-brand-navy/40 text-center py-8">No examples available.</p>
+              <p className="font-dm-sans text-sm text-brand-navy/40 text-center py-8">
+                No examples available.
+              </p>
             ) : (
               visibleSamples.map((test, i) => (
-                <div
-                  key={test.id}
-                  className="rounded-xl border border-brand-border bg-brand-surface p-4"
-                >
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">
+                <div key={test.id} className="mb-6">
+                  <p className="font-dm-mono text-xs text-brand-navy/40 uppercase tracking-wider font-medium mb-3">
                     Example {i + 1}
                   </p>
 
-                  <p className="mb-1 text-xs font-medium text-brand-navy/50">Input</p>
-                  <pre className="mb-3 overflow-x-auto rounded-lg border border-brand-border bg-white p-3 font-mono text-xs text-brand-navy">
-                    {test.input}
-                  </pre>
-
-                  <div className="mb-3 flex justify-center">
-                    <ArrowDown size={14} className="text-brand-navy/30" aria-hidden="true" />
+                  {/* Input */}
+                  <div>
+                    <p className="font-dm-sans text-xs font-medium text-brand-navy/60 mb-1.5">
+                      Input
+                    </p>
+                    <div className="bg-brand-surface border border-brand-border rounded-xl p-3">
+                      <pre className="font-dm-mono text-xs text-brand-navy leading-relaxed whitespace-pre m-0 bg-transparent overflow-x-auto">
+                        {test.input}
+                      </pre>
+                    </div>
                   </div>
 
-                  <p className="mb-1 text-xs font-medium text-brand-navy/50">Expected Output</p>
-                  <pre className="overflow-x-auto rounded-lg border border-brand-border bg-white p-3 font-mono text-xs text-brand-navy">
-                    {test.expectedOutput}
-                  </pre>
+                  {/* Arrow */}
+                  <ArrowDown
+                    size={16}
+                    className="text-brand-border mx-auto block my-2"
+                    aria-hidden="true"
+                  />
+
+                  {/* Output */}
+                  <div>
+                    <p className="font-dm-sans text-xs font-medium text-brand-navy/60 mb-1.5">
+                      Expected Output
+                    </p>
+                    <div className="bg-brand-surface border border-brand-border rounded-xl p-3">
+                      <pre className="font-dm-mono text-xs text-brand-navy leading-relaxed whitespace-pre m-0 bg-transparent overflow-x-auto">
+                        {test.expectedOutput}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Divider between examples */}
+                  {i < visibleSamples.length - 1 && (
+                    <div className="h-px bg-brand-border my-6" />
+                  )}
                 </div>
               ))
             )}
           </div>
         )}
 
+        {/* Runs tab */}
         {activeTab === 'runs' && (
-          <div className="px-5 py-4">
+          <div>
             {runHistory.length === 0 ? (
-              <p className="py-8 text-center text-sm text-brand-navy/40">
-                No runs yet. Press ⌘ Enter to run your code.
-              </p>
+              <div className="text-center pt-10">
+                <History
+                  size={32}
+                  className="text-brand-navy/20 mb-3 mx-auto block"
+                  aria-hidden="true"
+                />
+                <p className="font-dm-sans text-sm text-brand-navy/40">No runs yet</p>
+                <p className="font-dm-mono text-xs text-brand-navy/30 mt-1">
+                  Press Ctrl+Enter to run your code
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div>
                 {runHistory.map((run, i) => {
                   const passed = run.outcomes.filter((o) => o.passed).length
                   const total = run.outcomes.length
                   const allPass = passed === total && !run.compile_error
+                  const avgTime =
+                    total > 0
+                      ? Math.round(
+                          run.outcomes.reduce((sum, o) => sum + o.execution_time_ms, 0) / total,
+                        )
+                      : 0
+
                   return (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-xl border border-brand-border bg-brand-surface px-4 py-3"
+                      className="flex items-center px-1 py-3 border-b border-brand-border last:border-0 gap-3"
                     >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={[
-                            'text-sm font-medium',
-                            allPass ? 'text-green-600' : 'text-red-500',
-                          ].join(' ')}
-                        >
-                          {allPass ? '✓' : '✗'}
-                        </span>
-                        <span className="text-xs text-brand-navy/70">
+                      <span
+                        className={cn(
+                          'w-2 h-2 rounded-full flex-shrink-0',
+                          allPass ? 'bg-green-500' : 'bg-red-500',
+                        )}
+                        aria-label={allPass ? 'Passed' : 'Failed'}
+                      />
+                      <div>
+                        <span className="font-dm-sans text-sm text-brand-navy">
                           {run.compile_error ? 'Compile error' : `${passed}/${total} passed`}
                         </span>
+                        {!run.compile_error && (
+                          <span className="font-dm-mono text-xs text-brand-navy/40 block">
+                            {avgTime}ms
+                          </span>
+                        )}
                       </div>
                     </div>
                   )

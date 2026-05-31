@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { toast } from 'sonner'
+import type { TestCase } from '@secureassess/shared-types'
 
 export interface TestCaseOutcome {
   test_case_id: string
@@ -35,10 +36,18 @@ export function runSampleTests(
   questionId: string,
   language: string,
   sourceCode: string,
+  testCases: TestCase[],
+  timeLimitMs: number,
+  memoryLimitMb: number,
 ): Promise<RunResult> {
-  return invoke<RunResult>('run_sample_tests', { questionId, language, sourceCode }).catch(
-    handleOfflineError,
-  )
+  return invoke<RunResult>('run_sample_tests', {
+    questionId,
+    language,
+    sourceCode,
+    testCases,
+    timeLimitMs,
+    memoryLimitMb,
+  }).catch(handleOfflineError)
 }
 
 export function submitSolution(

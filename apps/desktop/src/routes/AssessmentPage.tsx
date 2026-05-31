@@ -103,6 +103,9 @@ export function AssessmentPage() {
         mockQuestion.id,
         currentLanguage,
         codeByLanguage[currentLanguage],
+        mockQuestion.sampleTests,
+        mockQuestion.timeLimitMs,
+        mockQuestion.memoryLimitMb,
       )
       setRunResult(result)
       setRunHistory((h) => [result, ...h].slice(0, 20))

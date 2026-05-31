@@ -124,23 +124,48 @@ async fn run_cases(
     Ok(RunResult { outcomes, compile_error: None })
 }
 
+// ── Frontend test case input (passed directly from the UI) ───────────────────
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendTestCase {
+    pub id: String,
+    pub input: String,
+    pub expected_output: String,
+    pub is_hidden: bool,
+}
+
 // ── Tauri commands ────────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub async fn run_sample_tests(
-    db: State<'_, DbPool>,
     question_id: String,
     language: String,
     source_code: String,
+    test_cases: Vec<FrontendTestCase>,
+    time_limit_ms: u64,
+    memory_limit_mb: u64,
 ) -> Result<RunResult, String> {
-    let test_cases = fetch_test_cases(&db.0, &question_id, false).await?;
+    let rows: Vec<TestCaseRow> = test_cases
+        .into_iter()
+        .filter(|tc| !tc.is_hidden)
+        .map(|tc| TestCaseRow {
+            id: tc.id,
+            question_id: question_id.clone(),
+            input: tc.input,
+            expected_output: tc.expected_output,
+            is_hidden: 0,
+            time_limit_ms: time_limit_ms as i64,
+            memory_limit_mb: memory_limit_mb as i64,
+        })
+        .collect();
 
-    if test_cases.is_empty() {
+    if rows.is_empty() {
         return Ok(RunResult { outcomes: vec![], compile_error: None });
     }
 
     let backend = get_backend();
-    run_cases(backend.as_ref(), &source_code, &language, &test_cases).await
+    run_cases(backend.as_ref(), &source_code, &language, &rows).await
 }
 
 #[tauri::command]

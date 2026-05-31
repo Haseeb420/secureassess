@@ -80,9 +80,17 @@ async def create_assessment(
 @router.get("/my")
 async def get_my_assessment(candidate: dict = Depends(get_current_candidate)):
     """Return the assessment assigned to the currently authenticated candidate."""
+    import logging
+    log = logging.getLogger(__name__)
+
     assessment_id = candidate.get("assessment_id")
+    log.info("GET /assessments/my — candidate_id=%s assessment_id=%s", candidate.get("id"), assessment_id)
+
     if not assessment_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No assessment assigned to this account")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No assessment_id in candidate token. Re-invite the candidate.",
+        )
 
     supabase = get_supabase()
     result = (
@@ -91,8 +99,13 @@ async def get_my_assessment(candidate: dict = Depends(get_current_candidate)):
         .eq("id", assessment_id)
         .execute()
     )
+    log.info("assessments query returned %d rows", len(result.data or []))
+
     if not result.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Assessment {assessment_id} not found in database. Create it from the admin panel first.",
+        )
     return result.data[0]
 
 

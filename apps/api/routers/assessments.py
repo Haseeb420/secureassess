@@ -95,11 +95,11 @@ async def get_my_assessment(candidate: dict = Depends(get_current_candidate)):
     supabase = get_supabase()
     result = (
         supabase.table("assessments")
-        .select("id, title, duration_minutes, allowed_languages, question_ids, security_level, status")
+        .select("*")
         .eq("id", assessment_id)
         .execute()
     )
-    log.info("assessments query returned %d rows", len(result.data or []))
+    log.info("assessments query returned %d rows; data=%s", len(result.data or []), result.data)
 
     if not result.data:
         raise HTTPException(

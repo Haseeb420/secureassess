@@ -26,6 +26,7 @@ import {
 } from '../features/security/securityService'
 import type { ForbiddenProcess } from '../features/security/types'
 import { useAssessmentStore } from '../store/assessmentStore'
+import { fetchAssessmentWithQuestions } from '../lib/apiClient'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -146,7 +147,7 @@ export function PreAssessmentPage() {
   const candidate     = useAssessmentStore((s) => s.candidate)
   const authToken     = useAssessmentStore((s) => s.authToken)
   const storeAssId    = useAssessmentStore((s) => s.assessmentId)
-  const { setTimer }  = useAssessmentStore()
+  const { setAssessmentData, setQuestions } = useAssessmentStore()
 
   // Extract assessment_id from JWT user_metadata if not already in store
   const assessmentId = useMemo<string | null>(() => {
@@ -157,15 +158,35 @@ export function PreAssessmentPage() {
     return (meta?.assessment_id as string | undefined) ?? null
   }, [authToken, storeAssId])
 
-  const [state,      setState]      = useState<ValidationState>(INITIAL)
-  const [isChecking, setIsChecking] = useState(true)
-  const [kioskReady, setKioskReady] = useState(false)
-  const [isStarting, setIsStarting] = useState(false)
-  const [expanded,   setExpanded]   = useState<CheckKey | null>(null)
+  const [state,           setState]          = useState<ValidationState>(INITIAL)
+  const [isChecking,      setIsChecking]     = useState(true)
+  const [kioskReady,      setKioskReady]     = useState(false)
+  const [isStarting,      setIsStarting]     = useState(false)
+  const [expanded,        setExpanded]       = useState<CheckKey | null>(null)
+  const [assessmentTitle, setAssessmentTitle] = useState<string | null>(null)
+  const [fetchError,      setFetchError]     = useState<string | null>(null)
+  const [isFetching,      setIsFetching]     = useState(false)
 
   useEffect(() => {
     enterKioskMode().then(() => setKioskReady(true)).catch(() => setKioskReady(true))
   }, [])
+
+  // Fetch real assessment + questions once auth is ready
+  useEffect(() => {
+    if (!authToken) return
+    setIsFetching(true)
+    setFetchError(null)
+    fetchAssessmentWithQuestions()
+      .then(({ assessment, questions }) => {
+        setAssessmentData(assessment.id, assessment.title, assessment.duration_minutes)
+        setQuestions(questions)
+        setAssessmentTitle(assessment.title)
+      })
+      .catch((err: unknown) => {
+        setFetchError(err instanceof Error ? err.message : 'Failed to load assessment')
+      })
+      .finally(() => setIsFetching(false))
+  }, [authToken, setAssessmentData, setQuestions])
 
   const runValidations = useCallback(async () => {
     setIsChecking(true)
@@ -212,7 +233,6 @@ export function PreAssessmentPage() {
 
   const handleStart = async () => {
     setIsStarting(true)
-    setTimer(3600)
     navigate('/assessment')
   }
 
@@ -282,12 +302,26 @@ export function PreAssessmentPage() {
               </span>
             </div>
 
-            {assessmentId && (
+            {isFetching && (
+              <div className="flex items-center gap-2 rounded-lg bg-white/[0.05] px-3 py-2.5">
+                <Loader2 size={11} className="animate-spin text-white/30 shrink-0" />
+                <span className="text-[11px] text-white/30" style={DMSANS}>Loading assessment…</span>
+              </div>
+            )}
+
+            {assessmentTitle && !isFetching && (
               <div className="rounded-lg bg-white/[0.05] px-3 py-2.5">
-                <p className="text-[10px] text-white/25 mb-1" style={DMSANS}>Assessment ID</p>
-                <p className="text-[11px] font-medium text-white/55 truncate" style={DMMONO}>
-                  {assessmentId}
+                <p className="text-[10px] text-white/25 mb-1" style={DMSANS}>Assessment</p>
+                <p className="text-[12px] font-medium text-white/70 leading-snug" style={DMSANS}>
+                  {assessmentTitle}
                 </p>
+              </div>
+            )}
+
+            {fetchError && !isFetching && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2.5">
+                <p className="text-[10px] text-red-400/80 mb-0.5" style={DMSANS}>Error loading assessment</p>
+                <p className="text-[11px] text-red-300/70 leading-snug" style={DMSANS}>{fetchError}</p>
               </div>
             )}
           </div>
@@ -602,14 +636,20 @@ export function PreAssessmentPage() {
                 <button
                   type="button"
                   onClick={handleStart}
-                  disabled={!allPassed || isChecking || isStarting}
-                  title={!allPassed ? 'Fix issues above to continue' : undefined}
+                  disabled={!allPassed || isChecking || isStarting || isFetching || !!fetchError}
+                  title={
+                    fetchError ? 'Assessment failed to load' :
+                    isFetching ? 'Loading assessment…' :
+                    !allPassed ? 'Fix issues above to continue' : undefined
+                  }
                   aria-label={isStarting ? 'Starting assessment…' : 'Start assessment'}
                   className="flex items-center rounded-xl bg-brand-navy px-5 py-2 text-[13px] font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
                   style={DMSANS}
                 >
                   {isStarting ? (
                     <><Loader2 size={13} className="mr-1.5 animate-spin" />Starting...</>
+                  ) : isFetching ? (
+                    <><Loader2 size={13} className="mr-1.5 animate-spin" />Loading…</>
                   ) : (
                     <>Start Assessment<ArrowRight size={13} className="ml-1.5" /></>
                   )}

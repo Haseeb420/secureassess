@@ -1,8 +1,10 @@
+'use client'
+
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels'
-import type { Question } from '@secureassess/shared-types'
+import { ChevronLeft, ChevronRight, FileQuestion } from 'lucide-react'
 import { CodeEditor } from '../features/ide/CodeEditor'
 import { ConsoleOutput } from '../features/ide/ConsoleOutput'
 import { EditorToolbar } from '../features/ide/EditorToolbar'
@@ -21,48 +23,28 @@ import {
 } from '../features/ide/evaluationService'
 import { defaultTemplates } from '../features/ide/templates'
 
-const mockQuestion: Question = {
-  id: 'q1',
-  title: 'Two Sum',
-  difficulty: 'easy',
-  timeLimitMs: 2000,
-  memoryLimitMb: 256,
-  description: `Given an array of integers \`nums\` and an integer \`target\`, return the indices of the two numbers that add up to \`target\`.
-
-You may assume that each input has exactly one solution, and you may not use the same element twice.
-
-**Example:**
-\`\`\`
-Input: nums = [2, 7, 11, 15], target = 9
-Output: [0, 1]
-\`\`\`
-
-**Constraints:**
-- \`2 <= nums.length <= 10^4\`
-- \`-10^9 <= nums[i] <= 10^9\`
-- Only one valid answer exists.`,
-  sampleTests: [
-    { id: 't1', input: '4\n2 7 11 15\n9', expectedOutput: '0 1', isHidden: false },
-    { id: 't2', input: '3\n3 2 4\n6', expectedOutput: '1 2', isHidden: false },
-    { id: 't3', input: '2\n3 3\n6', expectedOutput: '0 1', isHidden: true },
-  ],
-}
-
 export function AssessmentPage() {
   const navigate = useNavigate()
   const {
     candidate,
     assessmentId,
+    assessmentTitle,
+    questions,
+    currentQuestionIndex,
     currentLanguage,
     codeByLanguage,
     consoleOutput,
     timerSeconds,
+    timerTotalSeconds,
     setLanguage,
     setCode,
     appendOutput,
     clearOutput,
     decrementTimer,
+    setCurrentQuestionIndex,
   } = useAssessmentStore()
+
+  const currentQuestion = questions[currentQuestionIndex] ?? null
 
   const [isRunning, setIsRunning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -74,6 +56,14 @@ export function AssessmentPage() {
 
   const { violationCount, lastViolation } = useSecurityMonitor({ enabled: true })
 
+  // Reset run state when switching questions
+  useEffect(() => {
+    setRunResult(null)
+    setCompileError(null)
+    setRunHistory([])
+    clearOutput()
+  }, [currentQuestionIndex, clearOutput])
+
   useEffect(() => {
     const id = setInterval(() => decrementTimer(), 1000)
     return () => clearInterval(id)
@@ -81,7 +71,7 @@ export function AssessmentPage() {
 
   const { forceSave } = useAutoSave({
     sessionId: assessmentId,
-    questionId: mockQuestion.id,
+    questionId: currentQuestion?.id ?? null,
     language: currentLanguage,
     code: codeByLanguage[currentLanguage],
   })
@@ -92,6 +82,7 @@ export function AssessmentPage() {
   }, [forceSave, appendOutput])
 
   const handleRun = useCallback(async () => {
+    if (!currentQuestion) return
     setIsRunning(true)
     setRunResult(null)
     setCompileError(null)
@@ -100,12 +91,12 @@ export function AssessmentPage() {
 
     try {
       const result = await runSampleTests(
-        mockQuestion.id,
+        currentQuestion.id,
         currentLanguage,
         codeByLanguage[currentLanguage],
-        mockQuestion.sampleTests,
-        mockQuestion.timeLimitMs,
-        mockQuestion.memoryLimitMb,
+        currentQuestion.sampleTests,
+        currentQuestion.timeLimitMs,
+        currentQuestion.memoryLimitMb,
       )
       setRunResult(result)
       setRunHistory((h) => [result, ...h].slice(0, 20))
@@ -129,16 +120,17 @@ export function AssessmentPage() {
     } finally {
       setIsRunning(false)
     }
-  }, [currentLanguage, codeByLanguage, appendOutput, clearOutput])
+  }, [currentQuestion, currentLanguage, codeByLanguage, appendOutput, clearOutput])
 
   const handleSubmit = useCallback(async () => {
+    if (!currentQuestion) return
     setIsSubmitting(true)
     appendOutput({ type: 'system', text: 'Submitting solution…' })
 
     try {
       const result = await submitSolution(
         assessmentId ?? 'unknown-session',
-        mockQuestion.id,
+        currentQuestion.id,
         currentLanguage,
         codeByLanguage[currentLanguage],
       )
@@ -149,7 +141,7 @@ export function AssessmentPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [assessmentId, currentLanguage, codeByLanguage, appendOutput])
+  }, [assessmentId, currentQuestion, currentLanguage, codeByLanguage, appendOutput])
 
   const handleResetCode = useCallback(() => {
     setCode(currentLanguage, defaultTemplates[currentLanguage])
@@ -196,31 +188,44 @@ export function AssessmentPage() {
           ? 'success'
           : 'error'
 
+  // No questions loaded yet
+  if (questions.length === 0) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-brand-navy text-white/50">
+        <FileQuestion size={36} className="mb-3 text-white/20" />
+        <p className="text-sm">No questions loaded for this assessment.</p>
+        <button
+          onClick={() => navigate('/pre-assessment')}
+          className="mt-4 rounded-lg border border-white/10 px-4 py-2 text-xs hover:border-white/30 transition-colors"
+        >
+          ← Back
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      {/* Violation banner — fixed above top bar */}
       <ViolationBanner violation={lastViolation} violationCount={violationCount} />
 
       <TopBar
         candidateName={candidate?.name ?? candidate?.email ?? 'Candidate'}
-        assessmentTitle="Assessment"
-        questionIndex={1}
-        totalQuestions={1}
+        assessmentTitle={assessmentTitle ?? 'Assessment'}
+        questionIndex={currentQuestionIndex + 1}
+        totalQuestions={questions.length}
         timerSeconds={timerSeconds}
-        timerTotalSeconds={3600}
+        timerTotalSeconds={timerTotalSeconds}
         sessionId={assessmentId}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       />
 
-      {/* Main layout */}
       <div className="min-h-0 flex-1">
         <PanelGroup orientation="horizontal" className="h-full">
           <Panel defaultSize="38%" minSize="28%" maxSize="50%">
-            <QuestionPanel
-              question={mockQuestion}
-              runHistory={runHistory}
-            />
+            {currentQuestion ? (
+              <QuestionPanel question={currentQuestion} runHistory={runHistory} />
+            ) : null}
           </Panel>
 
           <PanelResizeHandle className="w-1.5 cursor-col-resize bg-brand-border transition-colors hover:bg-brand-orange" />
@@ -273,10 +278,34 @@ export function AssessmentPage() {
         className="flex h-[22px] shrink-0 items-center gap-6 border-t border-white/10 bg-brand-navy px-4 text-xs font-mono text-white/40"
         aria-hidden="true"
       >
-        <span>
-          {isRunning || isSubmitting ? 'Running…' : 'Ready'}
-        </span>
+        <span>{isRunning || isSubmitting ? 'Running…' : 'Ready'}</span>
         <span>{currentLanguage}</span>
+
+        {/* Question navigation */}
+        {questions.length > 1 && (
+          <div className="flex items-center gap-1 ml-2">
+            <button
+              onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+              disabled={currentQuestionIndex === 0}
+              aria-label="Previous question"
+              className="flex items-center rounded p-0.5 hover:text-white/70 disabled:opacity-30 transition-colors"
+            >
+              <ChevronLeft size={12} />
+            </button>
+            <span className="tabular-nums">
+              Q{currentQuestionIndex + 1}/{questions.length}
+            </span>
+            <button
+              onClick={() => setCurrentQuestionIndex(Math.min(questions.length - 1, currentQuestionIndex + 1))}
+              disabled={currentQuestionIndex === questions.length - 1}
+              aria-label="Next question"
+              className="flex items-center rounded p-0.5 hover:text-white/70 disabled:opacity-30 transition-colors"
+            >
+              <ChevronRight size={12} />
+            </button>
+          </div>
+        )}
+
         {timerSeconds < 300 && (
           <span className="ml-auto text-brand-orange">
             {Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2, '0')} remaining

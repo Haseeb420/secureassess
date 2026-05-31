@@ -5,58 +5,91 @@ import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { format, fromUnixTime } from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  createColumnHelper,
-} from '@tanstack/react-table'
+  Clock, Shield, Code, Users, ArrowLeft, UserPlus,
+  Check, Copy, BarChart2, AlertCircle,
+} from 'lucide-react'
 import { assessmentsApi, type CandidateRow, type Invite } from '../../../../lib/api'
 import { InviteDialog } from '../../../../components/InviteDialog'
 
-const col = createColumnHelper<CandidateRow>()
+const CANDIDATE_STATUS = {
+  not_started: { label: 'Not started', dot: 'bg-brand-border',  text: 'text-brand-navy/50', bg: 'bg-brand-surface',  pulse: false },
+  in_progress: { label: 'In progress',  dot: 'bg-blue-400',     text: 'text-blue-700',      bg: 'bg-blue-50',        pulse: true  },
+  completed:   { label: 'Completed',    dot: 'bg-emerald-400',  text: 'text-emerald-700',   bg: 'bg-emerald-50',     pulse: false },
+} as const
 
-const STATUS_CLASSES: Record<CandidateRow['status'], string> = {
-  not_started: 'bg-brand-surface text-brand-navy/50',
-  in_progress: 'bg-blue-100 text-blue-700',
-  completed:   'bg-green-100 text-green-700',
+function getInitials(name: string) {
+  return name.split(' ').slice(0, 2).map((p) => p[0] ?? '').join('').toUpperCase()
 }
 
-const columns = [
-  col.accessor('name', { header: 'Name' }),
-  col.accessor('email', { header: 'Email' }),
-  col.accessor('status', {
-    header: 'Status',
-    cell: (i) => (
-      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[i.getValue()]}`}>
-        {i.getValue().replace('_', ' ')}
-      </span>
-    ),
-  }),
-  col.accessor('score', {
-    header: 'Score',
-    cell: (i) => (i.getValue() != null ? `${i.getValue()}%` : '—'),
-  }),
-  col.display({
-    id: 'report',
-    header: '',
-    cell: ({ row }) =>
-      row.original.session_id ? (
-        <Link
-          href={`/dashboard/reports/${row.original.session_id}`}
-          className="text-xs font-medium text-brand-orange hover:text-brand-orange-light"
-        >
-          Report
-        </Link>
-      ) : null,
-  }),
-]
+function AvatarCircle({ name }: { name: string }) {
+  const palette = ['bg-violet-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-indigo-500']
+  const color = palette[name.charCodeAt(0) % palette.length]
+  return (
+    <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${color} text-white text-[11px] font-semibold`}>
+      {getInitials(name)}
+    </span>
+  )
+}
+
+function PageSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="border-b border-brand-border bg-white px-8 py-5">
+        <div className="h-3 w-20 bg-brand-border/60 rounded mb-3" />
+        <div className="flex items-start justify-between">
+          <div className="space-y-2.5">
+            <div className="h-6 w-64 bg-brand-border rounded" />
+            <div className="h-4 w-28 bg-brand-border/60 rounded-full" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-9 w-36 bg-brand-border/60 rounded-lg" />
+            <div className="h-9 w-20 bg-brand-border/60 rounded-lg" />
+          </div>
+        </div>
+      </div>
+      <div className="border-b border-brand-border bg-white px-8 py-4 flex gap-8">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex items-center gap-2.5">
+            <div className="h-4 w-4 bg-brand-border/60 rounded" />
+            <div className="space-y-1.5">
+              <div className="h-2.5 w-12 bg-brand-border/60 rounded" />
+              <div className="h-3.5 w-20 bg-brand-border rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="p-8 max-w-5xl space-y-8">
+        <div className="flex gap-4 border-b border-brand-border pb-0">
+          <div className="h-8 w-24 bg-brand-border/40 rounded" />
+          <div className="h-8 w-20 bg-brand-border/40 rounded" />
+        </div>
+        <div className="rounded-xl border border-brand-border bg-white overflow-hidden">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-3.5 border-b border-brand-border last:border-0">
+              <div className="h-7 w-7 bg-brand-border/60 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 w-32 bg-brand-border rounded" />
+                <div className="h-3 w-44 bg-brand-border/60 rounded" />
+              </div>
+              <div className="h-5 w-20 bg-brand-border/60 rounded-full" />
+              <div className="h-5 w-10 bg-brand-border/60 rounded" />
+              <div className="h-6 w-14 bg-brand-border/60 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function AssessmentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const qc = useQueryClient()
   const [showInviteDialog, setShowInviteDialog] = useState(false)
+  const [activeTab, setActiveTab] = useState<'candidates' | 'invites'>('candidates')
 
   const { data, isLoading } = useQuery({
     queryKey: ['assessments', id],
@@ -76,118 +109,226 @@ export default function AssessmentDetailPage() {
     },
   })
 
-  const table = useReactTable({
-    data: data?.candidates ?? [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+  if (isLoading) return <PageSkeleton />
 
-  if (isLoading) return <div className="p-8 text-brand-navy/40">Loading…</div>
-  if (!data) return <div className="p-8 text-red-500">Assessment not found.</div>
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertCircle size={32} className="text-red-400 mb-3" aria-hidden="true" />
+        <p className="text-brand-navy font-medium">Assessment not found</p>
+        <Link href="/dashboard/assessments" className="mt-3 text-sm text-brand-orange hover:text-brand-orange-light transition-colors">
+          ← Back to assessments
+        </Link>
+      </div>
+    )
+  }
+
+  const metrics = [
+    { icon: Clock,   label: 'Duration',   value: `${data.duration_minutes} min` },
+    { icon: Shield,  label: 'Security',   value: data.security_level },
+    { icon: Users,   label: 'Candidates', value: String(data.candidate_count) },
+    { icon: Code,    label: 'Languages',  value: data.allowed_languages.length > 2
+      ? `${data.allowed_languages.slice(0, 2).join(', ')} +${data.allowed_languages.length - 2}`
+      : data.allowed_languages.join(', ') },
+  ]
 
   return (
-    <div>
-      <div className="border-b border-brand-border bg-white px-8 py-5 flex items-start justify-between">
-        <div>
-          <Link href="/dashboard/assessments" className="mb-1 block text-xs text-brand-navy/40 hover:text-brand-navy">
-            ← Assessments
-          </Link>
-          <h1 className="text-xl font-semibold text-brand-navy">{data.title}</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setShowInviteDialog(true)}
-            className="rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors"
-          >
-            + Invite Candidate
-          </button>
-          <button
-            type="button"
-            onClick={() => archive.mutate()}
-            disabled={data.status === 'archived' || archive.isPending}
-            className="rounded-lg border border-brand-border px-3 py-2 text-sm text-brand-navy/60 hover:border-red-300 hover:text-red-500 disabled:opacity-40 transition-colors"
-          >
-            {archive.isPending ? 'Archiving…' : 'Archive'}
-          </button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+      {/* Hero header */}
+      <div className="border-b border-brand-border bg-white px-8 py-5">
+        <Link
+          href="/dashboard/assessments"
+          className="mb-2 inline-flex items-center gap-1.5 text-xs text-brand-navy/40 hover:text-brand-navy transition-colors"
+        >
+          <ArrowLeft size={12} aria-hidden="true" />
+          Assessments
+        </Link>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-brand-navy">{data.title}</h1>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                data.status === 'active'
+                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                  : 'bg-brand-surface text-brand-navy/50 ring-brand-border'
+              }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${data.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-brand-border'}`} />
+                {data.status.charAt(0).toUpperCase() + data.status.slice(1)}
+              </span>
+              {data.allowed_languages.length > 0 && (
+                <>
+                  <span className="text-brand-border">·</span>
+                  <span className="text-xs text-brand-navy/40">
+                    {data.allowed_languages.join(' · ')}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowInviteDialog(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors shadow-sm"
+            >
+              <UserPlus size={15} aria-hidden="true" />
+              Invite Candidate
+            </button>
+            <button
+              type="button"
+              onClick={() => archive.mutate()}
+              disabled={data.status === 'archived' || archive.isPending}
+              className="rounded-lg border border-brand-border px-3 py-2 text-sm text-brand-navy/60 hover:border-red-300 hover:text-red-500 disabled:opacity-40 transition-colors"
+            >
+              {archive.isPending ? 'Archiving…' : 'Archive'}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="p-8 max-w-4xl space-y-8">
-        {/* Info cards */}
-        <div className="grid grid-cols-3 gap-4">
-          <InfoCard label="Duration" value={`${data.duration_minutes} min`} />
-          <InfoCard label="Status" value={data.status} />
-          <InfoCard label="Security Level" value={data.security_level} />
-          <InfoCard label="Languages" value={data.allowed_languages.join(', ')} />
-          <InfoCard label="Candidates" value={String(data.candidate_count)} />
+      {/* Metric strip */}
+      <div className="border-b border-brand-border bg-white px-8 py-4">
+        <div className="flex items-center gap-8">
+          {metrics.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-center gap-2.5">
+              <Icon size={15} className="text-brand-navy/35 shrink-0" aria-hidden="true" />
+              <div>
+                <p className="text-[11px] text-brand-navy/50 uppercase tracking-wider leading-none mb-0.5">{label}</p>
+                <p className="text-sm font-semibold text-brand-navy capitalize">{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-8 max-w-5xl space-y-6">
+        {/* Tabs */}
+        <div className="flex items-center gap-1 border-b border-brand-border">
+          {(['candidates', 'invites'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={[
+                'relative px-4 py-2.5 text-sm font-medium transition-colors capitalize',
+                activeTab === tab ? 'text-brand-navy' : 'text-brand-navy/50 hover:text-brand-navy/70',
+              ].join(' ')}
+            >
+              {tab}
+              <span className="ml-1.5 rounded-full bg-brand-surface px-1.5 py-0.5 text-xs text-brand-navy/50 tabular-nums">
+                {tab === 'candidates' ? data.candidate_count : invites.length}
+              </span>
+              {activeTab === tab && (
+                <motion.div
+                  layoutId="tab-indicator"
+                  className="absolute inset-x-0 -bottom-px h-0.5 bg-brand-orange rounded-full"
+                />
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* Candidates table */}
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-navy/50">Candidates</h2>
-          <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
-            <table className="w-full text-sm">
-              <thead>
-                {table.getHeaderGroups().map((hg) => (
-                  <tr key={hg.id} className="border-b border-brand-border bg-brand-surface">
-                    {hg.headers.map((h) => (
-                      <th key={h.id} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-navy/60">
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length} className="px-4 py-8 text-center text-brand-navy/40">
-                      No candidates yet. Send an invite to get started.
-                    </td>
-                  </tr>
+        {/* Tab content */}
+        <AnimatePresence mode="wait">
+          {activeTab === 'candidates' && (
+            <motion.section
+              key="candidates"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+                {data.candidates.length === 0 ? (
+                  <div className="flex flex-col items-center py-16 text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-surface border border-brand-border">
+                      <Users size={22} className="text-brand-navy/25" />
+                    </div>
+                    <p className="text-sm font-medium text-brand-navy/60">No candidates yet</p>
+                    <p className="text-xs text-brand-navy/40 mt-1 max-w-xs">
+                      Invite candidates to this assessment to see their progress here.
+                    </p>
+                    <button
+                      onClick={() => setShowInviteDialog(true)}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-orange px-3.5 py-2 text-xs font-medium text-white hover:bg-brand-orange-light transition-colors"
+                    >
+                      <UserPlus size={13} aria-hidden="true" />
+                      Invite now
+                    </button>
+                  </div>
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="border-b border-brand-border hover:bg-brand-navy-pale transition-colors last:border-0">
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-3 text-brand-navy">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
+                  <>
+                    <div className="flex items-center gap-4 border-b border-brand-border bg-brand-surface/70 px-5 py-2.5">
+                      <span className="flex-1 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Candidate</span>
+                      <span className="w-28 text-center text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Status</span>
+                      <span className="w-16 text-center text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Score</span>
+                      <span className="w-20 text-right text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Report</span>
+                    </div>
+                    <motion.div
+                      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+                      initial="hidden"
+                      animate="show"
+                    >
+                      {data.candidates.map((candidate) => (
+                        <CandidateRowItem key={candidate.id} candidate={candidate} />
                       ))}
-                    </tr>
-                  ))
+                    </motion.div>
+                  </>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              </div>
+            </motion.section>
+          )}
 
-        {/* Invites table */}
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-navy/50">Invite Links</h2>
-          <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
-            {invitesLoading ? (
-              <div className="px-4 py-8 text-center text-brand-navy/40 text-sm">Loading…</div>
-            ) : invites.length === 0 ? (
-              <div className="px-4 py-8 text-center text-brand-navy/40 text-sm">No invites sent yet.</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-brand-border bg-brand-surface">
-                    {['Candidate', 'Token', 'Expires', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-navy/60">{h}</th>
+          {activeTab === 'invites' && (
+            <motion.section
+              key="invites"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+                {invitesLoading ? (
+                  <div className="animate-pulse">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-brand-border last:border-0">
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3.5 w-40 bg-brand-border rounded" />
+                          <div className="h-3 w-24 bg-brand-border/60 rounded" />
+                        </div>
+                        <div className="h-6 w-32 bg-brand-border/60 rounded" />
+                        <div className="h-3 w-28 bg-brand-border/60 rounded" />
+                        <div className="h-5 w-16 bg-brand-border/60 rounded-full" />
+                      </div>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {invites.map((invite) => (
-                    <InviteRow key={invite.id} invite={invite} />
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </section>
+                  </div>
+                ) : invites.length === 0 ? (
+                  <div className="flex flex-col items-center py-14 text-center">
+                    <p className="text-sm text-brand-navy/50 font-medium">No invites sent yet</p>
+                    <p className="text-xs text-brand-navy/40 mt-1">Invite candidates to generate shareable access links.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-4 border-b border-brand-border bg-brand-surface/70 px-5 py-2.5">
+                      <span className="flex-1 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Candidate</span>
+                      <span className="w-40 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Token</span>
+                      <span className="w-36 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Expires</span>
+                      <span className="w-20 text-right text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Status</span>
+                    </div>
+                    <motion.div
+                      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+                      initial="hidden"
+                      animate="show"
+                    >
+                      {invites.map((invite) => (
+                        <InviteRowItem key={invite.id} invite={invite} />
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
       </div>
 
       {showInviteDialog && (
@@ -197,62 +338,110 @@ export default function AssessmentDetailPage() {
           onClose={() => setShowInviteDialog(false)}
         />
       )}
-    </div>
+    </motion.div>
   )
 }
 
-function InviteRow({ invite }: { invite: Invite }) {
+function CandidateRowItem({ candidate }: { candidate: CandidateRow }) {
+  const cfg = CANDIDATE_STATUS[candidate.status]
+  return (
+    <motion.div
+      variants={{ hidden: { opacity: 0, x: -4 }, show: { opacity: 1, x: 0, transition: { duration: 0.15 } } }}
+      className="flex items-center gap-4 border-b border-brand-border px-5 py-3.5 last:border-0 hover:bg-brand-surface/40 transition-colors"
+    >
+      <div className="flex flex-1 items-center gap-3 min-w-0">
+        <AvatarCircle name={candidate.name} />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-brand-navy truncate">{candidate.name}</p>
+          <p className="text-xs text-brand-navy/50 truncate">{candidate.email}</p>
+        </div>
+      </div>
+      <div className="w-28 flex justify-center">
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${cfg.bg} ${cfg.text}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot} ${cfg.pulse ? 'animate-pulse' : ''}`} />
+          {cfg.label}
+        </span>
+      </div>
+      <div className="w-16 flex justify-center">
+        {candidate.score != null ? (
+          <span className={`text-sm font-semibold tabular-nums ${
+            candidate.score >= 70 ? 'text-emerald-600' : candidate.score >= 40 ? 'text-amber-600' : 'text-red-500'
+          }`}>
+            {candidate.score}%
+          </span>
+        ) : (
+          <span className="text-brand-navy/30 text-sm">—</span>
+        )}
+      </div>
+      <div className="w-20 flex justify-end">
+        {candidate.session_id ? (
+          <Link
+            href={`/dashboard/reports/${candidate.session_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange-pale transition-colors"
+          >
+            <BarChart2 size={11} aria-hidden="true" />
+            Report
+          </Link>
+        ) : null}
+      </div>
+    </motion.div>
+  )
+}
+
+function InviteRowItem({ invite }: { invite: Invite }) {
   const [copied, setCopied] = useState(false)
   const isExpired = invite.expires_at < Math.floor(Date.now() / 1000)
   const isUsed = !!invite.used_at
 
-  const copy = () => {
-    navigator.clipboard.writeText(invite.token)
+  const copy = async () => {
+    await navigator.clipboard.writeText(invite.token)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   return (
-    <tr className="border-b border-brand-border last:border-0">
-      <td className="px-4 py-3">
-        <p className="text-brand-navy font-medium">{invite.candidate_email}</p>
-        {invite.candidate_name && <p className="text-brand-navy/50 text-xs">{invite.candidate_name}</p>}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <code className="rounded bg-brand-surface px-2 py-0.5 font-mono text-xs text-brand-navy/70">
-            {invite.token.slice(0, 16)}…
-          </code>
-          <button
-            type="button"
-            onClick={copy}
-            className="text-xs text-brand-orange hover:text-brand-orange-light transition-colors"
-          >
-            {copied ? '✓ Copied' : 'Copy'}
-          </button>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-brand-navy/60 text-xs">
-        {format(fromUnixTime(invite.expires_at), 'MMM d, yyyy HH:mm')}
-      </td>
-      <td className="px-4 py-3">
-        {isUsed ? (
-          <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Used</span>
-        ) : isExpired ? (
-          <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">Expired</span>
-        ) : (
-          <span className="inline-flex rounded-full bg-brand-orange-pale px-2 py-0.5 text-xs font-medium text-brand-orange">Pending</span>
+    <motion.div
+      variants={{ hidden: { opacity: 0, x: -4 }, show: { opacity: 1, x: 0, transition: { duration: 0.15 } } }}
+      className="flex items-center gap-4 border-b border-brand-border px-5 py-3.5 last:border-0 hover:bg-brand-surface/40 transition-colors"
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-brand-navy truncate">{invite.candidate_email}</p>
+        {invite.candidate_name && (
+          <p className="text-xs text-brand-navy/50 truncate">{invite.candidate_name}</p>
         )}
-      </td>
-    </tr>
-  )
-}
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-brand-border bg-white px-4 py-3 shadow-sm">
-      <p className="text-xs text-brand-navy/50">{label}</p>
-      <p className="mt-1 text-sm capitalize text-brand-navy font-medium">{value}</p>
-    </div>
+      </div>
+      <div className="w-40 flex items-center gap-1.5">
+        <code className="rounded-md bg-brand-surface border border-brand-border px-2 py-0.5 font-mono text-xs text-brand-navy/70">
+          {invite.token.slice(0, 12)}…
+        </code>
+        <button
+          onClick={copy}
+          aria-label="Copy token"
+          className="rounded p-1 text-brand-navy/40 hover:text-brand-navy hover:bg-brand-surface transition-colors"
+        >
+          {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+        </button>
+      </div>
+      <div className="w-36 text-xs text-brand-navy/50">
+        {format(fromUnixTime(invite.expires_at), 'MMM d, yyyy HH:mm')}
+      </div>
+      <div className="w-20 flex justify-end">
+        {isUsed ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            <Check size={9} aria-hidden="true" />
+            Used
+          </span>
+        ) : isExpired ? (
+          <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 ring-1 ring-inset ring-red-200">
+            Expired
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-brand-orange-pale px-2 py-0.5 text-xs font-medium text-brand-orange ring-1 ring-inset ring-orange-200">
+            Pending
+          </span>
+        )}
+      </div>
+    </motion.div>
   )
 }

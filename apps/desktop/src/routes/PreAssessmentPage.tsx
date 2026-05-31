@@ -7,7 +7,6 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
-  Globe,
   Loader2,
   Monitor,
   RefreshCw,
@@ -36,7 +35,6 @@ interface CheckState {
 interface ValidationState {
   display:      CheckState
   screenRec:    CheckState
-  browsers:     CheckState
   aiTools:      CheckState
   remoteAccess: CheckState
   system:       CheckState
@@ -45,7 +43,6 @@ interface ValidationState {
 const INITIAL: ValidationState = {
   display:      { status: 'pending' },
   screenRec:    { status: 'pending' },
-  browsers:     { status: 'pending' },
   aiTools:      { status: 'pending' },
   remoteAccess: { status: 'pending' },
   system:       { status: 'pending' },
@@ -54,7 +51,6 @@ const INITIAL: ValidationState = {
 const CHECKING: ValidationState = {
   display:      { status: 'checking' },
   screenRec:    { status: 'checking' },
-  browsers:     { status: 'checking' },
   aiTools:      { status: 'checking' },
   remoteAccess: { status: 'checking' },
   system:       { status: 'checking' },
@@ -74,13 +70,6 @@ const CHECK_META = [
     Icon:     Video,
     failHint: 'Stop screen recording',
     fixSteps: 'Close QuickTime Player, OBS, Loom, or any other screen recording or streaming application, then click Re-check.',
-  },
-  {
-    key:      'browsers' as const,
-    label:    'No browsers running',
-    Icon:     Globe,
-    failHint: 'Close all browsers',
-    fixSteps: 'Quit Chrome, Safari, Firefox, Edge, and any other browser completely (⌘Q), then click Re-check.',
   },
   {
     key:      'aiTools' as const,
@@ -107,10 +96,10 @@ const CHECK_META = [
 
 type CheckKey = (typeof CHECK_META)[number]['key']
 
-const PHASES = [
-  { label: 'Display',      keys: ['display', 'screenRec'] as CheckKey[] },
-  { label: 'Applications', keys: ['browsers', 'aiTools', 'remoteAccess'] as CheckKey[] },
-  { label: 'System',       keys: ['system'] as CheckKey[] },
+const PHASES: { label: string; keys: CheckKey[] }[] = [
+  { label: 'Display',      keys: ['display', 'screenRec'] },
+  { label: 'Applications', keys: ['aiTools', 'remoteAccess'] },
+  { label: 'System',       keys: ['system'] },
 ]
 
 const LANGUAGES = [
@@ -124,34 +113,34 @@ const LANGUAGES = [
 
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
+  visible: { transition: { staggerChildren: 0.07 } },
 }
 
 const cardVariants = {
-  hidden:   { opacity: 0, x: -16 },
-  visible:  { opacity: 1, x: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } },
+  hidden:  { opacity: 0, x: -12 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] } },
 }
 
-function phaseStatus(
-  state: ValidationState,
-  keys: CheckKey[],
-): 'pending' | 'active' | 'done' {
+function phaseStatus(state: ValidationState, keys: CheckKey[]): 'pending' | 'active' | 'done' {
   const statuses = keys.map((k) => state[k].status)
   if (statuses.every((s) => s === 'pass')) return 'done'
-  if (statuses.some((s) => s === 'checking')) return 'active'
-  if (statuses.some((s) => s === 'fail')) return 'active'
+  if (statuses.some((s) => s === 'checking' || s === 'fail')) return 'active'
   return 'pending'
 }
+
+const SYNE   = { fontFamily: "'Syne', system-ui, sans-serif" }
+const DMSANS = { fontFamily: "'DM Sans', system-ui, sans-serif" }
+const DMMONO = { fontFamily: "'DM Mono', 'Courier New', monospace" }
 
 export function PreAssessmentPage() {
   const navigate  = useNavigate()
   const candidate = useAssessmentStore((s) => s.candidate)
 
-  const [state,       setState]       = useState<ValidationState>(INITIAL)
-  const [isChecking,  setIsChecking]  = useState(true)
-  const [kioskReady,  setKioskReady]  = useState(false)
-  const [isStarting,  setIsStarting]  = useState(false)
-  const [expanded,    setExpanded]    = useState<CheckKey | null>(null)
+  const [state,      setState]      = useState<ValidationState>(INITIAL)
+  const [isChecking, setIsChecking] = useState(true)
+  const [kioskReady, setKioskReady] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
+  const [expanded,   setExpanded]   = useState<CheckKey | null>(null)
 
   useEffect(() => {
     enterKioskMode()
@@ -174,7 +163,6 @@ export function PreAssessmentPage() {
       const multiDisplay    = violations.some((v) => v.type === 'MultipleDisplays')
       const externalDisplay = violations.some((v) => v.type === 'ExternalDisplay')
       const screenRec       = violations.some((v) => v.type === 'ScreenRecording')
-      const browserProcs    = processes.filter((p) => p.category === 'browser')
       const aiProcs         = processes.filter((p) => p.category === 'ai')
       const remoteProcs     = processes.filter((p) => p.category === 'remote')
 
@@ -186,9 +174,6 @@ export function PreAssessmentPage() {
             : { status: 'pass' },
         screenRec: screenRec
           ? { status: 'fail', detail: 'Stop active screen recording.' }
-          : { status: 'pass' },
-        browsers: browserProcs.length > 0
-          ? { status: 'fail', detail: `Close ${browserProcs.map((p) => p.name).join(', ')}.` }
           : { status: 'pass' },
         aiTools: aiProcs.length > 0
           ? { status: 'fail', detail: `Close ${aiProcs.map((p) => p.name).join(', ')}.` }
@@ -202,7 +187,6 @@ export function PreAssessmentPage() {
       setState({
         display:      { status: 'pass' },
         screenRec:    { status: 'pass' },
-        browsers:     { status: 'pass' },
         aiTools:      { status: 'pass' },
         remoteAccess: { status: 'pass' },
         system:       { status: 'pass' },
@@ -216,128 +200,133 @@ export function PreAssessmentPage() {
     if (kioskReady) runValidations()
   }, [kioskReady, runValidations])
 
-  const allPassed  = Object.values(state).every((c) => c.status === 'pass')
-  const failCount  = Object.values(state).filter((c) => c.status === 'fail').length
-  const passCount  = Object.values(state).filter((c) => c.status === 'pass').length
-  const total      = CHECK_META.length
+  const allPassed = Object.values(state).every((c) => c.status === 'pass')
+  const failCount = Object.values(state).filter((c) => c.status === 'fail').length
+  const passCount = Object.values(state).filter((c) => c.status === 'pass').length
+  const total     = CHECK_META.length
 
   const handleStart = async () => {
     setIsStarting(true)
     navigate('/assessment')
   }
 
-  const toggleExpand = (key: CheckKey) => {
+  const toggleExpand = (key: CheckKey) =>
     setExpanded((prev) => (prev === key ? null : key))
-  }
 
   return (
-    <motion.div
-      className="flex h-full flex-col"
-      style={{ background: '#F7F8FA' }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.2 }}
-    >
+    /* Page shell — fills the AppShell flex-1 slot */
+    <div className="flex h-full min-h-screen flex-col" style={{ background: '#F7F8FA' }}>
+
       {/* ── Top bar ── */}
       <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-white/10 bg-brand-navy px-5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-orange/20">
             <ShieldCheck size={14} className="text-brand-orange" aria-hidden="true" />
           </div>
-          <span
-            className="text-[15px] font-bold text-white"
-            style={{ fontFamily: "'Syne', system-ui, sans-serif", letterSpacing: '-0.01em' }}
-          >
+          <span className="text-[15px] font-bold tracking-tight text-white" style={SYNE}>
             SecureAssess
           </span>
         </div>
-
         {candidate?.name && (
-          <span
-            className="text-sm text-white/60"
-            style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
-          >
+          <span className="text-sm text-white/60" style={DMSANS}>
             {candidate.name}
           </span>
         )}
       </div>
 
-      {/* ── Scrollable body ── */}
-      <div className="flex flex-1 items-center justify-center overflow-y-auto px-4 py-8">
-        <div className="w-full max-w-lg">
+      {/* ── Centered content ── */}
+      <div className="flex flex-1 items-center justify-center px-6 py-10">
+        <div className="w-full max-w-[540px]">
 
-          {/* Phase chip */}
-          <div
-            className="inline-flex items-center rounded-full border border-brand-orange/20 bg-brand-orange-pale px-3 py-1"
-            style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+          {/* ── Header ── */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="mb-5"
           >
-            <span className="text-xs font-semibold uppercase tracking-[0.15em] text-brand-orange">
-              Environment Check
+            <span
+              className="inline-flex items-center rounded-full border border-brand-orange/25 bg-brand-orange-pale px-3 py-1"
+              style={DMSANS}
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-orange">
+                Environment Check
+              </span>
             </span>
-          </div>
 
-          {/* Title */}
-          <h1
-            className="mt-3 text-2xl font-bold text-brand-navy"
-            style={{ fontFamily: "'Syne', system-ui, sans-serif" }}
+            <h1 className="mt-3 text-[26px] font-bold leading-tight text-brand-navy" style={SYNE}>
+              Verifying your setup
+            </h1>
+            <p className="mt-1.5 text-sm leading-relaxed text-brand-navy/55" style={DMSANS}>
+              We check your environment before the assessment starts.
+              All checks must pass to continue.
+            </p>
+          </motion.div>
+
+          {/* ── Progress bar ── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="mb-3"
           >
-            Verifying your setup
-          </h1>
-          <p
-            className="mt-1 text-sm text-brand-navy/60"
-            style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+            <div className="h-[3px] w-full overflow-hidden rounded-full bg-brand-border">
+              <motion.div
+                className="h-full rounded-full bg-brand-orange"
+                animate={{ width: `${(passCount / total) * 100}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              />
+            </div>
+          </motion.div>
+
+          {/* ── Phase pills ── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+            className="mb-5 flex items-center gap-1.5"
           >
-            We will check your environment in a few seconds. Please do not close the app.
-          </p>
-
-          {/* Overall progress bar */}
-          <div className="mt-5 h-1 w-full overflow-hidden rounded-full bg-brand-border">
-            <motion.div
-              className="h-full rounded-full bg-brand-orange"
-              animate={{ width: `${(passCount / total) * 100}%` }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-            />
-          </div>
-
-          {/* Step pills */}
-          <div className="mt-4 flex items-center gap-0">
             {PHASES.map((phase, i) => {
               const ps = phaseStatus(state, phase.keys)
               return (
-                <div key={phase.label} className="flex items-center">
+                <div key={phase.label} className="flex items-center gap-1.5">
                   {i > 0 && (
                     <div
                       className={cn(
-                        'h-px w-6 transition-colors duration-300',
+                        'h-px w-5 shrink-0 transition-colors duration-500',
                         ps === 'done' ? 'bg-green-300' : 'bg-brand-border',
                       )}
                       aria-hidden="true"
                     />
                   )}
-                  <motion.div
-                    animate={ps === 'active' ? { scale: [1, 1.03, 1] } : { scale: 1 }}
-                    transition={ps === 'active' ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
+                  <motion.span
+                    animate={ps === 'active' ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                    transition={
+                      ps === 'active'
+                        ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+                        : {}
+                    }
                     className={cn(
-                      'rounded-full border px-4 py-1.5 text-xs transition-all duration-300',
-                      ps === 'pending' && 'border-brand-border bg-white text-brand-navy/40',
-                      ps === 'active'  && 'border-brand-orange bg-brand-orange-pale text-brand-orange',
+                      'inline-block rounded-full border px-3 py-1 text-[11px] font-medium transition-all duration-300',
+                      ps === 'pending' && 'border-brand-border bg-white text-brand-navy/35',
+                      ps === 'active'  && 'border-brand-orange/50 bg-brand-orange-pale text-brand-orange',
                       ps === 'done'    && 'border-green-200 bg-green-50 text-green-700',
                     )}
-                    style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+                    style={DMSANS}
                   >
                     {phase.label}
-                  </motion.div>
+                  </motion.span>
                 </div>
               )
             })}
-          </div>
+          </motion.div>
 
-          {/* Check cards */}
+          {/* ── Check cards ── */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="mt-6 flex flex-col gap-2.5"
+            className="flex flex-col gap-2"
             aria-busy={isChecking}
             aria-label="Environment check results"
           >
@@ -352,72 +341,81 @@ export function PreAssessmentPage() {
                   key={key}
                   variants={cardVariants}
                   className={cn(
-                    'overflow-hidden rounded-2xl border transition-all duration-300',
+                    'overflow-hidden rounded-xl border shadow-sm transition-all duration-300',
                     check.status === 'pending'  && 'border-brand-border bg-white',
-                    check.status === 'checking' && 'border-brand-orange/30 bg-brand-orange-pale/20',
-                    isPass                      && 'border-green-200 bg-green-50/40',
-                    isFail                      && 'border-red-200 bg-red-50/40',
+                    check.status === 'checking' && 'border-brand-orange/20 bg-white',
+                    isPass                      && 'border-green-200/70 bg-white',
+                    isFail                      && 'border-red-200 bg-white',
                   )}
                 >
                   {/* Main row */}
-                  <div className="flex items-center gap-4 px-5 py-3.5">
-                    {/* Icon circle */}
+                  <div className="flex items-center gap-3.5 px-4 py-3">
+
+                    {/* State dot strip (left edge accent) */}
                     <div
                       className={cn(
-                        'flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl transition-all duration-300',
+                        'absolute left-0 top-0 h-full w-[3px] rounded-l-xl opacity-0 transition-all duration-300',
+                        isPass  && 'bg-green-400 opacity-100',
+                        isFail  && 'bg-red-400 opacity-100',
+                        check.status === 'checking' && 'bg-brand-orange opacity-100',
+                      )}
+                      aria-hidden="true"
+                    />
+
+                    {/* Icon */}
+                    <div
+                      className={cn(
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
                         check.status === 'pending'  && 'bg-brand-surface',
                         check.status === 'checking' && 'bg-brand-orange-pale',
-                        isPass                      && 'bg-green-100',
-                        isFail                      && 'bg-red-100',
+                        isPass                      && 'bg-green-50',
+                        isFail                      && 'bg-red-50',
                       )}
                     >
                       {check.status === 'checking' ? (
-                        <Loader2 size={16} className="animate-spin text-brand-orange" aria-label="Checking" />
+                        <Loader2 size={15} className="animate-spin text-brand-orange" />
                       ) : isPass ? (
-                        <CheckCircle2 size={16} className="text-green-600" aria-label="Passed" />
+                        <CheckCircle2 size={15} className="text-green-500" />
                       ) : isFail ? (
-                        <XCircle size={16} className="text-red-500" aria-label="Failed" />
+                        <XCircle size={15} className="text-red-400" />
                       ) : (
-                        <Icon size={16} className="text-brand-navy/30" aria-hidden="true" />
+                        <Icon size={15} className="text-brand-navy/25" />
                       )}
                     </div>
 
-                    {/* Text */}
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm font-medium text-brand-navy"
-                        style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
-                      >
+                    {/* Label + status value */}
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                      <p className="text-[13px] font-medium text-brand-navy" style={DMSANS}>
                         {label}
                       </p>
-                      <p
+                      <span
                         className={cn(
-                          'mt-0.5 text-xs',
-                          check.status === 'pending'  && 'text-brand-navy/30',
+                          'shrink-0 text-[11px] transition-colors duration-200',
+                          check.status === 'pending'  && 'text-brand-navy/25',
                           check.status === 'checking' && 'text-brand-orange',
                           isPass                      && 'text-green-600',
                           isFail                      && 'text-red-500',
                         )}
-                        style={{ fontFamily: "'DM Mono', 'Courier New', monospace" }}
+                        style={DMMONO}
                       >
                         {check.status === 'pending'  ? '—'
                           : check.status === 'checking' ? 'Scanning...'
                           : isPass                      ? 'Verified'
                           : (check.detail ?? failHint)}
-                      </p>
+                      </span>
                     </div>
 
-                    {/* How to fix (fail only) */}
+                    {/* How to fix */}
                     {isFail && (
                       <button
                         type="button"
                         onClick={() => toggleExpand(key)}
-                        className="shrink-0 text-xs text-brand-orange underline underline-offset-2 transition-opacity hover:opacity-70"
-                        style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+                        className="ml-1 shrink-0 text-[11px] text-brand-orange underline underline-offset-2 transition-opacity hover:opacity-60"
+                        style={DMSANS}
                         aria-expanded={isExpand}
                         aria-controls={`fix-${key}`}
                       >
-                        How to fix
+                        {isExpand ? 'Hide' : 'How to fix'}
                       </button>
                     )}
                   </div>
@@ -431,14 +429,14 @@ export function PreAssessmentPage() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        transition={{ duration: 0.18, ease: 'easeInOut' }}
                         className="overflow-hidden"
                       >
                         <div
-                          className="border-t border-brand-orange/20 bg-brand-orange-pale px-5 py-3"
-                          style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+                          className="border-t border-brand-orange/15 bg-brand-orange-pale/60 px-4 py-3"
+                          style={DMSANS}
                         >
-                          <p className="text-xs leading-relaxed text-brand-navy/70">
+                          <p className="text-[12px] leading-relaxed text-brand-navy/65">
                             {fixSteps}
                           </p>
                         </div>
@@ -450,94 +448,83 @@ export function PreAssessmentPage() {
             })}
           </motion.div>
 
-          {/* Language row */}
-          <div className="mt-5">
+          {/* ── Language row ── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+            className="mt-5"
+          >
             <p
-              className="text-xs font-semibold uppercase tracking-wider text-brand-navy/40"
-              style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+              className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-brand-navy/35"
+              style={DMSANS}
             >
               Available Languages
             </p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {LANGUAGES.map(({ name, installed }) => (
                 <span
                   key={name}
                   className={cn(
-                    'inline-flex items-center rounded-full border px-3 py-1 text-xs',
+                    'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px]',
                     installed
                       ? 'border-green-200 bg-green-50 text-green-700'
                       : 'border-amber-200 bg-amber-50 text-amber-700',
                   )}
-                  style={{ fontFamily: "'DM Mono', 'Courier New', monospace" }}
+                  style={DMMONO}
                 >
-                  {installed ? (
-                    <CheckCircle2 size={10} className="mr-1.5 shrink-0" aria-hidden="true" />
-                  ) : (
-                    <AlertTriangle size={10} className="mr-1.5 shrink-0" aria-hidden="true" />
-                  )}
+                  {installed
+                    ? <CheckCircle2 size={9} className="mr-1 shrink-0" aria-hidden="true" />
+                    : <AlertTriangle size={9} className="mr-1 shrink-0" aria-hidden="true" />
+                  }
                   {name}
                 </span>
               ))}
             </div>
-          </div>
+          </motion.div>
 
         </div>
       </div>
 
       {/* ── Sticky bottom action bar ── */}
-      <div className="shrink-0 border-t border-brand-border bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="shrink-0 border-t border-brand-border bg-white px-6 py-3.5">
+        <div className="mx-auto flex max-w-[540px] items-center justify-between">
 
-          {/* Status text */}
-          <div className="flex items-center gap-2">
+          {/* Status */}
+          <div className="flex items-center gap-2" style={DMSANS}>
             {isChecking ? (
               <>
-                <Loader2 size={14} className="animate-spin text-brand-orange" aria-hidden="true" />
-                <span
-                  className="text-sm text-brand-navy/60"
-                  style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
-                >
-                  Checking...
-                </span>
+                <Loader2 size={13} className="animate-spin text-brand-orange" aria-hidden="true" />
+                <span className="text-sm text-brand-navy/50">Checking...</span>
               </>
             ) : allPassed ? (
               <>
-                <CheckCircle2 size={14} className="text-green-600" aria-hidden="true" />
-                <span
-                  className="text-sm text-green-700"
-                  style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
-                >
-                  All checks passed
-                </span>
+                <CheckCircle2 size={13} className="text-green-500" aria-hidden="true" />
+                <span className="text-sm text-green-700">All checks passed</span>
               </>
             ) : (
               <>
-                <AlertCircle size={14} className="text-red-400" aria-hidden="true" />
-                <span
-                  className="text-sm text-red-600"
-                  style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
-                >
+                <AlertCircle size={13} className="text-red-400" aria-hidden="true" />
+                <span className="text-sm text-red-500">
                   {failCount} issue{failCount !== 1 ? 's' : ''} to fix
                 </span>
               </>
             )}
           </div>
 
-          {/* Buttons */}
-          <div className="flex items-center gap-3">
+          {/* Actions */}
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={runValidations}
               disabled={isChecking}
               aria-label="Re-run environment checks"
-              className={cn(
-                'flex items-center rounded-xl border border-brand-border bg-white px-4 py-2 text-sm text-brand-navy transition-colors hover:border-brand-navy disabled:opacity-40',
-              )}
-              style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+              className="flex items-center rounded-xl border border-brand-border bg-white px-4 py-2 text-[13px] text-brand-navy transition-colors hover:border-brand-navy/40 disabled:opacity-40"
+              style={DMSANS}
             >
               <RefreshCw
-                size={14}
-                className={cn('mr-2', isChecking && 'animate-spin')}
+                size={13}
+                className={cn('mr-1.5', isChecking && 'animate-spin')}
                 aria-hidden="true"
               />
               Re-check
@@ -549,24 +536,24 @@ export function PreAssessmentPage() {
               disabled={!allPassed || isChecking || isStarting}
               title={!allPassed ? 'Fix issues above to continue' : undefined}
               aria-label={isStarting ? 'Starting assessment…' : 'Start assessment'}
-              className="flex items-center rounded-xl bg-brand-navy px-6 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-              style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+              className="flex items-center rounded-xl bg-brand-navy px-5 py-2 text-[13px] font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
+              style={DMSANS}
             >
               {isStarting ? (
                 <>
-                  <Loader2 size={14} className="mr-2 animate-spin" aria-hidden="true" />
+                  <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
                   Starting...
                 </>
               ) : (
                 <>
                   Start Assessment
-                  <ArrowRight size={14} className="ml-2" aria-hidden="true" />
+                  <ArrowRight size={13} className="ml-1.5" aria-hidden="true" />
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

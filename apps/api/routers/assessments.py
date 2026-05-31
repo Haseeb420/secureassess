@@ -77,6 +77,25 @@ async def create_assessment(
     return row
 
 
+@router.get("/my")
+async def get_my_assessment(candidate: dict = Depends(get_current_candidate)):
+    """Return the assessment assigned to the currently authenticated candidate."""
+    assessment_id = candidate.get("assessment_id")
+    if not assessment_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No assessment assigned to this account")
+
+    supabase = get_supabase()
+    result = (
+        supabase.table("assessments")
+        .select("id, title, duration_minutes, allowed_languages, question_ids, security_level, status")
+        .eq("id", assessment_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    return result.data[0]
+
+
 @router.get("/{assessment_id}")
 async def get_assessment(
     assessment_id: str,

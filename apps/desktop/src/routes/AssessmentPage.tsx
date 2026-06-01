@@ -12,7 +12,9 @@ import { QuestionPanel } from '../features/ide/QuestionPanel'
 import { SubmissionModal } from '../features/ide/SubmissionModal'
 import { ViolationBanner } from '../features/security/ViolationBanner'
 import { useSecurityMonitor } from '../features/security/useSecurityMonitor'
+import { exitKioskMode } from '../features/security/securityService'
 import { TopBar } from '../components/TopBar'
+import { ExitAssessmentDialog } from '../components/ExitAssessmentDialog'
 import { useAutoSave } from '../features/persistence/useAutoSave'
 import { useAssessmentStore } from '../store/assessmentStore'
 import {
@@ -37,6 +39,7 @@ export function AssessmentPage() {
     consoleOutput,
     timerSeconds,
     timerTotalSeconds,
+    status,
     setLanguage,
     setCode,
     appendOutput,
@@ -54,8 +57,17 @@ export function AssessmentPage() {
   const [compileError, setCompileError] = useState<string | null>(null)
   const [fontSize, setFontSize] = useState(14)
   const [runHistory, setRunHistory] = useState<RunResult[]>([])
+  const [exitDialogOpen, setExitDialogOpen] = useState(false)
+  const [submittedQuestions, setSubmittedQuestions] = useState(new Set<number>())
 
   const { violationCount, lastViolation } = useSecurityMonitor({ enabled: true })
+
+  // Track which questions have been submitted
+  useEffect(() => {
+    if (submitResult) {
+      setSubmittedQuestions((prev) => new Set([...prev, currentQuestionIndex]))
+    }
+  }, [submitResult, currentQuestionIndex])
 
   // Reset run state when switching questions
   useEffect(() => {
@@ -149,12 +161,21 @@ export function AssessmentPage() {
     setCompileError(null)
   }, [currentLanguage, setCode])
 
+  // Navigate to completion when assessment is locked server-side
   useEffect(() => {
     const unlisten = listen('assessment:locked', () => {
       navigate('/completion', { replace: true })
     })
     return () => { unlisten.then((fn) => fn()) }
   }, [navigate])
+
+  // Open exit dialog when native window close button is clicked during assessment
+  useEffect(() => {
+    const unlisten = listen('window:close-requested', () => {
+      setExitDialogOpen(true)
+    })
+    return () => { unlisten.then((fn) => fn()) }
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -179,6 +200,28 @@ export function AssessmentPage() {
     navigate('/completion', { replace: true })
   }, [navigate])
 
+  const handleSubmitAndExit = useCallback(async () => {
+    if (currentQuestion) {
+      try {
+        await submitSolution(
+          sessionId ?? assessmentId ?? 'unknown-session',
+          currentQuestion.id,
+          currentLanguage,
+          codeByLanguage[currentLanguage],
+        )
+      } catch {
+        // best-effort: proceed with exit even if submission fails
+      }
+    }
+    await exitKioskMode()
+    navigate('/completion', { replace: true })
+  }, [currentQuestion, sessionId, assessmentId, currentLanguage, codeByLanguage, navigate])
+
+  const handleExitWithoutSubmit = useCallback(async () => {
+    await exitKioskMode()
+    navigate('/login', { replace: true })
+  }, [navigate])
+
   const consoleStatus: ConsoleStatus = isRunning || isSubmitting
     ? 'running'
     : runResult == null
@@ -188,6 +231,9 @@ export function AssessmentPage() {
         : runResult.outcomes.every((o) => o.passed)
           ? 'pass'
           : 'fail'
+
+  const isExitLocked = isRunning || isSubmitting
+  const isAssessmentCompleted = status === 'completed'
 
   // No questions loaded yet
   if (questions.length === 0) {
@@ -219,6 +265,9 @@ export function AssessmentPage() {
         sessionId={assessmentId}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
+        onExitClick={() => setExitDialogOpen(true)}
+        isExitLocked={isExitLocked}
+        isExitDialogOpen={exitDialogOpen}
       />
 
       <div className="min-h-0 flex-1">
@@ -282,7 +331,6 @@ export function AssessmentPage() {
         <span>{isRunning || isSubmitting ? 'Running…' : 'Ready'}</span>
         <span>{currentLanguage}</span>
 
-        {/* Question navigation */}
         {questions.length > 1 && (
           <div className="flex items-center gap-1 ml-2">
             <button
@@ -317,6 +365,16 @@ export function AssessmentPage() {
       {submitResult && (
         <SubmissionModal result={submitResult} onFinish={handleFinish} />
       )}
+
+      <ExitAssessmentDialog
+        open={exitDialogOpen}
+        onClose={() => setExitDialogOpen(false)}
+        onSubmitAndExit={handleSubmitAndExit}
+        onExitWithoutSubmit={handleExitWithoutSubmit}
+        questionsCompleted={submittedQuestions.size}
+        questionsTotal={questions.length}
+        isAssessmentCompleted={isAssessmentCompleted}
+      />
     </div>
   )
 }

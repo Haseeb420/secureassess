@@ -36,3 +36,7 @@ export function enterKioskMode(): Promise<void> {
 export function exitKioskMode(): Promise<void> {
   return invoke('exit_kiosk_mode')
 }
+
+export function onFullscreenRestored(callback: () => void): Promise<UnlistenFn> {
+  return listen('security:fullscreen-restored', () => callback())
+}

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { toast } from 'sonner'
-import { onFocusLoss, onProcessViolation } from './securityService'
+import { onFocusLoss, onFullscreenRestored, onProcessViolation } from './securityService'
 import type { ForbiddenProcess, FocusLossPayload } from './securityService'
+import { activateKeyboardGuard } from '@/lib/keyboard-guard'
 
 export type SecurityViolation =
   | { kind: 'focus-loss'; payload: FocusLossPayload }
   | { kind: 'process'; payload: ForbiddenProcess }
+  | { kind: 'fullscreen-restored' }
 
 interface UseSecurityMonitorReturn {
   violationCount: number
@@ -21,6 +23,8 @@ export function useSecurityMonitor({ enabled }: { enabled: boolean }): UseSecuri
   useEffect(() => {
     if (!enabled) return
 
+    const deactivateKeyboard = activateKeyboardGuard()
+
     const register = async () => {
       const unFocus = await onFocusLoss((payload) => {
         setLastViolation({ kind: 'focus-loss', payload })
@@ -34,12 +38,19 @@ export function useSecurityMonitor({ enabled }: { enabled: boolean }): UseSecuri
         toast.warning(`Violation detected: ${payload.name}`)
       })
 
-      unlistenRefs.current = [unFocus, unProcess]
+      const unFullscreen = await onFullscreenRestored(() => {
+        setLastViolation({ kind: 'fullscreen-restored' })
+        setViolationCount((c) => c + 1)
+        toast.warning('Fullscreen was exited — restored')
+      })
+
+      unlistenRefs.current = [unFocus, unProcess, unFullscreen]
     }
 
     register()
 
     return () => {
+      deactivateKeyboard()
       unlistenRefs.current.forEach((fn) => fn())
       unlistenRefs.current = []
     }

@@ -16,15 +16,20 @@ use db::migrations::init_pool;
 use db::DbPool;
 use security::display::validate_displays;
 use security::fingerprint::get_machine_fingerprint;
-use security::kiosk::{enter_kiosk_mode, exit_kiosk_mode};
+use security::kiosk::{enter_kiosk_mode, exit_kiosk_mode, AssessmentActiveFlag};
 use security::processes::check_forbidden_processes;
-use tauri::Manager;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tauri::{Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let assessment_flag = Arc::new(AtomicBool::new(false));
+    let flag_for_watchdog = Arc::clone(&assessment_flag);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().build())
-        .setup(|app| {
+        .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -32,6 +37,8 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            app.manage(AssessmentActiveFlag(assessment_flag));
 
             let key = get_db_key();
             let app_data_dir = app.path().app_data_dir()
@@ -46,7 +53,19 @@ pub fn run() {
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(sync::worker::start_sync_worker(app_handle));
 
+            let watchdog_handle = app.handle().clone();
+            security::fullscreen_guard::start_fullscreen_watchdog(watchdog_handle, flag_for_watchdog);
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let flag = window.state::<AssessmentActiveFlag>();
+                if flag.0.load(Ordering::Relaxed) {
+                    api.prevent_close();
+                    let _ = window.app_handle().emit("window:close-requested", ());
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // security

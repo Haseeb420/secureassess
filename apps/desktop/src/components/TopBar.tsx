@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { ConfirmDialog } from '@secureassess/ui'
 import { useSyncStatus } from '../features/sync/useSyncStatus'
 import { useTimerPersistence } from '../features/persistence/useTimerPersistence'
@@ -16,6 +17,9 @@ interface TopBarProps {
   onPrevQuestion?: () => void
   onNextQuestion?: () => void
   isSubmitting?: boolean
+  onExitClick?: () => void
+  isExitLocked?: boolean
+  isExitDialogOpen?: boolean
 }
 
 const RING_R = 14
@@ -71,6 +75,9 @@ export function TopBar({
   onPrevQuestion,
   onNextQuestion,
   isSubmitting = false,
+  onExitClick,
+  isExitLocked = false,
+  isExitDialogOpen = false,
 }: TopBarProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { isOnline, pendingCount } = useSyncStatus()
@@ -105,153 +112,194 @@ export function TopBar({
     syncTextClass = 'text-white/40'
   }
 
+  const submitDisabled = isSubmitting || isExitDialogOpen
+
   return (
     <>
-      <div
-        className="flex h-[52px] shrink-0 items-center border-b border-white/8 bg-brand-navy px-5"
-        role="banner"
-      >
-        {/* Left: logo mark + divider + avatar + name */}
-        <div className="flex w-1/4 min-w-0 items-center gap-3">
-          <WamoMark />
-          <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
-          <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-orange"
-            aria-hidden="true"
-          >
-            <span className="text-xs font-bold leading-none text-white" style={SYNE}>
-              {initial}
-            </span>
-          </div>
-          <span
-            className="truncate text-sm text-white/70"
-            style={DM_SANS}
-            title={candidateName}
-          >
-            {candidateName}
-          </span>
-        </div>
-
-        {/* Center: question nav + assessment title */}
-        <div className="flex flex-1 flex-col items-center justify-center">
-          {isMultiQuestion && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onPrevQuestion}
-                disabled={questionIndex <= 1}
-                aria-label="Previous question"
-                className="text-white/40 transition-colors hover:text-white disabled:opacity-30"
-              >
-                <ChevronLeft size={14} aria-hidden="true" />
-              </button>
-              <span className="text-sm font-medium text-white/80" style={DM_SANS}>
-                Question {questionIndex}
-              </span>
-              <span className="text-sm text-white/30" style={DM_SANS}>
-                of {totalQuestions}
-              </span>
-              <button
-                type="button"
-                onClick={onNextQuestion}
-                disabled={questionIndex >= totalQuestions}
-                aria-label="Next question"
-                className="text-white/40 transition-colors hover:text-white disabled:opacity-30"
-              >
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
-            </div>
-          )}
-          <span className="mt-0.5 text-xs text-white/30" style={DM_SANS}>
-            {assessmentTitle}
-          </span>
-        </div>
-
-        {/* Right: sync + divider + timer + divider + submit */}
-        <div className="flex w-1/4 items-center justify-end gap-3">
-          {/* Sync indicator */}
-          <div
-            className="flex items-center gap-1.5"
-            aria-label={`Sync status: ${syncText}`}
-          >
-            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncDot}`} aria-hidden="true" />
-            <span className={`text-[11px] ${syncTextClass}`} style={DM_MONO}>
-              {syncText}
-            </span>
-          </div>
-
-          <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
-
-          {/* Timer: SVG ring + centered time + "REMAINING" label */}
-          <div className="flex flex-col items-center gap-px">
-            <div className="relative flex items-center justify-center">
-              <svg
-                width="36"
-                height="36"
-                viewBox="0 0 36 36"
-                className="-rotate-90"
-                aria-hidden="true"
-              >
-                {/* Track */}
-                <circle
-                  cx="18" cy="18" r={RING_R}
-                  fill="none"
-                  stroke="rgba(255,255,255,0.10)"
-                  strokeWidth="2.5"
-                />
-                {/* Progress arc */}
-                <circle
-                  cx="18" cy="18" r={RING_R}
-                  fill="none"
-                  stroke={ringColor}
-                  strokeWidth="2.5"
-                  strokeDasharray={RING_C}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
-                />
-              </svg>
-              <span
-                className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${timerNumClass(timerSeconds)}`}
-                style={{ ...SYNE, letterSpacing: '-0.01em' }}
-                aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
-                aria-live="off"
-              >
-                {formatTime(timerSeconds)}
+      <Tooltip.Provider delayDuration={400}>
+        <div
+          className="flex h-[52px] shrink-0 items-center border-b border-white/8 bg-brand-navy px-5"
+          role="banner"
+        >
+          {/* Left: logo mark + divider + avatar + name + divider + exit */}
+          <div className="flex w-1/4 min-w-0 items-center gap-3">
+            <WamoMark />
+            <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-orange"
+              aria-hidden="true"
+            >
+              <span className="text-xs font-bold leading-none text-white" style={SYNE}>
+                {initial}
               </span>
             </div>
             <span
-              className="text-[9px] uppercase tracking-widest text-white/25"
-              style={DM_MONO}
+              className="truncate text-sm text-white/70"
+              style={DM_SANS}
+              title={candidateName}
             >
-              remaining
+              {candidateName}
+            </span>
+
+            {onExitClick && (
+              <>
+                <span className="h-4 w-px shrink-0 bg-white/15" aria-hidden="true" />
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <button
+                      type="button"
+                      onClick={onExitClick}
+                      disabled={isExitLocked}
+                      aria-label="Exit assessment"
+                      className={[
+                        'flex items-center gap-1.5 text-xs transition-colors duration-150',
+                        isExitLocked
+                          ? 'pointer-events-none opacity-20'
+                          : 'text-white/30 hover:text-red-400',
+                      ].join(' ')}
+                      style={DM_SANS}
+                    >
+                      <LogOut size={14} aria-hidden="true" />
+                      Exit
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      side="bottom"
+                      sideOffset={6}
+                      className="rounded-lg bg-brand-navy-light px-2.5 py-1.5 text-xs text-white/80 shadow-lg"
+                      style={DM_SANS}
+                    >
+                      {isExitLocked
+                        ? 'Cannot exit while code is running'
+                        : 'Exit assessment'}
+                      <Tooltip.Arrow className="fill-brand-navy-light" />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              </>
+            )}
+          </div>
+
+          {/* Center: question nav + assessment title */}
+          <div className="flex flex-1 flex-col items-center justify-center">
+            {isMultiQuestion && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onPrevQuestion}
+                  disabled={questionIndex <= 1}
+                  aria-label="Previous question"
+                  className="text-white/40 transition-colors hover:text-white disabled:opacity-30"
+                >
+                  <ChevronLeft size={14} aria-hidden="true" />
+                </button>
+                <span className="text-sm font-medium text-white/80" style={DM_SANS}>
+                  Question {questionIndex}
+                </span>
+                <span className="text-sm text-white/30" style={DM_SANS}>
+                  of {totalQuestions}
+                </span>
+                <button
+                  type="button"
+                  onClick={onNextQuestion}
+                  disabled={questionIndex >= totalQuestions}
+                  aria-label="Next question"
+                  className="text-white/40 transition-colors hover:text-white disabled:opacity-30"
+                >
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+            <span className="mt-0.5 text-xs text-white/30" style={DM_SANS}>
+              {assessmentTitle}
             </span>
           </div>
 
-          <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+          {/* Right: sync + divider + timer + divider + submit */}
+          <div className="flex w-1/4 items-center justify-end gap-3">
+            {/* Sync indicator */}
+            <div
+              className="flex items-center gap-1.5"
+              aria-label={`Sync status: ${syncText}`}
+            >
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncDot}`} aria-hidden="true" />
+              <span className={`text-[11px] ${syncTextClass}`} style={DM_MONO}>
+                {syncText}
+              </span>
+            </div>
 
-          {/* Submit button */}
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(true)}
-            disabled={isSubmitting}
-            aria-label={isSubmitting ? 'Submitting…' : 'Submit assessment'}
-            className="flex items-center rounded-xl border border-white/15 bg-white/8 px-4 py-1.5 text-sm font-medium text-white/80 transition-all hover:border-brand-orange/40 hover:bg-white/15 hover:text-brand-orange disabled:opacity-50"
-            style={DM_SANS}
-          >
-            {isSubmitting && (
-              <svg className="mr-1.5 h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            )}
-            {isSubmitting ? 'Submitting…' : 'Submit'}
-            {!isSubmitting && (
-              <ChevronRight size={14} className="ml-1" aria-hidden="true" />
-            )}
-          </button>
+            <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+
+            {/* Timer: SVG ring + centered time + "REMAINING" label */}
+            <div className="flex flex-col items-center gap-px">
+              <div className="relative flex items-center justify-center">
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 36 36"
+                  className="-rotate-90"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="18" cy="18" r={RING_R}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.10)"
+                    strokeWidth="2.5"
+                  />
+                  <circle
+                    cx="18" cy="18" r={RING_R}
+                    fill="none"
+                    stroke={ringColor}
+                    strokeWidth="2.5"
+                    strokeDasharray={RING_C}
+                    strokeDashoffset={dashOffset}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
+                  />
+                </svg>
+                <span
+                  className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${timerNumClass(timerSeconds)}`}
+                  style={{ ...SYNE, letterSpacing: '-0.01em' }}
+                  aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
+                  aria-live="off"
+                >
+                  {formatTime(timerSeconds)}
+                </span>
+              </div>
+              <span
+                className="text-[9px] uppercase tracking-widest text-white/25"
+                style={DM_MONO}
+              >
+                remaining
+              </span>
+            </div>
+
+            <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+
+            {/* Submit button */}
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              disabled={submitDisabled}
+              aria-label={isSubmitting ? 'Submitting…' : 'Submit assessment'}
+              className="flex items-center rounded-xl border border-white/15 bg-white/8 px-4 py-1.5 text-sm font-medium text-white/80 transition-all hover:border-brand-orange/40 hover:bg-white/15 hover:text-brand-orange disabled:opacity-50"
+              style={DM_SANS}
+            >
+              {isSubmitting && (
+                <svg className="mr-1.5 h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
+              {isSubmitting ? 'Submitting…' : 'Submit'}
+              {!isSubmitting && (
+                <ChevronRight size={14} className="ml-1" aria-hidden="true" />
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      </Tooltip.Provider>
 
       <ConfirmDialog
         open={confirmOpen}

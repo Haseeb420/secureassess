@@ -1,4 +1,6 @@
-use tauri::WebviewWindow;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tauri::{State, WebviewWindow};
 
 // NSApplicationPresentationOptions bit flags (macOS SDK)
 // https://developer.apple.com/documentation/appkit/nsapplicationpresentationoptions
@@ -11,6 +13,8 @@ use tauri::WebviewWindow;
 #[cfg(target_os = "macos")]
 const KIOSK_PRESENTATION_OPTIONS: u64 = 2 | 8 | 16 | 32 | 64 | 128;
 
+pub struct AssessmentActiveFlag(pub Arc<AtomicBool>);
+
 #[cfg(target_os = "macos")]
 fn set_presentation_options(options: u64) {
     use objc::runtime::Object;
@@ -22,7 +26,10 @@ fn set_presentation_options(options: u64) {
 }
 
 #[tauri::command]
-pub fn enter_kiosk_mode(window: WebviewWindow) -> Result<(), String> {
+pub fn enter_kiosk_mode(
+    window: WebviewWindow,
+    flag: State<AssessmentActiveFlag>,
+) -> Result<(), String> {
     window.set_fullscreen(true).map_err(|e| e.to_string())?;
     window.set_always_on_top(true).map_err(|e| e.to_string())?;
     window.set_decorations(false).map_err(|e| e.to_string())?;
@@ -30,17 +37,24 @@ pub fn enter_kiosk_mode(window: WebviewWindow) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     set_presentation_options(KIOSK_PRESENTATION_OPTIONS);
 
+    flag.0.store(true, Ordering::Relaxed);
+    tracing::info!("Kiosk mode activated");
     Ok(())
 }
 
 #[tauri::command]
-pub fn exit_kiosk_mode(window: WebviewWindow) -> Result<(), String> {
+pub fn exit_kiosk_mode(
+    window: WebviewWindow,
+    flag: State<AssessmentActiveFlag>,
+) -> Result<(), String> {
+    flag.0.store(false, Ordering::Relaxed);
+
     #[cfg(target_os = "macos")]
     set_presentation_options(0); // NSApplicationPresentationDefault — restore everything
 
     window.set_fullscreen(false).map_err(|e| e.to_string())?;
     window.set_always_on_top(false).map_err(|e| e.to_string())?;
     window.set_decorations(true).map_err(|e| e.to_string())?;
-
+    tracing::info!("Kiosk mode deactivated");
     Ok(())
 }

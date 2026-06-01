@@ -12,6 +12,9 @@ function getMessage(violation: SecurityViolation): string {
   if (violation.kind === 'focus-loss') {
     return 'Focus loss detected. Return to the assessment.'
   }
+  if (violation.kind === 'fullscreen-restored') {
+    return 'Screen recording or switching detected. Fullscreen restored.'
+  }
   return `Unauthorized application detected: ${violation.payload.name}`
 }
 

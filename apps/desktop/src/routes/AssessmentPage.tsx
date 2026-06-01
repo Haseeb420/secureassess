@@ -28,6 +28,7 @@ export function AssessmentPage() {
   const {
     candidate,
     assessmentId,
+    sessionId,
     assessmentTitle,
     questions,
     currentQuestionIndex,
@@ -70,7 +71,7 @@ export function AssessmentPage() {
   }, [decrementTimer])
 
   const { forceSave } = useAutoSave({
-    sessionId: assessmentId,
+    sessionId: sessionId,
     questionId: currentQuestion?.id ?? null,
     language: currentLanguage,
     code: codeByLanguage[currentLanguage],
@@ -129,7 +130,7 @@ export function AssessmentPage() {
 
     try {
       const result = await submitSolution(
-        assessmentId ?? 'unknown-session',
+        sessionId ?? assessmentId ?? 'unknown-session',
         currentQuestion.id,
         currentLanguage,
         codeByLanguage[currentLanguage],

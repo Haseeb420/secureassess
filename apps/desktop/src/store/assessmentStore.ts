@@ -8,6 +8,7 @@ type AssessmentStatus = 'idle' | 'validating' | 'active' | 'completed'
 interface AssessmentState {
   candidateId: string | null
   assessmentId: string | null
+  sessionId: string | null
   assessmentTitle: string | null
   status: AssessmentStatus
   timerSeconds: number
@@ -22,6 +23,7 @@ interface AssessmentState {
 
   setCandidate: (id: string) => void
   setAssessment: (id: string) => void
+  setSessionId: (id: string) => void
   setStatus: (status: AssessmentStatus) => void
   setTimer: (seconds: number) => void
   setTimerTotal: (seconds: number) => void
@@ -42,6 +44,7 @@ interface AssessmentState {
 const initialState = {
   candidateId: null,
   assessmentId: null,
+  sessionId: null,
   assessmentTitle: null,
   status: 'idle' as AssessmentStatus,
   timerSeconds: 0,
@@ -59,6 +62,7 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
   ...initialState,
   setCandidate: (id) => set({ candidateId: id }),
   setAssessment: (id) => set({ assessmentId: id }),
+  setSessionId: (id) => set({ sessionId: id }),
   setStatus: (status) => set({ status }),
   setTimer: (seconds) => set({ timerSeconds: seconds }),
   setTimerTotal: (seconds) => set({ timerTotalSeconds: seconds }),

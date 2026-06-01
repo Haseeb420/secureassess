@@ -20,6 +20,19 @@ async function apiFetch<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const resBody = await res.json().catch(() => ({}))
+    throw new Error((resBody as { detail?: string }).detail ?? `Request failed: ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
 // ── API shapes (snake_case from FastAPI) ─────────────────────────────────────
 
 interface ApiAssessment {
@@ -73,6 +86,20 @@ function toQuestion(q: ApiQuestion): Question {
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export type { ApiAssessment }
+
+export async function createServerSession(
+  sessionId: string,
+  assessmentId: string,
+  assessmentTitle: string,
+  totalQuestions: number,
+): Promise<void> {
+  await apiPost('/sessions', {
+    session_id: sessionId,
+    assessment_id: assessmentId,
+    assessment_title: assessmentTitle,
+    total_questions: totalQuestions,
+  })
+}
 
 export async function fetchMyAssessment(): Promise<ApiAssessment> {
   return apiFetch<ApiAssessment>('/assessments/my')

@@ -25,8 +25,9 @@ import {
   checkForbiddenProcesses,
 } from '../features/security/securityService'
 import type { ForbiddenProcess } from '../features/security/types'
+import { invoke } from '@tauri-apps/api/core'
 import { useAssessmentStore } from '../store/assessmentStore'
-import { fetchAssessmentWithQuestions } from '../lib/apiClient'
+import { fetchAssessmentWithQuestions, createServerSession } from '../lib/apiClient'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -147,7 +148,9 @@ export function PreAssessmentPage() {
   const candidate     = useAssessmentStore((s) => s.candidate)
   const authToken     = useAssessmentStore((s) => s.authToken)
   const storeAssId    = useAssessmentStore((s) => s.assessmentId)
-  const { setAssessmentData, setQuestions } = useAssessmentStore()
+  const { setAssessmentData, setQuestions, setSessionId } = useAssessmentStore()
+  const timerSeconds = useAssessmentStore((s) => s.timerSeconds)
+  const questions = useAssessmentStore((s) => s.questions)
 
   // Extract assessment_id from JWT user_metadata if not already in store
   const assessmentId = useMemo<string | null>(() => {
@@ -232,8 +235,41 @@ export function PreAssessmentPage() {
   const total     = CHECK_META.length
 
   const handleStart = async () => {
+    if (!assessmentId || !candidate) return
     setIsStarting(true)
-    navigate('/assessment')
+    try {
+      // Create local session in SQLite, returns a new UUID
+      const sessionId = await invoke<string>('save_session', {
+        assessmentId,
+        candidateId: candidate.id,
+        timerRemainingSecs: timerSeconds,
+      })
+
+      // Create the corresponding row in Supabase so FK constraints pass
+      await createServerSession(sessionId, assessmentId, assessmentTitle ?? '', questions.length)
+
+      // Persist all test cases (including hidden) to local SQLite so submit_solution can run them
+      for (const q of questions) {
+        await invoke('save_test_cases', {
+          questionId: q.id,
+          testCases: q.sampleTests.map((tc) => ({
+            id: tc.id,
+            questionId: q.id,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            isHidden: tc.isHidden,
+            timeLimitMs: q.timeLimitMs,
+            memoryLimitMb: q.memoryLimitMb,
+          })),
+        })
+      }
+
+      setSessionId(sessionId)
+      navigate('/assessment')
+    } catch (err) {
+      console.error('Failed to start assessment session:', err)
+      setIsStarting(false)
+    }
   }
 
   const toggleExpand = (key: CheckKey) => setExpanded((p) => (p === key ? null : key))

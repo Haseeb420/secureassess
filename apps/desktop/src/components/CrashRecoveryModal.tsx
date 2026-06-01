@@ -1,6 +1,6 @@
-import { AlertTriangle } from 'lucide-react'
-import { Button, ConfirmDialog } from '@secureassess/ui'
 import { useState } from 'react'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Button, ConfirmDialog } from '@secureassess/ui'
 
 interface AssessmentSession {
   id: string
@@ -26,7 +26,7 @@ export function CrashRecoveryModal({ session, onResume, onAbandon }: CrashRecove
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy/70 px-4 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy/80 px-4 backdrop-blur-md"
         aria-modal="true"
         role="dialog"
         aria-labelledby="crash-recovery-title"
@@ -34,34 +34,44 @@ export function CrashRecoveryModal({ session, onResume, onAbandon }: CrashRecove
         <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
           {/* Header */}
           <div className="flex items-center gap-3 bg-brand-navy px-6 py-4">
-            <AlertTriangle size={18} className="text-brand-orange shrink-0" aria-hidden="true" />
-            <h2 id="crash-recovery-title" className="text-white font-semibold">
-              Unfinished Assessment Found
+            <AlertCircle size={18} className="shrink-0 text-brand-orange" aria-hidden="true" />
+            <h2
+              id="crash-recovery-title"
+              className="font-syne font-semibold text-white"
+            >
+              Session found
             </h2>
           </div>
 
           {/* Body */}
-          <div className="px-6 py-6">
-            <p className="text-brand-navy/70 text-sm">
-              You were in the middle of an assessment when the app closed.
+          <div className="px-6 py-5">
+            <p className="font-dm-sans text-sm text-brand-navy/70">
+              The app closed while you were in the middle of an assessment. Your work is safe.
             </p>
 
-            <div className="mt-4 rounded-xl border border-brand-border bg-brand-surface p-4">
-              <p className="text-brand-navy font-medium text-sm">{session.assessment_id}</p>
-              <p
-                className={[
-                  'mt-1 font-mono text-2xl font-bold tabular-nums',
-                  session.timer_remaining_secs < 300 ? 'text-brand-orange' : 'text-brand-navy',
-                ].join(' ')}
-              >
+            {/* Recovery card */}
+            <div className="mt-4 rounded-2xl border border-brand-border bg-brand-surface p-4">
+              <p className="font-dm-sans text-xs uppercase tracking-wider text-brand-navy/40">
+                Assessment
+              </p>
+              <p className="mt-1 font-syne text-base font-bold text-brand-navy">
+                {session.assessment_id}
+              </p>
+
+              <p className="mt-3 font-dm-sans text-xs text-brand-navy/40">
+                Time Remaining
+              </p>
+              <p className="font-syne text-3xl font-bold text-brand-orange tabular-nums">
                 {formatTime(session.timer_remaining_secs)}
               </p>
-              <p className="mt-0.5 text-brand-navy/50 text-xs">time remaining</p>
-            </div>
 
-            <p className="mt-4 text-brand-navy/60 text-xs">
-              Your code was auto-saved. You can resume exactly where you left off.
-            </p>
+              <div className="mt-3 flex items-center gap-1.5">
+                <CheckCircle2 size={12} className="shrink-0 text-green-600" aria-hidden="true" />
+                <span className="font-dm-sans text-xs text-green-600">
+                  Code auto-saved — resume exactly where you left off
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Footer */}

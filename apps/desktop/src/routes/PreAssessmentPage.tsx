@@ -149,6 +149,7 @@ export function PreAssessmentPage() {
   const authToken     = useAssessmentStore((s) => s.authToken)
   const storeAssId    = useAssessmentStore((s) => s.assessmentId)
   const { setAssessmentData, setQuestions, setSessionId } = useAssessmentStore()
+  const candidateId = useAssessmentStore((s) => s.candidateId)
   const timerSeconds = useAssessmentStore((s) => s.timerSeconds)
   const questions = useAssessmentStore((s) => s.questions)
 
@@ -235,18 +236,15 @@ export function PreAssessmentPage() {
   const total     = CHECK_META.length
 
   const handleStart = async () => {
-    if (!assessmentId || !candidate) return
+    if (!assessmentId || !candidateId) return
     setIsStarting(true)
     try {
       // Create local session in SQLite, returns a new UUID
       const sessionId = await invoke<string>('save_session', {
         assessmentId,
-        candidateId: candidate.id,
+        candidateId,
         timerRemainingSecs: timerSeconds,
       })
-
-      // Create the corresponding row in Supabase so FK constraints pass
-      await createServerSession(sessionId, assessmentId, assessmentTitle ?? '', questions.length)
 
       // Persist all test cases (including hidden) to local SQLite so submit_solution can run them
       for (const q of questions) {
@@ -254,17 +252,24 @@ export function PreAssessmentPage() {
           questionId: q.id,
           testCases: q.sampleTests.map((tc) => ({
             id: tc.id,
-            questionId: q.id,
+            question_id: q.id,
             input: tc.input,
-            expectedOutput: tc.expectedOutput,
-            isHidden: tc.isHidden,
-            timeLimitMs: q.timeLimitMs,
-            memoryLimitMb: q.memoryLimitMb,
+            expected_output: tc.expectedOutput,
+            is_hidden: tc.isHidden ? 1 : 0,
+            time_limit_ms: q.timeLimitMs,
+            memory_limit_mb: q.memoryLimitMb,
           })),
         })
       }
 
       setSessionId(sessionId)
+
+      // Fire-and-forget: create server session so sync FK constraints pass.
+      // If offline, sync.py handles it by auto-creating the session on first sync.
+      createServerSession(sessionId, assessmentId, assessmentTitle ?? '', questions.length).catch(
+        () => { /* server unreachable — sync will recover */ }
+      )
+
       navigate('/assessment')
     } catch (err) {
       console.error('Failed to start assessment session:', err)

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from supabase_auth.errors import AuthApiError
 
 from core.dependencies import get_current_candidate
-from core.supabase import get_supabase
+from core.supabase import get_auth_client, get_supabase
 from schemas.auth import (
     InviteLoginRequest,
     LoginRequest,
@@ -35,9 +35,10 @@ def _build_login_response(session) -> LoginResponse:
 
 @router.post("/candidate/login", response_model=LoginResponse)
 async def candidate_login(body: LoginRequest):
-    supabase = get_supabase()
+    # Use a fresh auth client so the shared service client's state is never mutated
+    auth = get_auth_client()
     try:
-        response = supabase.auth.sign_in_with_password(
+        response = auth.auth.sign_in_with_password(
             {"email": body.email, "password": body.password}
         )
     except AuthApiError as exc:
@@ -55,6 +56,7 @@ async def candidate_login(body: LoginRequest):
 
 @router.post("/candidate/verify-invite")
 async def verify_invite(body: InviteLoginRequest):
+    # get_supabase() for DB reads/writes; get_auth_client() for all auth operations
     supabase = get_supabase()
     result = (
         supabase.table("assessment_invites")
@@ -75,17 +77,18 @@ async def verify_invite(body: InviteLoginRequest):
     # Stable credential: SHA-256 of the token — token IS the authentication secret
     password = hashlib.sha256(body.token.encode()).hexdigest()
 
+    auth = get_auth_client()
     try:
-        auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        auth_response = auth.auth.sign_in_with_password({"email": email, "password": password})
     except AuthApiError:
-        # Candidate account doesn't exist yet — create it then sign in
-        supabase.auth.admin.create_user({
+        # Candidate account doesn't exist yet — create it via service client (admin), then sign in
+        get_supabase().auth.admin.create_user({
             "email": email,
             "password": password,
             "email_confirm": True,
             "user_metadata": {"name": name, "assessment_id": invite["assessment_id"]},
         })
-        auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        auth_response = auth.auth.sign_in_with_password({"email": email, "password": password})
 
     if not auth_response.session:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create session")
@@ -97,9 +100,9 @@ async def verify_invite(body: InviteLoginRequest):
 
 @router.post("/refresh", response_model=LoginResponse)
 async def refresh_token(body: RefreshRequest):
-    supabase = get_supabase()
+    auth = get_auth_client()
     try:
-        response = supabase.auth.refresh_session(body.refresh_token)
+        response = auth.auth.refresh_session(body.refresh_token)
     except AuthApiError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

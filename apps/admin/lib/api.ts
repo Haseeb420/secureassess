@@ -64,7 +64,7 @@ export interface CandidateRow {
   session_id: string
   name: string
   email: string
-  status: 'not_started' | 'in_progress' | 'completed'
+  status: 'not_started' | 'in_progress' | 'completed' | 'submitted' | 'abandoned' | 'terminated' | string
   score: number | null
 }
 

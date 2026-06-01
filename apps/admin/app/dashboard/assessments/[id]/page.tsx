@@ -13,11 +13,16 @@ import {
 import { assessmentsApi, questionsApi, type CandidateRow, type Invite, type Question } from '../../../../lib/api'
 import { InviteDialog } from '../../../../components/InviteDialog'
 
-const CANDIDATE_STATUS = {
+const CANDIDATE_STATUS: Record<string, { label: string; dot: string; text: string; bg: string; pulse: boolean }> = {
   not_started: { label: 'Not started', dot: 'bg-brand-border',  text: 'text-brand-navy/50', bg: 'bg-brand-surface',  pulse: false },
-  in_progress: { label: 'In progress',  dot: 'bg-blue-400',     text: 'text-blue-700',      bg: 'bg-blue-50',        pulse: true  },
-  completed:   { label: 'Completed',    dot: 'bg-emerald-400',  text: 'text-emerald-700',   bg: 'bg-emerald-50',     pulse: false },
-} as const
+  in_progress:  { label: 'In progress',  dot: 'bg-blue-400',     text: 'text-blue-700',      bg: 'bg-blue-50',        pulse: true  },
+  completed:    { label: 'Completed',    dot: 'bg-emerald-400',  text: 'text-emerald-700',   bg: 'bg-emerald-50',     pulse: false },
+  submitted:    { label: 'Submitted',    dot: 'bg-emerald-400',  text: 'text-emerald-700',   bg: 'bg-emerald-50',     pulse: false },
+  abandoned:    { label: 'Abandoned',    dot: 'bg-red-400',      text: 'text-red-700',       bg: 'bg-red-50',         pulse: false },
+  terminated:   { label: 'Terminated',   dot: 'bg-red-400',      text: 'text-red-700',       bg: 'bg-red-50',         pulse: false },
+}
+
+const CANDIDATE_STATUS_FALLBACK = { label: 'Unknown', dot: 'bg-brand-border', text: 'text-brand-navy/50', bg: 'bg-brand-surface', pulse: false }
 
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((p) => p[0] ?? '').join('').toUpperCase()
@@ -598,7 +603,7 @@ function QuestionsTab({
 }
 
 function CandidateRowItem({ candidate }: { candidate: CandidateRow }) {
-  const cfg = CANDIDATE_STATUS[candidate.status]
+  const cfg = CANDIDATE_STATUS[candidate.status] ?? CANDIDATE_STATUS_FALLBACK
   return (
     <motion.div
       variants={{ hidden: { opacity: 0, x: -4 }, show: { opacity: 1, x: 0, transition: { duration: 0.15 } } }}

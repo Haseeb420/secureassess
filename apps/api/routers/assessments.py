@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
-from core.dependencies import get_current_admin
+from core.dependencies import get_current_admin, get_current_candidate
 from core.supabase import get_supabase
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
@@ -75,6 +75,37 @@ async def create_assessment(
     row = result.data[0]
     row["candidate_count"] = 0
     return row
+
+
+@router.get("/my")
+async def get_my_assessment(candidate: dict = Depends(get_current_candidate)):
+    """Return the assessment assigned to the currently authenticated candidate."""
+    import logging
+    log = logging.getLogger(__name__)
+
+    assessment_id = candidate.get("assessment_id")
+    log.info("GET /assessments/my — candidate_id=%s assessment_id=%s", candidate.get("id"), assessment_id)
+
+    if not assessment_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No assessment_id in candidate token. Re-invite the candidate.",
+        )
+
+    supabase = get_supabase()
+    result = (
+        supabase.table("assessments")
+        .select("id, title, duration_minutes, allowed_languages, question_ids, security_level, status")
+        .eq("id", assessment_id)
+        .execute()
+    )
+
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Assessment {assessment_id} not found in database. Create it from the admin panel first.",
+        )
+    return result.data[0]
 
 
 @router.get("/{assessment_id}")

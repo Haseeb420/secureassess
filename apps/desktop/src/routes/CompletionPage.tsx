@@ -1,60 +1,63 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ShieldCheck } from 'lucide-react'
 import { useAssessmentStore } from '../store/assessmentStore'
 
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.12 } },
+  visible: { transition: { staggerChildren: 0.15 } },
 }
 
 const itemVariants = {
-  hidden:   { opacity: 0, y: 16 },
-  visible:  { opacity: 1, y: 0, transition: { duration: 0.25 } },
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
 }
 
 function AnimatedCheck() {
+  const [pathDone, setPathDone] = useState(false)
+
   return (
-    <svg
-      width="80" height="80"
-      viewBox="0 0 80 80"
+    <motion.svg
+      width="88" height="88"
+      viewBox="0 0 88 88"
       fill="none"
       aria-hidden="true"
+      animate={pathDone ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+      transition={pathDone ? { duration: 0.2, ease: 'easeInOut' } : {}}
     >
-      {/* Background circle */}
-      <motion.circle
-        cx="40" cy="40" r="38"
-        stroke="#DE5E1F"
-        strokeWidth="3"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
+      <circle
+        cx="44" cy="44" r="42"
+        stroke="rgba(42,42,71,0.08)"
+        strokeWidth="2"
       />
-      {/* Checkmark path */}
       <motion.path
-        d="M22 41L35 54L58 28"
+        d="M 26 44 L 38 56 L 62 32"
         stroke="#DE5E1F"
-        strokeWidth="4"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
+        fill="none"
         initial={{ pathLength: 0 }}
         animate={{ pathLength: 1 }}
-        transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        onAnimationComplete={() => setPathDone(true)}
       />
-    </svg>
+    </motion.svg>
   )
 }
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
-  if (m < 1) return `${seconds}s`
+  const s = seconds % 60
+  if (m < 1) return `${s}s`
+  if (s === 0) return `${m}m`
   return `${m}m`
 }
 
 export function CompletionPage() {
-  const { timerSeconds } = useAssessmentStore()
+  const { timerSeconds, timerTotalSeconds, questions } = useAssessmentStore()
+  const elapsed = timerTotalSeconds - timerSeconds
 
-  // Lock to this page — prevent back navigation
   useEffect(() => {
     window.history.pushState(null, '', '/completion')
     const handlePop = () => window.history.pushState(null, '', '/completion')
@@ -63,18 +66,17 @@ export function CompletionPage() {
   }, [])
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-brand-surface px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#F7F8FA] to-[#EEEEF5] px-4">
       <motion.div
-        className="flex flex-col items-center text-center"
+        className="flex w-full max-w-sm flex-col items-center text-center"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Logo */}
-        <motion.div variants={itemVariants} className="mb-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-orange/10">
-            <ShieldCheck size={24} className="text-brand-orange" aria-hidden="true" />
-          </div>
+        {/* Logo + name */}
+        <motion.div variants={itemVariants} className="mb-8 flex items-center gap-2">
+          <ShieldCheck size={28} className="text-brand-navy/20" aria-hidden="true" />
+          <span className="font-syne text-sm text-brand-navy/30">SecureAssess</span>
         </motion.div>
 
         {/* Animated checkmark */}
@@ -85,15 +87,15 @@ export function CompletionPage() {
         {/* Title */}
         <motion.h1
           variants={itemVariants}
-          className="mt-5 text-2xl font-semibold text-brand-navy"
+          className="mt-6 font-syne text-2xl font-bold text-brand-navy"
         >
-          Assessment Submitted
+          Assessment complete
         </motion.h1>
 
         {/* Subtitle */}
         <motion.p
           variants={itemVariants}
-          className="mt-2 max-w-sm text-sm leading-relaxed text-brand-navy/60"
+          className="mt-3 max-w-[260px] font-dm-sans text-sm leading-relaxed text-brand-navy/60"
         >
           Your answers have been recorded and will be reviewed by your team.
         </motion.p>
@@ -101,26 +103,32 @@ export function CompletionPage() {
         {/* Divider */}
         <motion.div
           variants={itemVariants}
-          className="my-6 h-px w-48 bg-brand-border"
+          className="mx-auto mt-6 h-px w-12 bg-brand-border"
           aria-hidden="true"
         />
 
         {/* Stats */}
-        <motion.div variants={itemVariants} className="flex items-center gap-3">
-          <span className="rounded-full bg-brand-navy-pale px-3 py-1 text-xs text-brand-navy">
-            Questions answered: 1
-          </span>
-          <span className="rounded-full bg-brand-navy-pale px-3 py-1 text-xs text-brand-navy">
-            Session: {formatDuration(3600 - timerSeconds)}
-          </span>
+        <motion.div variants={itemVariants} className="mt-6 flex gap-3 justify-center">
+          <div className="flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-1.5">
+            <span className="font-dm-mono text-xs text-brand-navy/50">Questions</span>
+            <span className="font-dm-mono text-xs font-medium text-brand-navy">
+              {questions.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-1.5">
+            <span className="font-dm-mono text-xs text-brand-navy/50">Duration</span>
+            <span className="font-dm-mono text-xs font-medium text-brand-navy">
+              {formatDuration(elapsed)}
+            </span>
+          </div>
         </motion.div>
 
         {/* Close note */}
         <motion.p
           variants={itemVariants}
-          className="mt-8 text-xs text-brand-navy/40"
+          className="mt-8 font-dm-sans text-xs text-brand-navy/25"
         >
-          You may close this window.
+          You may close this window
         </motion.p>
       </motion.div>
     </div>

@@ -1,13 +1,29 @@
 import json
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
+from postgrest.exceptions import APIError
 from pydantic import BaseModel
 
 from core.supabase import get_supabase
 from services.integrity import verify_submission
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/sync", tags=["sync"])
+
+
+def _ensure_session(supabase, session_id: str) -> None:
+    """Upsert a minimal assessment_sessions row so FK constraints on dependent tables pass.
+    Called when a sync item arrives before the full session creation request does (offline case).
+    """
+    try:
+        supabase.table("assessment_sessions").upsert(
+            {"id": session_id, "status": "active"},
+            on_conflict="id",
+        ).execute()
+    except Exception as exc:
+        log.warning("Could not auto-create session %s: %s", session_id, exc)
 
 
 class SyncItem(BaseModel):

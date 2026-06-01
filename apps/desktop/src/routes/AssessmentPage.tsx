@@ -6,7 +6,7 @@ import { listen } from '@tauri-apps/api/event'
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import { ChevronLeft, ChevronRight, FileQuestion } from 'lucide-react'
 import { CodeEditor } from '../features/ide/CodeEditor'
-import { ConsoleOutput } from '../features/ide/ConsoleOutput'
+import { ConsoleOutput, type ConsoleStatus } from '../features/ide/ConsoleOutput'
 import { EditorToolbar } from '../features/ide/EditorToolbar'
 import { QuestionPanel } from '../features/ide/QuestionPanel'
 import { SubmissionModal } from '../features/ide/SubmissionModal'
@@ -178,15 +178,15 @@ export function AssessmentPage() {
     navigate('/completion', { replace: true })
   }, [navigate])
 
-  const consoleStatus = isRunning || isSubmitting
+  const consoleStatus: ConsoleStatus = isRunning || isSubmitting
     ? 'running'
     : runResult == null
       ? 'idle'
       : runResult.compile_error
         ? 'error'
         : runResult.outcomes.every((o) => o.passed)
-          ? 'success'
-          : 'error'
+          ? 'pass'
+          : 'fail'
 
   // No questions loaded yet
   if (questions.length === 0) {

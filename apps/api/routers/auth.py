@@ -1,5 +1,6 @@
 import hashlib
 import time
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase_auth.errors import AuthApiError
@@ -69,7 +70,12 @@ async def verify_invite(body: InviteLoginRequest):
 
     invite = result.data[0]
 
-    if invite.get("used_at") or invite.get("expires_at", 0) < int(time.time()):
+    expires_raw = invite.get("expires_at", 0)
+    if isinstance(expires_raw, str):
+        expires_ts = datetime.fromisoformat(expires_raw.replace("Z", "+00:00")).timestamp()
+    else:
+        expires_ts = float(expires_raw)
+    if invite.get("used_at") or expires_ts < time.time():
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Invite has expired")
 
     email = invite["candidate_email"]
@@ -93,7 +99,8 @@ async def verify_invite(body: InviteLoginRequest):
     if not auth_response.session:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create session")
 
-    supabase.table("assessment_invites").update({"used_at": int(time.time())}).eq("token", body.token).execute()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    supabase.table("assessment_invites").update({"used_at": now_iso}).eq("token", body.token).execute()
 
     return _build_login_response(auth_response.session)
 

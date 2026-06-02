@@ -61,7 +61,7 @@ def get_current_candidate(request: Request) -> dict:
     then falls back to Supabase JWT (desktop candidates)."""
     try:
         return get_session_user(request)
-    except HTTPException:
+    except Exception:
         pass
     return _get_supabase_user(request)
 

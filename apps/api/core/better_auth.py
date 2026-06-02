@@ -5,6 +5,7 @@ column. We validate incoming Bearer tokens by looking them up there and joining
 with the `user` table to get role information.
 """
 
+import httpx
 from fastapi import HTTPException, Request, status
 
 from .supabase import get_supabase
@@ -15,12 +16,18 @@ def _get_user_from_token(token: str) -> dict:
     supabase = get_supabase()
 
     # Query the session table; Better Auth uses camelCase column names
-    session_result = (
-        supabase.table("session")
-        .select('id, "expiresAt", "userId"')
-        .eq("token", token)
-        .execute()
-    )
+    try:
+        session_result = (
+            supabase.table("session")
+            .select('id, "expiresAt", "userId"')
+            .eq("token", token)
+            .execute()
+        )
+    except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.TimeoutException) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Auth service temporarily unavailable",
+        ) from exc
 
     if not session_result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
@@ -49,12 +56,18 @@ def _get_user_from_token(token: str) -> dict:
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
 
-    user_result = (
-        supabase.table("user")
-        .select("id, email, name, role")
-        .eq("id", user_id)
-        .execute()
-    )
+    try:
+        user_result = (
+            supabase.table("user")
+            .select("id, email, name, role")
+            .eq("id", user_id)
+            .execute()
+        )
+    except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.TimeoutException) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Auth service temporarily unavailable",
+        ) from exc
 
     if not user_result.data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")

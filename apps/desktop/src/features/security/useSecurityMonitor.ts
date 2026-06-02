@@ -3,7 +3,7 @@ import type { UnlistenFn } from '@tauri-apps/api/event'
 import { toast } from 'sonner'
 import { onFocusLoss, onFullscreenRestored, onProcessViolation } from './securityService'
 import type { ForbiddenProcess, FocusLossPayload } from './securityService'
-import { activateKeyboardGuard } from '@/lib/keyboard-guard'
+import { activateKeyboardGuard } from '../../lib/keyboard-guard'
 
 export type SecurityViolation =
   | { kind: 'focus-loss'; payload: FocusLossPayload }

@@ -286,6 +286,18 @@
 
 ---
 
+## feat/f2-token-management
+
+- [x] Create apps/api/services/token_generator.py
+- [x] Create apps/api/schemas/tokens.py
+- [x] Create apps/api/routers/tokens.py (CRUD + validate endpoint)
+- [x] Register tokens router in main.py
+- [x] Add Token types and tokensApi to apps/admin/lib/api.ts
+- [x] Add Tokens nav item to Sidebar
+- [x] Build apps/admin/app/dashboard/tokens/page.tsx
+
+---
+
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 188 complete / 190 total
+- Total tasks: 195 complete / 197 total

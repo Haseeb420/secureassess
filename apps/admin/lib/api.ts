@@ -215,3 +215,59 @@ export interface ViolationSummary {
 export const reportsApi = {
   get: (sessionId: string) => apiFetch<Report>(`/reports/${sessionId}`),
 }
+
+// ── Tokens ────────────────────────────────────────────────────────────────────
+
+export interface Token {
+  id: string
+  candidate_email: string
+  candidate_name: string
+  assessment_id: string
+  mock_ids: string[]
+  expiry_at: string
+  usage_limit: number
+  used_count: number
+  token_value: string
+  created_by: string
+  created_at: string
+  notes: string | null
+  is_revoked: boolean
+  assessment_title?: string
+}
+
+export interface CreateTokenBody {
+  candidate_email: string
+  candidate_name: string
+  assessment_id: string
+  mock_ids?: string[]
+  expiry_at: string
+  usage_limit: number
+  notes?: string | null
+}
+
+export interface PatchTokenBody {
+  expiry_at?: string
+  usage_limit?: number
+  mock_ids?: string[]
+  notes?: string | null
+}
+
+export const tokensApi = {
+  list: (params?: { assessment_id?: string; active?: boolean }) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params ?? {})
+          .filter(([, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => [k, String(v)]),
+      ),
+    ).toString()
+    return apiFetch<Token[]>(`/tokens${qs ? `?${qs}` : ''}`)
+  },
+  create: (body: CreateTokenBody) =>
+    apiFetch<Token>('/tokens', { method: 'POST', body: JSON.stringify(body) }),
+  get: (id: string) => apiFetch<Token>(`/tokens/${id}`),
+  patch: (id: string, body: PatchTokenBody) =>
+    apiFetch<Token>(`/tokens/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  revoke: (id: string) =>
+    apiFetch<void>(`/tokens/${id}`, { method: 'DELETE' }),
+}

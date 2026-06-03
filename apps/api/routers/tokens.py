@@ -90,7 +90,6 @@ async def create_token(
         "token_value": token_value,
         "created_by": admin.get("id", ""),
         "notes": body.notes,
-        "is_revoked": False,
     }
 
     result = supabase.table("tokens").insert(row).execute()
@@ -291,7 +290,7 @@ async def validate_token(body: ValidateTokenRequest, request: Request):
     # Log usage and increment counter
     supabase.table("token_usage_log").insert({
         "token_id": token["id"],
-        "validated_at": datetime.now(tz=timezone.utc).isoformat(),
+        "used_at": datetime.now(tz=timezone.utc).isoformat(),
         "ip_address": request.client.host if request.client else None,
     }).execute()
 

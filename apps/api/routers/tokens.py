@@ -162,12 +162,21 @@ async def get_token(
 
     log_result = (
         supabase.table("token_usage_log")
-        .select("*")
+        .select("id, used_at, ip_address")
         .eq("token_id", token_id)
-        .order("validated_at", desc=True)
+        .order("used_at", desc=True)
         .execute()
     )
     token["usage_log"] = log_result.data or []
+
+    sessions_result = (
+        supabase.table("assessment_sessions")
+        .select("id, candidate_name, candidate_email, status, started_at, final_score")
+        .eq("token_id", token_id)
+        .order("started_at", desc=True)
+        .execute()
+    )
+    token["sessions"] = sessions_result.data or []
 
     return token
 

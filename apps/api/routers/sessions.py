@@ -15,6 +15,7 @@ class SessionCreate(BaseModel):
     assessment_id: str
     assessment_title: Optional[str] = None
     total_questions: Optional[int] = None
+    token_id: Optional[str] = None
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -37,6 +38,8 @@ async def create_session(
         row["assessment_title"] = body.assessment_title
     if body.total_questions is not None:
         row["total_questions"] = body.total_questions
+    if body.token_id:
+        row["token_id"] = body.token_id
 
     result = supabase.table("assessment_sessions").upsert(row).execute()
     if not result.data:

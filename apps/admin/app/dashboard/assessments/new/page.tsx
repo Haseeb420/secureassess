@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Search, Plus, Minus, Check, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Search, Plus, Minus, Check, CheckCircle2, Infinity, CalendarX2, Clock } from 'lucide-react'
 import Link from 'next/link'
-import { assessmentsApi, questionsApi, type CreateAssessmentBody } from '../../../../lib/api'
+import { assessmentsApi, type CreateAssessmentBody } from '../../../../lib/api'
+import { questionsApi } from '../../../../lib/api'
 
 const LANGUAGES = ['python', 'javascript', 'typescript', 'cpp', 'java', 'go'] as const
 
@@ -27,6 +28,40 @@ const DIFFICULTY_BADGE: Record<string, string> = {
 
 const DURATION_PRESETS = [30, 60, 90, 120]
 
+const TIMEZONES = [
+  { value: 'Asia/Karachi',        label: 'PKT — UTC+5' },
+  { value: 'UTC',                 label: 'UTC' },
+  { value: 'America/New_York',    label: 'EST/EDT — UTC-5/-4' },
+  { value: 'America/Chicago',     label: 'CST/CDT — UTC-6/-5' },
+  { value: 'America/Los_Angeles', label: 'PST/PDT — UTC-8/-7' },
+  { value: 'Europe/London',       label: 'GMT/BST — UTC+0/+1' },
+  { value: 'Europe/Paris',        label: 'CET/CEST — UTC+1/+2' },
+  { value: 'Asia/Dubai',          label: 'GST — UTC+4' },
+  { value: 'Asia/Kolkata',        label: 'IST — UTC+5:30' },
+  { value: 'Asia/Singapore',      label: 'SGT — UTC+8' },
+]
+
+const ASSESSMENT_TYPES = [
+  {
+    value: 'open' as const,
+    title: 'Open Access',
+    desc: 'No time restriction. Candidate can start any time the token is valid.',
+    Icon: Infinity,
+  },
+  {
+    value: 'deadline' as const,
+    title: 'Deadline Based',
+    desc: 'Accessible immediately. Candidate must complete before the deadline.',
+    Icon: CalendarX2,
+  },
+  {
+    value: 'window' as const,
+    title: 'Time Window',
+    desc: 'Only accessible during a defined time window.',
+    Icon: Clock,
+  },
+]
+
 const formVariants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07 } },
@@ -37,6 +72,26 @@ const sectionVariants = {
   show:   { opacity: 1, y: 0, transition: { duration: 0.2 } },
 }
 
+function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label htmlFor="timezone" className="mb-1.5 block text-sm font-medium text-brand-navy">
+        Timezone
+      </label>
+      <select
+        id="timezone"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-brand-border bg-white px-3.5 py-2.5 text-sm text-brand-navy outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
+      >
+        {TIMEZONES.map((tz) => (
+          <option key={tz.value} value={tz.value}>{tz.label}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export default function NewAssessmentPage() {
   const router = useRouter()
   const [title, setTitle] = useState('')
@@ -45,6 +100,13 @@ export default function NewAssessmentPage() {
   const [securityLevel, setSecurityLevel] = useState<'standard' | 'strict'>('standard')
   const [questionIds, setQuestionIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
+
+  const [assessmentType, setAssessmentType] = useState<'open' | 'deadline' | 'window'>('open')
+  const [deadlineAt, setDeadlineAt] = useState('')
+  const [windowStart, setWindowStart] = useState('')
+  const [windowEnd, setWindowEnd] = useState('')
+  const [timezone, setTimezone] = useState('Asia/Karachi')
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
 
   const { data: questions = [], isLoading: questionsLoading } = useQuery({
     queryKey: ['questions'],
@@ -70,14 +132,35 @@ export default function NewAssessmentPage() {
       prev.includes(id) ? prev.filter((q) => q !== id) : [...prev, id],
     )
 
+  const validateSchedule = (): string | null => {
+    if (assessmentType === 'deadline') {
+      if (!deadlineAt) return 'Deadline date and time is required.'
+      if (new Date(deadlineAt) <= new Date()) return 'Deadline must be in the future.'
+    }
+    if (assessmentType === 'window') {
+      if (!windowStart) return 'Window start date and time is required.'
+      if (!windowEnd) return 'Window end date and time is required.'
+      if (new Date(windowEnd) <= new Date(windowStart)) return 'Window end must be after window start.'
+    }
+    return null
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const err = validateSchedule()
+    if (err) { setScheduleError(err); return }
+    setScheduleError(null)
     create.mutate({
       title,
       duration_minutes: duration,
       allowed_languages: languages,
       security_level: securityLevel,
       question_ids: questionIds,
+      assessment_type: assessmentType,
+      deadline_at:  assessmentType === 'deadline' ? deadlineAt  : undefined,
+      window_start: assessmentType === 'window'   ? windowStart : undefined,
+      window_end:   assessmentType === 'window'   ? windowEnd   : undefined,
+      timezone,
     })
   }
 
@@ -244,7 +327,120 @@ export default function NewAssessmentPage() {
               </div>
             </motion.div>
 
-            {/* Section 4: Questions */}
+            {/* Section 4: Schedule */}
+            <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-brand-border bg-brand-surface/50 px-6 py-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-navy/60">Assessment Type</h2>
+              </div>
+              <div className="p-6 space-y-4">
+                {/* Type card-radios */}
+                <div className="grid grid-cols-3 gap-3">
+                  {ASSESSMENT_TYPES.map(({ value, title, desc, Icon }) => {
+                    const selected = assessmentType === value
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => { setAssessmentType(value); setScheduleError(null) }}
+                        className={[
+                          'rounded-xl p-4 text-left transition-all',
+                          selected
+                            ? 'border-2 border-brand-orange bg-brand-orange-pale/30'
+                            : 'border border-brand-border bg-white hover:border-brand-navy/30',
+                        ].join(' ')}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <Icon
+                            size={18}
+                            className={selected ? 'text-brand-orange' : 'text-brand-navy/40'}
+                            aria-hidden="true"
+                          />
+                          {selected && (
+                            <CheckCircle2 size={14} className="text-brand-orange" aria-hidden="true" />
+                          )}
+                        </div>
+                        <p className="font-semibold text-sm text-brand-navy">{title}</p>
+                        <p className="text-xs text-brand-navy/50 mt-0.5 leading-relaxed">{desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Deadline fields */}
+                {assessmentType === 'deadline' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    transition={{ duration: 0.15 }}
+                    className="space-y-3 overflow-hidden"
+                  >
+                    <div>
+                      <label htmlFor="deadlineAt" className="mb-1.5 block text-sm font-medium text-brand-navy">
+                        Deadline date and time <span className="text-red-400" aria-hidden="true">*</span>
+                      </label>
+                      <input
+                        id="deadlineAt"
+                        type="datetime-local"
+                        value={deadlineAt}
+                        onChange={(e) => { setDeadlineAt(e.target.value); setScheduleError(null) }}
+                        aria-required="true"
+                        className="w-full rounded-lg border border-brand-border bg-white px-3.5 py-2.5 text-sm text-brand-navy outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
+                      />
+                    </div>
+                    <TimezoneSelect value={timezone} onChange={setTimezone} />
+                  </motion.div>
+                )}
+
+                {/* Window fields */}
+                {assessmentType === 'window' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    transition={{ duration: 0.15 }}
+                    className="space-y-3 overflow-hidden"
+                  >
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="windowStart" className="mb-1.5 block text-sm font-medium text-brand-navy">
+                          Window opens <span className="text-red-400" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="windowStart"
+                          type="datetime-local"
+                          value={windowStart}
+                          onChange={(e) => { setWindowStart(e.target.value); setScheduleError(null) }}
+                          aria-required="true"
+                          className="w-full rounded-lg border border-brand-border bg-white px-3.5 py-2.5 text-sm text-brand-navy outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="windowEnd" className="mb-1.5 block text-sm font-medium text-brand-navy">
+                          Window closes <span className="text-red-400" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="windowEnd"
+                          type="datetime-local"
+                          value={windowEnd}
+                          onChange={(e) => { setWindowEnd(e.target.value); setScheduleError(null) }}
+                          aria-required="true"
+                          className="w-full rounded-lg border border-brand-border bg-white px-3.5 py-2.5 text-sm text-brand-navy outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
+                        />
+                      </div>
+                    </div>
+                    <TimezoneSelect value={timezone} onChange={setTimezone} />
+                  </motion.div>
+                )}
+
+                {/* Schedule validation error */}
+                {scheduleError && (
+                  <p className="text-xs text-red-500" role="alert">
+                    {scheduleError}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Section 5: Questions */}
             <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
               <div className="border-b border-brand-border bg-brand-surface/50 px-6 py-3 flex items-center justify-between">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Questions</h2>

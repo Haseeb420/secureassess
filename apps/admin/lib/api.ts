@@ -44,6 +44,11 @@ export interface Assessment {
   security_level: 'standard' | 'strict'
   candidate_count: number
   created_at: string
+  assessment_type: 'open' | 'deadline' | 'window'
+  deadline_at?: string
+  window_start?: string
+  window_end?: string
+  timezone: string
 }
 
 export interface CreateAssessmentBody {
@@ -52,6 +57,11 @@ export interface CreateAssessmentBody {
   allowed_languages: string[]
   security_level: 'standard' | 'strict'
   question_ids: string[]
+  assessment_type?: 'open' | 'deadline' | 'window'
+  deadline_at?: string
+  window_start?: string
+  window_end?: string
+  timezone?: string
 }
 
 export interface AssessmentDetail extends Assessment {

@@ -147,20 +147,27 @@ ALTER TABLE question_answers    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE token_usage_log     ENABLE ROW LEVEL SECURITY;
 
 -- tokens: admin full access; public token_value lookup for validation only
-CREATE POLICY IF NOT EXISTS tokens_admin_all ON tokens
+DROP POLICY IF EXISTS tokens_admin_all    ON tokens;
+DROP POLICY IF EXISTS tokens_public_lookup ON tokens;
+
+CREATE POLICY tokens_admin_all ON tokens
   FOR ALL
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY IF NOT EXISTS tokens_public_lookup ON tokens
+CREATE POLICY tokens_public_lookup ON tokens
   FOR SELECT
   USING (true);
 
 -- assessment_attempts: admin read; candidate insert/update with matching token
-CREATE POLICY IF NOT EXISTS attempts_admin_read ON assessment_attempts
+DROP POLICY IF EXISTS attempts_admin_read        ON assessment_attempts;
+DROP POLICY IF EXISTS attempts_candidate_write   ON assessment_attempts;
+DROP POLICY IF EXISTS attempts_candidate_update  ON assessment_attempts;
+
+CREATE POLICY attempts_admin_read ON assessment_attempts
   FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY IF NOT EXISTS attempts_candidate_write ON assessment_attempts
+CREATE POLICY attempts_candidate_write ON assessment_attempts
   FOR INSERT
   WITH CHECK (
     EXISTS (
@@ -172,7 +179,7 @@ CREATE POLICY IF NOT EXISTS attempts_candidate_write ON assessment_attempts
     )
   );
 
-CREATE POLICY IF NOT EXISTS attempts_candidate_update ON assessment_attempts
+CREATE POLICY attempts_candidate_update ON assessment_attempts
   FOR UPDATE
   USING (
     EXISTS (
@@ -183,11 +190,15 @@ CREATE POLICY IF NOT EXISTS attempts_candidate_update ON assessment_attempts
   );
 
 -- question_answers: admin read; candidate write during active attempt
-CREATE POLICY IF NOT EXISTS answers_admin_read ON question_answers
+DROP POLICY IF EXISTS answers_admin_read        ON question_answers;
+DROP POLICY IF EXISTS answers_candidate_write   ON question_answers;
+DROP POLICY IF EXISTS answers_candidate_update  ON question_answers;
+
+CREATE POLICY answers_admin_read ON question_answers
   FOR SELECT
   USING (auth.role() = 'authenticated');
 
-CREATE POLICY IF NOT EXISTS answers_candidate_write ON question_answers
+CREATE POLICY answers_candidate_write ON question_answers
   FOR INSERT
   WITH CHECK (
     EXISTS (
@@ -197,7 +208,7 @@ CREATE POLICY IF NOT EXISTS answers_candidate_write ON question_answers
     )
   );
 
-CREATE POLICY IF NOT EXISTS answers_candidate_update ON question_answers
+CREATE POLICY answers_candidate_update ON question_answers
   FOR UPDATE
   USING (
     EXISTS (

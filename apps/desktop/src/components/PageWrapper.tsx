@@ -10,7 +10,6 @@ export function PageWrapper({ children, className }: PageWrapperProps) {
   return (
     <div
       className={cn('page-enter h-full w-full', className)}
-      key={Math.random()}
     >
       {children}
     </div>

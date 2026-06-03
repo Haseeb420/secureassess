@@ -17,6 +17,11 @@ class AssessmentCreate(BaseModel):
     allowed_languages: list[str]
     security_level: str
     question_ids: list[str]
+    assessment_type: str = "open"
+    deadline_at: Optional[str] = None
+    window_start: Optional[str] = None
+    window_end: Optional[str] = None
+    timezone: str = "Asia/Karachi"
 
 
 class AssessmentPatch(BaseModel):
@@ -26,6 +31,11 @@ class AssessmentPatch(BaseModel):
     security_level: Optional[str] = None
     question_ids: Optional[list[str]] = None
     status: Optional[str] = None
+    assessment_type: Optional[str] = None
+    deadline_at: Optional[str] = None
+    window_start: Optional[str] = None
+    window_end: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 @router.get("")
@@ -66,6 +76,11 @@ async def create_assessment(
                 "security_level": body.security_level,
                 "question_ids": body.question_ids,
                 "status": "active",
+                "assessment_type": body.assessment_type,
+                "deadline_at": body.deadline_at,
+                "window_start": body.window_start,
+                "window_end": body.window_end,
+                "timezone": body.timezone,
             }
         )
         .execute()
@@ -158,6 +173,20 @@ async def patch_assessment(
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
+
+    schedule_fields = {"assessment_type", "deadline_at", "window_start", "window_end", "timezone"}
+    if schedule_fields & set(updates.keys()):
+        attempts = (
+            supabase.table("assessment_sessions")
+            .select("id", count="exact")
+            .eq("assessment_id", assessment_id)
+            .execute()
+        )
+        if (attempts.count or 0) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot update schedule: this assessment already has active attempts.",
+            )
 
     result = (
         supabase.table("assessments")

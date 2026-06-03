@@ -298,6 +298,20 @@
 
 ---
 
+## feat/f3-assessment-scheduling
+
+- [x] Add createAssessmentScheduleSchema to packages/shared-types/src/schemas.ts
+- [x] Add scheduling fields to CreateAssessmentBody and Assessment in apps/admin/lib/api.ts
+- [x] Add Schedule section (card-radio open/deadline/window) to admin new assessment page
+- [x] Update AssessmentCreate and AssessmentPatch Pydantic models with scheduling fields
+- [x] Update POST /assessments to persist scheduling fields
+- [x] Update PATCH /assessments to guard schedule edits when attempts exist
+- [x] Create apps/desktop/src/lib/schedule.ts — getAssessmentStatus() utility
+- [x] Create apps/desktop/src/components/CountdownTimer.tsx
+- [x] Create apps/desktop/src/components/AssessmentClosedState.tsx
+
+---
+
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 195 complete / 197 total
+- Total tasks: 204 complete / 206 total

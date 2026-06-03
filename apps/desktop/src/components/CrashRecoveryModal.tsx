@@ -25,27 +25,29 @@ export function CrashRecoveryModal({ session, onResume, onAbandon }: CrashRecove
 
   return (
     <>
+      {/* Overlay */}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-[#2A2A47]/75 backdrop-blur-sm fade-in"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy/75 backdrop-blur-sm fade-in"
         aria-modal="true"
         role="dialog"
         aria-labelledby="crash-recovery-title"
       >
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[420px] mx-4 overflow-hidden slide-up">
+        {/* Card */}
+        <div className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-2xl slide-up">
 
           {/* Header */}
-          <div className="bg-[#2A2A47] px-6 py-5 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-4 h-4 text-[#DE5E1F]" aria-hidden="true" />
+          <div className="flex items-center gap-3 bg-brand-navy px-6 py-5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10">
+              <AlertCircle size={16} className="text-brand-orange" aria-hidden="true" />
             </div>
-            <div className="min-w-0">
+            <div>
               <h2
                 id="crash-recovery-title"
-                className="font-display font-bold text-white text-[15px] leading-tight"
+                className="font-syne text-[15px] font-bold leading-tight text-white"
               >
                 Session found
               </h2>
-              <p className="text-white/55 text-xs font-sans mt-0.5">
+              <p className="mt-0.5 font-dm-sans text-xs text-white/55">
                 You were in the middle of an assessment
               </p>
             </div>
@@ -53,35 +55,32 @@ export function CrashRecoveryModal({ session, onResume, onAbandon }: CrashRecove
 
           {/* Body */}
           <div className="px-6 pt-5 pb-4">
-            <p className="text-[#2A2A47]/70 text-sm font-sans leading-relaxed">
+            <p className="font-dm-sans text-sm leading-relaxed text-brand-navy/70">
               The app closed unexpectedly. Your work is safe and you can resume exactly where you left off.
             </p>
 
-            {/* Recovery info card */}
-            <div className="mt-4 bg-[#F7F8FA] border border-[#E8E9EE] rounded-xl overflow-hidden">
-              <div className="px-4 pt-4 pb-4">
-
-                <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-[#2A2A47]/40">
-                  ASSESSMENT
+            {/* Info card */}
+            <div className="mt-4 rounded-xl border border-brand-border bg-brand-surface">
+              <div className="px-4 py-4">
+                <p className="font-dm-sans text-[10px] font-semibold uppercase tracking-widest text-brand-navy/40">
+                  Assessment
                 </p>
-                <p className="text-[#2A2A47] font-sans font-medium text-sm leading-snug mt-1">
-                  <span className="font-mono text-[#2A2A47]/70">
-                    {session.assessment_id?.slice(0, 8)}…
-                  </span>
+                <p className="mt-1 font-dm-mono text-sm text-brand-navy/70">
+                  {session.assessment_id?.slice(0, 8)}&hellip;
                 </p>
 
-                <div className="border-t border-[#E8E9EE] my-3" />
+                <div className="my-3 h-px bg-brand-border" />
 
-                <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-[#2A2A47]/40">
-                  TIME REMAINING
+                <p className="font-dm-sans text-[10px] font-semibold uppercase tracking-widest text-brand-navy/40">
+                  Time Remaining
                 </p>
-                <p className="font-display font-bold text-[#DE5E1F] text-3xl leading-none mt-1 tabular-nums">
+                <p className="mt-1 font-syne text-3xl font-bold leading-none tabular-nums text-brand-orange">
                   {formatTime(session.timer_remaining_secs)}
                 </p>
 
-                <div className="flex items-center gap-1.5 mt-3">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" aria-hidden="true" />
-                  <span className="text-green-700 text-xs font-sans">
+                <div className="mt-3 flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className="shrink-0 text-green-600" aria-hidden="true" />
+                  <span className="font-dm-sans text-xs text-green-700">
                     Code auto-saved — resume exactly where you left off
                   </span>
                 </div>
@@ -90,21 +89,21 @@ export function CrashRecoveryModal({ session, onResume, onAbandon }: CrashRecove
           </div>
 
           {/* Footer */}
-          <div className="px-6 pb-6 pt-3 flex gap-3">
+          <div className="flex gap-3 px-6 pb-6 pt-2">
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              className="flex-none px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-sans font-medium hover:bg-red-50 hover:border-red-300 transition-colors duration-[120ms] cursor-pointer"
+              className="shrink-0 rounded-xl border border-red-200 px-4 py-2.5 font-dm-sans text-sm font-medium text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
             >
               Abandon
             </button>
             <button
               type="button"
               onClick={onResume}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-[#DE5E1F] text-white text-sm font-sans font-medium hover:bg-[#F06B28] transition-colors duration-[120ms] cursor-pointer flex items-center justify-center gap-2"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-orange px-4 py-2.5 font-dm-sans text-sm font-medium text-white transition-colors hover:bg-brand-orange-light"
             >
               Resume Assessment
-              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              <ArrowRight size={15} aria-hidden="true" />
             </button>
           </div>
         </div>

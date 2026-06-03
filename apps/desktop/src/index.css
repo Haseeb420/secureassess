@@ -1,24 +1,28 @@
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/syne/400.css";
-@import "@fontsource/syne/600.css";
-@import "@fontsource/syne/700.css";
-@import "@fontsource/syne/800.css";
+@import "@fontsource/dm-sans/300.css";
 @import "@fontsource/dm-sans/400.css";
 @import "@fontsource/dm-sans/500.css";
 @import "@fontsource/dm-sans/600.css";
+@import "@fontsource/dm-sans/400-italic.css";
 @import "@fontsource/dm-mono/400.css";
 @import "@fontsource/dm-mono/500.css";
+@import "@fontsource/syne/600.css";
+@import "@fontsource/syne/700.css";
+@import "@fontsource/syne/800.css";
 
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @source "../../../packages/ui/src";
 
 @theme {
+  /* Keep existing font vars for backward compat */
   --font-syne:    'Syne', sans-serif;
   --font-dm-sans: 'DM Sans', sans-serif;
   --font-dm-mono: 'DM Mono', monospace;
+
+  /* Standard semantic names */
+  --font-sans:    'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:    'DM Mono', 'Cascadia Code', 'Fira Code', monospace;
+  --font-display: 'Syne', 'DM Sans', sans-serif;
 
   --color-brand-white:         #FFFFFF;
   --color-brand-surface:       #F7F8FA;
@@ -38,6 +42,7 @@
 :root {
   --spacing: 0.25rem;
 
+  /* Brand colors */
   --color-white:          #FFFFFF;
   --color-surface:        #F7F8FA;
   --color-border:         #E8E9EE;
@@ -47,10 +52,42 @@
   --color-orange:         #DE5E1F;
   --color-orange-light:   #F06B28;
   --color-orange-pale:    #FFF0E8;
+
+  /* Editor dark zone */
   --color-editor-bg:      #1E1E2E;
   --color-editor-surface: #262637;
   --color-editor-border:  #383850;
   --color-editor-text:    #CDD6F4;
+
+  /* Typography */
+  --font-sans:    'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:    'DM Mono', 'Cascadia Code', 'Fira Code', monospace;
+  --font-display: 'Syne', var(--font-sans);
+
+  /* Spacing scale — 4px base grid */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Border radius */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast:   all 120ms ease;
+  --transition-base:   all 180ms ease;
+  --transition-slow:   all 280ms ease;
+  --transition-colors: color 120ms ease, background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
 *, *::before, *::after {
@@ -59,12 +96,21 @@
   padding: 0;
 }
 
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
 body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background: var(--color-white);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--color-navy);
+  background: var(--color-white);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
@@ -75,23 +121,107 @@ body {
 *:focus-visible {
   outline: 2px solid var(--color-orange);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Light scrollbar */
-::-webkit-scrollbar       { width: 6px; height: 6px; }
+/* Light scrollbars */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #C5C7D4; }
 
-/* Dark scrollbar for editor zone */
-.editor-zone ::-webkit-scrollbar-thumb { background: var(--color-editor-border); }
+/* Editor zone scrollbars — dark */
+.editor-zone ::-webkit-scrollbar-thumb       { background: var(--color-editor-border); }
+.editor-zone ::-webkit-scrollbar-thumb:hover { background: #505068; }
 
-#root {
-  width: 100%;
-  min-height: 100svh;
+/* Tailwind font utilities — map to CSS vars */
+.font-sans    { font-family: var(--font-sans) !important; }
+.font-mono    { font-family: var(--font-mono) !important; }
+.font-display { font-family: var(--font-display) !important; }
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+
+/* Page transitions — used on every route */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-enter 200ms ease forwards;
 }
 
-/* Prose styles for question markdown content */
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in { animation: fade-in 180ms ease forwards; }
+
+/* Slide up (modals, drawers) */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.slide-up { animation: slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Slide down (banners from top) */
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-down { animation: slide-down 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Stagger children */
+.stagger > * { opacity: 0; animation: page-enter 200ms ease forwards; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+
+/* Pulse once — for success/error flash */
+@keyframes pulse-once {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.pulse-once { animation: pulse-once 300ms ease; }
+
+/* Shimmer — for loading skeletons */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-surface) 50%, var(--color-border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Global interactive element smoothness ──────────────────────────────── */
+
+button, a, [role="button"] {
+  transition: color 120ms ease, background-color 120ms ease,
+              border-color 120ms ease, opacity 120ms ease,
+              transform 120ms ease;
+}
+
+input, textarea, select {
+  transition: border-color 120ms ease, box-shadow 120ms ease,
+              background-color 120ms ease;
+}
+
+/* ─── Radix Dialog animations ────────────────────────────────────────────── */
+
+[data-radix-dialog-overlay][data-state="open"]   { animation: fade-in 180ms ease; }
+[data-radix-dialog-content][data-state="open"]   { animation: slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+[data-radix-dialog-overlay][data-state="closed"] { animation: fade-in 150ms ease reverse; }
+[data-radix-dialog-content][data-state="closed"] { animation: slide-up 150ms ease reverse; }
+
+/* ─── Prose styles for question markdown content ─────────────────────────── */
+
 .prose-content {
   font-size: 0.875rem;
   line-height: 1.625;
@@ -119,7 +249,7 @@ body {
   padding: 0.1em 0.35em;
   border-radius: 3px;
   font-size: 0.84em;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-family: 'DM Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 .prose-content pre {
   background: #F7F8FA;

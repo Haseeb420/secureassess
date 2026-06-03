@@ -122,30 +122,30 @@ export function SubmissionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy/70 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy/70 px-4 backdrop-blur-sm fade-in"
       role="dialog"
       aria-modal="true"
       aria-labelledby="submission-modal-title"
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl slide-up">
         {/* Header */}
-        <div className="bg-brand-navy px-6 py-4">
+        <div className="bg-brand-navy px-6 py-5">
           <h2
             id="submission-modal-title"
-            className="font-syne font-semibold text-base text-white"
+            className="font-display font-bold text-base text-white"
           >
             Question Submitted
           </h2>
           {assessmentName && (
-            <p className="mt-0.5 font-dm-sans text-xs text-white/40">{assessmentName}</p>
+            <p className="mt-0.5 font-sans text-xs text-white/40">{assessmentName}</p>
           )}
         </div>
 
         {/* Body */}
-        <div className="flex flex-col items-center px-6 py-6">
+        <div className="flex flex-col items-center px-6 py-5 space-y-4">
           <ScoreRing score={score} />
 
-          <p className="mt-3 font-dm-sans text-sm text-brand-navy/60">
+          <p className="font-sans text-sm text-brand-navy/60 mt-1">
             {passed_tests} of {total_tests} tests passed
           </p>
 
@@ -164,7 +164,7 @@ export function SubmissionModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-brand-border bg-brand-surface px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-brand-border bg-brand-surface px-6 py-4 gap-3">
           {hasNextQuestion && onNextQuestion ? (
             <>
               <button

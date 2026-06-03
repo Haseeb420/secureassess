@@ -2,3 +2,4 @@
 export * from './auth'
 export * from './assessment'
 export * from './schemas'
+export * from './features'

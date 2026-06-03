@@ -20,7 +20,8 @@ export function Button({ variant = "primary", className = "", children, ...props
         "inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium",
         "focus:outline-none focus:ring-2 focus:ring-brand-orange focus:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",
-        "transition-colors duration-150",
+        "transition-colors duration-[120ms] ease-in-out",
+        "active:scale-[0.97] transition-transform",
         variantClasses[variant],
         className,
       ].join(" ")}

@@ -510,11 +510,18 @@ export function PreAssessmentPage() {
             </motion.div>
 
             {/* Check cards */}
+            {!kioskReady ? (
+              <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading checks">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="skeleton h-[64px] rounded-2xl" aria-hidden="true" />
+                ))}
+              </div>
+            ) : null}
             <motion.div
               variants={listVariants}
               initial="hidden"
               animate="visible"
-              className="flex flex-col gap-2"
+              className={cn('flex flex-col gap-2', !kioskReady && 'hidden')}
               aria-busy={isChecking}
             >
               {CHECK_META.map(({ key, label, Icon, failHint, fixSteps }) => {
@@ -535,7 +542,7 @@ export function PreAssessmentPage() {
                       isFail                      && 'border-red-200 bg-white',
                     )}
                   >
-                    <div className="flex items-center gap-3.5 px-4 py-3">
+                    <div className="flex items-center gap-4 px-5 py-4">
 
                       {/* Icon */}
                       <div className={cn(
@@ -637,7 +644,7 @@ export function PreAssessmentPage() {
           </div>
 
           {/* ── Action bar ── */}
-          <div className="shrink-0 border-t border-brand-border bg-white px-6 py-3.5">
+          <div className="shrink-0 border-t border-brand-border bg-white px-6 py-4">
             <div className="flex items-center justify-between">
 
               <div className="flex items-center gap-2" style={DMSANS}>
@@ -661,7 +668,7 @@ export function PreAssessmentPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-4">
                 <button
                   type="button"
                   onClick={runValidations}

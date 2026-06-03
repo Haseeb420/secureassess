@@ -134,7 +134,7 @@ export function TopBar({
               </span>
             </div>
             <span
-              className="truncate text-sm text-white/70"
+              className="truncate text-sm font-medium text-white/75"
               style={DM_SANS}
               title={candidateName}
             >

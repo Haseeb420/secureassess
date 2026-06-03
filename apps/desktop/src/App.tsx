@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { CrashRecoveryModal } from './components/CrashRecoveryModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { PageWrapper } from './components/PageWrapper'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { SecureLayout } from './layouts/SecureLayout'
 import { useCrashRecovery } from './features/persistence/useCrashRecovery'
@@ -24,20 +25,22 @@ function AppContent() {
       )}
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/pre-assessment" element={<PreAssessmentPage />} />
+          <Route path="/pre-assessment" element={<PageWrapper><PreAssessmentPage /></PageWrapper>} />
           <Route
             path="/assessment"
             element={
               <ErrorBoundary>
-                <SecureLayout />
+                <PageWrapper>
+                  <SecureLayout />
+                </PageWrapper>
               </ErrorBoundary>
             }
           >
             <Route index element={<AssessmentPage />} />
           </Route>
-          <Route path="/completion" element={<CompletionPage />} />
+          <Route path="/completion" element={<PageWrapper><CompletionPage /></PageWrapper>} />
         </Route>
       </Routes>
     </>

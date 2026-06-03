@@ -41,7 +41,7 @@ export function ViolationBanner({ violation, violationCount }: ViolationBannerPr
           animate={{ y: 0 }}
           exit={{ y: -48 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="fixed inset-x-0 top-0 z-50 bg-brand-orange shadow-lg"
+          className="fixed inset-x-0 top-0 z-50 bg-brand-orange shadow-lg slide-down"
         >
           {/* Main strip */}
           <div className="flex items-center gap-4 px-6 py-2.5">

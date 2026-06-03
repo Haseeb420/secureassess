@@ -51,7 +51,7 @@ export function ExitAssessmentDialog({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <motion.div
-          className="absolute inset-0 bg-brand-navy/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-brand-navy/60 backdrop-blur-sm fade-in"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={onClose}
@@ -63,7 +63,7 @@ export function ExitAssessmentDialog({
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.18 }}
-          className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+          className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl slide-up"
         >
           <h2 id="exit-dialog-title" className="text-lg font-bold text-brand-navy" style={SYNE}>
             Exit assessment
@@ -96,7 +96,7 @@ export function ExitAssessmentDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <motion.div
-        className="absolute inset-0 bg-brand-navy/75 backdrop-blur-md"
+        className="absolute inset-0 bg-brand-navy/75 backdrop-blur-md fade-in"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
@@ -113,7 +113,7 @@ export function ExitAssessmentDialog({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl slide-up"
           >
             <div className="flex items-center gap-3 bg-brand-orange px-6 py-4">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
@@ -209,7 +209,7 @@ export function ExitAssessmentDialog({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -24, opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+            className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl slide-up"
           >
             <button
               onClick={() => setStep('warning')}
@@ -279,7 +279,7 @@ export function ExitAssessmentDialog({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -24, opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+            className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl slide-up"
           >
             <button
               onClick={() => setStep('warning')}

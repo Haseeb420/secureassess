@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS tokens (
   id               TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
   candidate_email  TEXT        NOT NULL,
   candidate_name   TEXT        NOT NULL,
-  assessment_id    TEXT        NOT NULL REFERENCES assessments(id),
+  assessment_id    UUID        NOT NULL REFERENCES assessments(id),
   mock_ids         TEXT[]      NOT NULL DEFAULT '{}',
   expiry_at        TIMESTAMPTZ NOT NULL,
   usage_limit      INTEGER     NOT NULL DEFAULT 1,

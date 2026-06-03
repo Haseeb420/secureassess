@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.logging import configure_logging, get_logger
-from routers import assessments, auth, questions, reports, sessions, sync
+from routers import assessments, auth, questions, reports, sessions, sync, tokens
 
 configure_logging()
 logger = get_logger()
@@ -27,6 +27,7 @@ app.include_router(questions.router)
 app.include_router(sessions.router)
 app.include_router(reports.router)
 app.include_router(sync.router)
+app.include_router(tokens.router)
 
 
 @app.on_event("startup")

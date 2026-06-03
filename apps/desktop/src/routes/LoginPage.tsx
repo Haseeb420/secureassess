@@ -11,8 +11,12 @@ import {
   type LoginFormValues,
   type InviteTokenFormValues,
 } from '@secureassess/shared-types'
+import type { LandingPageData } from '@secureassess/shared-types'
 import { cn } from '@secureassess/ui'
 import { useAuth } from '../features/auth/useAuth'
+import { useAssessmentStore } from '../store/assessmentStore'
+import { validateToken } from '../lib/apiClient'
+import { getAssessmentStatus } from '../lib/schedule'
 
 type Tab = 'email' | 'token'
 
@@ -204,9 +208,17 @@ function SubmitButton({ isLoading, label, color }: SubmitButtonProps) {
   )
 }
 
+const TOKEN_ERROR_MESSAGES: Record<string, string> = {
+  not_found:           'This token does not exist. Check for typos.',
+  expired:             'This token has expired. Contact your coordinator.',
+  usage_limit_reached: 'You have used all available attempts for this assessment.',
+  assessment_closed:   'This assessment is no longer available.',
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
-  const { login, loginWithToken } = useAuth()
+  const { login } = useAuth()
+  const { setToken, setLandingData, setCandidateData } = useAssessmentStore()
   const [activeTab, setActiveTab] = useState<Tab>('email')
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -241,9 +253,34 @@ export function LoginPage() {
   const onTokenSubmit = async (values: InviteTokenFormValues) => {
     setServerError(null)
     try {
-      await loginWithToken(values.token)
-      toast.success('Token verified. Starting assessment setup…')
-      navigate('/pre-assessment')
+      const result = await validateToken(values.token)
+
+      if (!result.valid) {
+        setServerError(TOKEN_ERROR_MESSAGES[result.reason] ?? 'Token is invalid.')
+        return
+      }
+
+      const scheduleInfo = getAssessmentStatus(result.assessment)
+      const landingData: LandingPageData = {
+        token: result.token,
+        assessment: result.assessment,
+        assessmentStatus: scheduleInfo.status,
+        countdownToMs: scheduleInfo.countdownMs,
+        mocks: result.mocks,
+        previousAttempts: [],
+      }
+
+      setToken(result.token)
+      setLandingData(landingData)
+      setCandidateData({
+        id: result.token.id,
+        email: result.token.candidateEmail,
+        name: result.token.candidateName,
+        organizationId: result.token.organizationId ?? '',
+      })
+
+      toast.success('Token verified!')
+      navigate('/landing')
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Token is invalid or has expired.')
     }

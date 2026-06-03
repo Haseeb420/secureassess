@@ -12,6 +12,11 @@ module.exports = {
     ...baseConfig.theme,
     extend: {
       ...baseConfig.theme?.extend,
+      fontFamily: {
+        sans:    ['DM Sans', 'system-ui', '-apple-system', 'sans-serif'],
+        mono:    ['DM Mono', 'Cascadia Code', 'Fira Code', 'monospace'],
+        display: ['Syne', 'DM Sans', 'sans-serif'],
+      },
       colors: {
         ...baseConfig.theme?.extend?.colors,
         editor: {
@@ -20,6 +25,11 @@ module.exports = {
           border:  '#383850',
           text:    '#CDD6F4',
         },
+      },
+      transitionDuration: {
+        '120': '120ms',
+        '180': '180ms',
+        '250': '250ms',
       },
     },
   },

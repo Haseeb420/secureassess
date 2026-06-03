@@ -5,16 +5,6 @@ export interface TestCase {
   isHidden: boolean
 }
 
-export interface Question {
-  id: string
-  title: string
-  description: string // markdown
-  difficulty: 'easy' | 'medium' | 'hard'
-  timeLimitMs: number
-  memoryLimitMb: number
-  sampleTests: TestCase[]
-}
-
 export interface ExecutionResult {
   testCaseId: string
   passed: boolean

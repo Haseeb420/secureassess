@@ -29,7 +29,14 @@ function AppContent() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
         <Route element={<LandingProtectedRoute />}>
-          <Route path="/landing" element={<PageWrapper><LandingPage /></PageWrapper>} />
+          <Route
+            path="/landing"
+            element={
+              <ErrorBoundary>
+                <PageWrapper><LandingPage /></PageWrapper>
+              </ErrorBoundary>
+            }
+          />
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/pre-assessment" element={<PageWrapper><PreAssessmentPage /></PageWrapper>} />

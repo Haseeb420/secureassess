@@ -23,6 +23,7 @@ export function useSyncStatus(): SyncState {
   const prevOnlineRef = useRef<boolean | null>(null)
 
   useEffect(() => {
+    if (!('__TAURI_INTERNALS__' in window)) return
     let unlisten: (() => void) | undefined
 
     listen<SyncStatus>('sync:status', (event) => {

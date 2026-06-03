@@ -19,7 +19,8 @@ const SYNE   = { fontFamily: "'Syne', system-ui, sans-serif" } as const
 const DMSANS = { fontFamily: "'DM Sans', system-ui, sans-serif" } as const
 const DMMONO = { fontFamily: "'DM Mono', 'Courier New', monospace" } as const
 
-function getInitials(name: string): string {
+function getInitials(name: string | undefined | null): string {
+  if (!name) return '?'
   return name
     .split(' ')
     .filter(Boolean)
@@ -62,7 +63,13 @@ export function LandingPage() {
   )
 
   const { token, assessment, mocks } = landingData
-  const initials = getInitials(token.candidateName)
+  // Guard against snake_case API responses (candidate_name vs candidateName)
+  const candidateName =
+    token.candidateName ??
+    (token as unknown as Record<string, string>)['candidate_name'] ??
+    token.candidateEmail ??
+    'Candidate'
+  const initials = getInitials(candidateName)
   const attemptsRemaining = token.usedCount < token.usageLimit
 
   const handleLogout = () => {
@@ -141,7 +148,7 @@ export function LandingPage() {
               {initials}
             </div>
             <span className="text-[13px] text-white/70" style={DMSANS}>
-              {token.candidateName}
+              {candidateName}
             </span>
           </div>
           <button
@@ -172,7 +179,7 @@ export function LandingPage() {
               WELCOME BACK
             </p>
             <h1 className="mt-1 text-2xl font-bold text-brand-navy" style={SYNE}>
-              {token.candidateName}
+              {candidateName}
             </h1>
             <p className="mt-1 text-sm text-brand-navy/60" style={DMSANS}>
               Your assessment is ready. Review the practice rounds below first.

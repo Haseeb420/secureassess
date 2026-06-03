@@ -1,4 +1,4 @@
-import type { Question } from '@secureassess/shared-types'
+import type { Question, TokenValidationResult } from '@secureassess/shared-types'
 import { useAssessmentStore } from '../store/assessmentStore'
 
 const BASE = import.meta.env.VITE_API_BASE_URL as string
@@ -108,6 +108,19 @@ export async function fetchMyAssessment(): Promise<ApiAssessment> {
 export async function fetchQuestion(id: string): Promise<Question> {
   const q = await apiFetch<ApiQuestion>(`/questions/${id}`)
   return toQuestion(q)
+}
+
+export async function validateToken(tokenValue: string): Promise<TokenValidationResult> {
+  const res = await fetch(`${BASE}/tokens/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token_value: tokenValue }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { detail?: string }).detail ?? `Request failed: ${res.status}`)
+  }
+  return res.json() as Promise<TokenValidationResult>
 }
 
 export async function fetchAssessmentWithQuestions(): Promise<{

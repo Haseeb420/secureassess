@@ -1,16 +1,23 @@
 import { create } from 'zustand'
-import type { Candidate, Question } from '@secureassess/shared-types'
+import type {
+  Candidate,
+  Question,
+  Token,
+  LandingPageData,
+  Assessment,
+  QuestionAnswer,
+} from '@secureassess/shared-types'
 import { defaultTemplates, type Language } from '../features/ide/templates'
 import type { OutputLine } from '../features/ide/ConsoleOutput'
 
-type AssessmentStatus = 'idle' | 'validating' | 'active' | 'completed'
+type SessionStatus = 'idle' | 'validating' | 'active' | 'completed'
 
 interface AssessmentState {
   candidateId: string | null
   assessmentId: string | null
   sessionId: string | null
   assessmentTitle: string | null
-  status: AssessmentStatus
+  status: SessionStatus
   timerSeconds: number
   timerTotalSeconds: number
   candidate: Candidate | null
@@ -21,10 +28,18 @@ interface AssessmentState {
   codeByLanguage: Record<Language, string>
   consoleOutput: OutputLine[]
 
+  // Landing page / token flow
+  token: Token | null
+  landingData: LandingPageData | null
+  mocks: Assessment[]
+  currentAttemptId: string | null
+  currentQuestionIdx: number
+  answers: Record<string, QuestionAnswer>
+
   setCandidate: (id: string) => void
   setAssessment: (id: string) => void
   setSessionId: (id: string) => void
-  setStatus: (status: AssessmentStatus) => void
+  setStatus: (status: SessionStatus) => void
   setTimer: (seconds: number) => void
   setTimerTotal: (seconds: number) => void
   decrementTimer: () => void
@@ -39,6 +54,14 @@ interface AssessmentState {
   appendOutput: (line: OutputLine) => void
   clearOutput: () => void
   reset: () => void
+
+  // Landing page / token flow actions
+  setToken: (token: Token) => void
+  setLandingData: (data: LandingPageData) => void
+  setCurrentAttemptId: (id: string) => void
+  setCurrentQuestionIdx: (idx: number) => void
+  saveAnswer: (questionId: string, answer: Partial<QuestionAnswer>) => void
+  clearAttempt: () => void
 }
 
 const initialState = {
@@ -46,7 +69,7 @@ const initialState = {
   assessmentId: null,
   sessionId: null,
   assessmentTitle: null,
-  status: 'idle' as AssessmentStatus,
+  status: 'idle' as SessionStatus,
   timerSeconds: 0,
   timerTotalSeconds: 3600,
   candidate: null,
@@ -56,6 +79,13 @@ const initialState = {
   currentLanguage: 'python' as Language,
   codeByLanguage: { ...defaultTemplates },
   consoleOutput: [] as OutputLine[],
+
+  token: null,
+  landingData: null,
+  mocks: [] as Assessment[],
+  currentAttemptId: null,
+  currentQuestionIdx: 0,
+  answers: {} as Record<string, QuestionAnswer>,
 }
 
 export const useAssessmentStore = create<AssessmentState>((set) => ({
@@ -89,4 +119,18 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
     set((state) => ({ consoleOutput: [...state.consoleOutput, line] })),
   clearOutput: () => set({ consoleOutput: [] }),
   reset: () => set(initialState),
+
+  setToken: (token) => set({ token }),
+  setLandingData: (data) => set({ landingData: data, mocks: data.mocks }),
+  setCurrentAttemptId: (id) => set({ currentAttemptId: id }),
+  setCurrentQuestionIdx: (idx) => set({ currentQuestionIdx: idx }),
+  saveAnswer: (questionId, answer) =>
+    set((state) => ({
+      answers: {
+        ...state.answers,
+        [questionId]: { ...state.answers[questionId], ...answer } as QuestionAnswer,
+      },
+    })),
+  clearAttempt: () =>
+    set({ currentAttemptId: null, currentQuestionIdx: 0, answers: {}, consoleOutput: [] }),
 }))

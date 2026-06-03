@@ -62,7 +62,7 @@ function ScoreRing({ score }: { score: number }) {
       </svg>
       <div className="absolute flex flex-col items-center">
         <motion.span
-          className="font-syne text-3xl font-bold tabular-nums"
+          className="font-display text-3xl font-bold tabular-nums"
           style={{ color }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -70,7 +70,7 @@ function ScoreRing({ score }: { score: number }) {
         >
           {Math.round(score)}
         </motion.span>
-        <span className="mt-0.5 font-dm-sans text-xs text-brand-navy/40">score</span>
+        <span className="mt-0.5 font-sans text-xs text-brand-navy/40">score</span>
       </div>
     </div>
   )

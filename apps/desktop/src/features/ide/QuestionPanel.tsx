@@ -85,7 +85,7 @@ export function QuestionPanel({ question, isLoading = false, runHistory = [] }: 
           </div>
 
           {/* Title */}
-          <h2 className="font-syne text-lg font-bold text-brand-navy leading-snug">
+          <h2 className="font-display font-bold text-lg text-brand-navy leading-snug">
             {question.title}
           </h2>
 
@@ -130,7 +130,7 @@ export function QuestionPanel({ question, isLoading = false, runHistory = [] }: 
       <div className="flex-1 overflow-y-auto px-5 py-5">
         {/* Problem tab */}
         {activeTab === 'problem' && (
-          <article className="prose prose-sm max-w-none prose-question">
+          <article className="prose prose-sm max-w-none prose-question leading-7">
             <ReactMarkdown>{question.description}</ReactMarkdown>
           </article>
         )}

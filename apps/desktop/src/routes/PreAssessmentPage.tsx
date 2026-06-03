@@ -535,7 +535,7 @@ export function PreAssessmentPage() {
                       isFail                      && 'border-red-200 bg-white',
                     )}
                   >
-                    <div className="flex items-center gap-3.5 px-4 py-3">
+                    <div className="flex items-center gap-4 px-5 py-4">
 
                       {/* Icon */}
                       <div className={cn(
@@ -637,7 +637,7 @@ export function PreAssessmentPage() {
           </div>
 
           {/* ── Action bar ── */}
-          <div className="shrink-0 border-t border-brand-border bg-white px-6 py-3.5">
+          <div className="shrink-0 border-t border-brand-border bg-white px-6 py-4">
             <div className="flex items-center justify-between">
 
               <div className="flex items-center gap-2" style={DMSANS}>
@@ -661,7 +661,7 @@ export function PreAssessmentPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-4">
                 <button
                   type="button"
                   onClick={runValidations}

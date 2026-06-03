@@ -11,6 +11,7 @@
 
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@source ".";
 @source "../../../packages/ui/src";
 
 @theme {
@@ -90,10 +91,12 @@
   --transition-colors: color 120ms ease, background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html, body {

@@ -510,11 +510,18 @@ export function PreAssessmentPage() {
             </motion.div>
 
             {/* Check cards */}
+            {!kioskReady ? (
+              <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading checks">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="skeleton h-[64px] rounded-2xl" aria-hidden="true" />
+                ))}
+              </div>
+            ) : null}
             <motion.div
               variants={listVariants}
               initial="hidden"
               animate="visible"
-              className="flex flex-col gap-2"
+              className={cn('flex flex-col gap-2', !kioskReady && 'hidden')}
               aria-busy={isChecking}
             >
               {CHECK_META.map(({ key, label, Icon, failHint, fixSteps }) => {

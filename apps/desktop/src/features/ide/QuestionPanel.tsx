@@ -3,7 +3,6 @@ import ReactMarkdown from 'react-markdown'
 import { ArrowDown, Clock, History } from 'lucide-react'
 import { cn } from '@secureassess/ui'
 import type { Question } from '@secureassess/shared-types'
-import { SkeletonBlock, SkeletonText } from '../../components/Skeleton'
 import type { RunResult } from './evaluationService'
 
 interface QuestionPanelProps {
@@ -40,17 +39,17 @@ export function QuestionPanel({ question, isLoading = false, runHistory = [] }: 
       <div className="flex h-full flex-col bg-white" aria-busy="true" aria-label="Loading question">
         <div className="px-5 pt-4 pb-0">
           <div className="flex items-center gap-2 mb-2">
-            <SkeletonBlock width="w-14" height="h-5" className="rounded-full" />
-            <SkeletonBlock width="w-14" height="h-5" className="rounded-full" />
+            <div className="skeleton h-5 w-14 rounded-full" aria-hidden="true" />
+            <div className="skeleton h-5 w-14 rounded-full" aria-hidden="true" />
           </div>
-          <SkeletonText className="h-5 w-3/4 mb-1" />
+          <div className="skeleton h-5 w-3/4 mb-3" aria-hidden="true" />
+          <div className="skeleton h-4 w-1/3" aria-hidden="true" />
           <div className="h-px bg-brand-border mt-3" />
         </div>
         <div className="px-5 py-5 space-y-2">
-          <SkeletonText />
-          <SkeletonText className="w-5/6" />
-          <SkeletonText className="w-4/5" />
-          <SkeletonBlock height="h-16" className="mt-3 rounded-xl" />
+          <div className="skeleton h-4 w-full mb-2" aria-hidden="true" />
+          <div className="skeleton h-4 w-5/6 mb-2" aria-hidden="true" />
+          <div className="skeleton h-4 w-4/6" aria-hidden="true" />
         </div>
       </div>
     )

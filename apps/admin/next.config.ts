@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
     "@better-auth/kysely-adapter",
     "kysely",
   ],
+
+  // Allow ngrok tunnels to reach the HMR websocket during dev.
+  // Admin ngrok URL is dynamic so we allow all ngrok-free subdomains.
+  allowedDevOrigins: ["*.ngrok-free.app", "*.ngrok-free.dev", "*.ngrok.io"],
 };
 
 export default nextConfig;

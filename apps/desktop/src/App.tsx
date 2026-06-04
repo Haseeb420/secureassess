@@ -9,6 +9,7 @@ import { SecureLayout } from './layouts/SecureLayout'
 import { useCrashRecovery } from './features/persistence/useCrashRecovery'
 import { LandingPage } from './routes/LandingPage'
 import { LoginPage } from './routes/LoginPage'
+import { MockResultsPage } from './routes/MockResultsPage'
 import { PreAssessmentPage } from './routes/PreAssessmentPage'
 import { AssessmentPage } from './routes/AssessmentPage'
 import { CompletionPage } from './routes/CompletionPage'
@@ -53,6 +54,7 @@ function AppContent() {
             <Route index element={<AssessmentPage />} />
           </Route>
           <Route path="/completion" element={<PageWrapper><CompletionPage /></PageWrapper>} />
+          <Route path="/mock-results" element={<PageWrapper><MockResultsPage /></PageWrapper>} />
         </Route>
       </Routes>
     </>

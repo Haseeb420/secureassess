@@ -57,6 +57,7 @@ export interface CreateAssessmentBody {
   allowed_languages: string[]
   security_level: 'standard' | 'strict'
   question_ids: string[]
+  question_weightages?: Record<string, number>
   assessment_type?: 'open' | 'deadline' | 'window'
   deadline_at?: string
   window_start?: string
@@ -113,12 +114,19 @@ export const assessmentsApi = {
 
 // ── Questions ─────────────────────────────────────────────────────────────────
 
+export interface McqOption {
+  id: string
+  text: string
+  is_correct: boolean
+}
+
 export interface Question {
   id: string
   title: string
-  type: 'coding' | 'debugging' | 'sql' | 'mcq' | 'system_design'
+  type: 'coding' | 'mcq' | 'text' | 'debugging' | 'sql' | 'system_design'
   difficulty: 'easy' | 'medium' | 'hard'
   tags: string[]
+  weightage: number
   time_limit_ms: number
   memory_limit_mb: number
   created_at: string
@@ -135,14 +143,17 @@ export interface CreateQuestionBody {
   description: string
   type: Question['type']
   difficulty: Question['difficulty']
-  time_limit_ms: number
-  memory_limit_mb: number
-  tags: string[]
-  test_cases: TestCase[]
+  weightage: number
+  time_limit_ms?: number
+  memory_limit_mb?: number
+  tags?: string[]
+  test_cases?: TestCase[]
+  options?: McqOption[]
 }
 
 export interface QuestionDetail extends Question {
   description: string
+  options: McqOption[]
   test_cases: (TestCase & { id: string })[]
 }
 

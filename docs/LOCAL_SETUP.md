@@ -498,3 +498,61 @@ pnpm build --filter=!@secureassess/desktop
 | Format Rust code | `cd apps/desktop/src-tauri && cargo fmt` |
 | View recent commits | `git log --oneline --all` |
 | Inspect local SQLite DB | Open `apps/desktop/src-tauri/*.db` with DB Browser for SQLite |
+
+---
+
+## 9. Testing on Multiple Devices
+
+### Quick Start
+
+1. Get your ngrok static domain (one time):
+   - Sign up at ngrok.com (free)
+   - Go to Dashboard → Domains → + New Domain
+   - Copy your domain (e.g. `pleased-hedgehog-musical.ngrok-free.app`)
+   - Add to `apps/api/.env`: `NGROK_STATIC_DOMAIN=your-domain.ngrok-free.app`
+   - Add to `apps/desktop/.env`: `VITE_API_BASE_URL=https://your-domain.ngrok-free.app`
+
+2. Start services + tunnels:
+   ```bash
+   make dev-ngrok
+   ```
+
+3. Build the desktop app with the ngrok URL baked in:
+   ```bash
+   make build-mac
+   ```
+
+4. Share the installer with testers:
+   ```bash
+   make serve-builds
+   ```
+   Shows a LAN URL — testers download from their browser.
+
+5. For Windows/Linux testers: push to a release branch and GitHub Actions
+   builds the Windows `.msi` and Linux `.AppImage` automatically.
+
+### Windows Build via GitHub Actions
+
+Push to any branch starting with `release/`:
+```bash
+git checkout -b release/test-build-$(date +%Y%m%d)
+git push origin HEAD
+```
+
+GitHub Actions will build for Windows and Linux.
+Download from the Actions artifacts tab.
+
+### Quick Commands Reference
+
+| Command | What it does |
+|---|---|
+| `make dev` | Start all services in tmux |
+| `make ngrok` | Start ngrok tunnels |
+| `make ngrok-urls` | Show live ngrok tunnel URLs |
+| `make build-mac` | Build macOS installer |
+| `make serve-builds` | Share builds over LAN |
+| `make release-draft` | Create GitHub draft release with installer |
+| `make env-check` | Verify all env vars are set |
+| `make ip` | Show your LAN IP |
+| `make ports` | Show which ports are in use |
+| `make help` | Show all available commands |

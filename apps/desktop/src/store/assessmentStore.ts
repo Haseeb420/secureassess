@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type {
   Candidate,
   QuestionForCandidate,
+  MockQuestionResult,
   Token,
   LandingPageData,
   Assessment,
@@ -38,6 +39,11 @@ interface AssessmentState {
   finalScore: number | null
   answers: Record<string, QuestionAnswer>
 
+  // Mock assessment flow
+  isMock: boolean
+  mockAttemptId: string | null
+  mockResults: MockQuestionResult[] | null
+
   setCandidate: (id: string) => void
   setAssessment: (id: string) => void
   setSessionId: (id: string) => void
@@ -68,6 +74,11 @@ interface AssessmentState {
   setCurrentQuestionIdx: (idx: number) => void
   saveAnswer: (questionId: string, answer: Partial<QuestionAnswer>) => void
   clearAttempt: () => void
+
+  // Mock flow actions
+  setIsMock: (value: boolean) => void
+  setMockAttemptId: (id: string | null) => void
+  setMockResults: (results: MockQuestionResult[]) => void
 }
 
 const initialState = {
@@ -94,6 +105,10 @@ const initialState = {
   submittedQuestions: new Set<string>(),
   finalScore: null,
   answers: {} as Record<string, QuestionAnswer>,
+
+  isMock: false,
+  mockAttemptId: null,
+  mockResults: null,
 }
 
 export const useAssessmentStore = create<AssessmentState>((set) => ({
@@ -126,7 +141,7 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
   appendOutput: (line) =>
     set((state) => ({ consoleOutput: [...state.consoleOutput, line] })),
   clearOutput: () => set({ consoleOutput: [] }),
-  reset: () => set({ ...initialState, submittedQuestions: new Set<string>() }),
+  reset: () => set({ ...initialState, submittedQuestions: new Set<string>(), isMock: false, mockAttemptId: null, mockResults: null }),
 
   setToken: (token) => set({ token }),
   setLandingData: (data) => set({ landingData: data, mocks: data.mocks }),
@@ -161,5 +176,12 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
       finalScore: null,
       answers: {},
       consoleOutput: [],
+      isMock: false,
+      mockAttemptId: null,
+      mockResults: null,
     }),
+
+  setIsMock: (value) => set({ isMock: value }),
+  setMockAttemptId: (id) => set({ mockAttemptId: id }),
+  setMockResults: (results) => set({ mockResults: results }),
 }))

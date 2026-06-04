@@ -1,5 +1,6 @@
 import secrets
 import time
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,8 +8,15 @@ from pydantic import BaseModel, EmailStr
 
 from core.dependencies import get_current_admin, get_current_candidate
 from core.supabase import get_supabase
+from services.token_generator import generate_token_value
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
+
+
+class AssessmentQuestionInput(BaseModel):
+    question_id: str
+    weightage: float
+    order_index: int = 0
 
 
 class AssessmentCreate(BaseModel):
@@ -16,7 +24,7 @@ class AssessmentCreate(BaseModel):
     duration_minutes: int
     allowed_languages: list[str]
     security_level: str
-    question_ids: list[str]
+    questions: list[AssessmentQuestionInput] = []
     assessment_type: str = "open"
     deadline_at: Optional[str] = None
     window_start: Optional[str] = None
@@ -29,6 +37,7 @@ class AssessmentPatch(BaseModel):
     duration_minutes: Optional[int] = None
     allowed_languages: Optional[list[str]] = None
     security_level: Optional[str] = None
+    questions: Optional[list[AssessmentQuestionInput]] = None
     question_ids: Optional[list[str]] = None
     status: Optional[str] = None
     assessment_type: Optional[str] = None
@@ -66,6 +75,17 @@ async def create_assessment(
     _admin: dict = Depends(get_current_admin),
 ):
     supabase = get_supabase()
+
+    if body.questions:
+        total_weight = sum(q.weightage for q in body.questions)
+        if abs(total_weight - 100) > 0.01:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Question weightages must sum to 100 (got {total_weight:.2f})",
+            )
+
+    question_ids = [q.question_id for q in body.questions]
+
     result = (
         supabase.table("assessments")
         .insert(
@@ -74,7 +94,7 @@ async def create_assessment(
                 "duration_minutes": body.duration_minutes,
                 "allowed_languages": body.allowed_languages,
                 "security_level": body.security_level,
-                "question_ids": body.question_ids,
+                "question_ids": question_ids,
                 "status": "active",
                 "assessment_type": body.assessment_type,
                 "deadline_at": body.deadline_at,
@@ -87,8 +107,24 @@ async def create_assessment(
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create assessment")
+
+    assessment_id = result.data[0]["id"]
+
+    if body.questions:
+        aq_rows = [
+            {
+                "assessment_id": assessment_id,
+                "question_id": q.question_id,
+                "weightage": q.weightage,
+                "order_index": q.order_index,
+            }
+            for q in body.questions
+        ]
+        supabase.table("assessment_questions").insert(aq_rows).execute()
+
     row = result.data[0]
     row["candidate_count"] = 0
+    row["assessment_questions"] = []
     return row
 
 
@@ -140,6 +176,50 @@ async def get_assessment(
 
     assessment = result.data[0]
 
+    # Fetch assessment_questions with joined question data
+    aq_result = (
+        supabase.table("assessment_questions")
+        .select("*")
+        .eq("assessment_id", assessment_id)
+        .order("order_index")
+        .execute()
+    )
+    aq_rows = aq_result.data or []
+
+    if aq_rows:
+        q_ids = [aq["question_id"] for aq in aq_rows]
+        q_result = (
+            supabase.table("questions")
+            .select("*")
+            .in_("id", q_ids)
+            .execute()
+        )
+        q_map = {q["id"]: q for q in (q_result.data or [])}
+        assessment["assessment_questions"] = [
+            {
+                "id": aq["id"],
+                "question": q_map.get(aq["question_id"], {}),
+                "weightage": float(aq["weightage"]),
+                "order_index": aq["order_index"],
+            }
+            for aq in aq_rows
+        ]
+        assessment["question_ids"] = q_ids
+    else:
+        # Fallback: use legacy question_ids with zero weightage
+        q_ids = assessment.get("question_ids") or []
+        if q_ids:
+            q_result = (
+                supabase.table("questions").select("*").in_("id", q_ids).execute()
+            )
+            q_map = {q["id"]: q for q in (q_result.data or [])}
+            assessment["assessment_questions"] = [
+                {"id": None, "question": q_map.get(qid, {}), "weightage": 0.0, "order_index": i}
+                for i, qid in enumerate(q_ids)
+            ]
+        else:
+            assessment["assessment_questions"] = []
+
     # Fetch candidates for this assessment
     sessions_result = (
         supabase.table("assessment_sessions")
@@ -171,6 +251,22 @@ async def patch_assessment(
 ):
     supabase = get_supabase()
     updates = body.model_dump(exclude_none=True)
+
+    # Handle new questions format (with weightage)
+    questions_input: list[AssessmentQuestionInput] | None = None
+    if "questions" in updates:
+        questions_input = updates.pop("questions")
+        raw = [AssessmentQuestionInput(**q) for q in questions_input]
+        if raw:
+            total = sum(q.weightage for q in raw)
+            if abs(total - 100) > 0.01:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Question weightages must sum to 100 (got {total:.2f})",
+                )
+        updates["question_ids"] = [q.question_id for q in raw]
+        questions_input = raw
+
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
 
@@ -196,6 +292,22 @@ async def patch_assessment(
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+
+    # Sync assessment_questions if questions were updated
+    if questions_input is not None:
+        supabase.table("assessment_questions").delete().eq("assessment_id", assessment_id).execute()
+        if questions_input:
+            aq_rows = [
+                {
+                    "assessment_id": assessment_id,
+                    "question_id": q.question_id,
+                    "weightage": q.weightage,
+                    "order_index": q.order_index,
+                }
+                for q in questions_input
+            ]
+            supabase.table("assessment_questions").insert(aq_rows).execute()
+
     return result.data[0]
 
 
@@ -210,10 +322,13 @@ async def delete_assessment(
 
 # ── Invites ───────────────────────────────────────────────────────────────────
 
-class InviteCreate(BaseModel):
+class CreateInviteRequest(BaseModel):
     candidate_email: EmailStr
-    candidate_name: str = ""
-    expires_in_hours: int = 48
+    candidate_name: str
+    mock_ids: list[str] = []
+    expiry_at: datetime
+    usage_limit: int = 1
+    notes: Optional[str] = None
 
 
 @router.get("/{assessment_id}/invites")
@@ -223,8 +338,8 @@ async def list_invites(
 ):
     supabase = get_supabase()
     result = (
-        supabase.table("assessment_invites")
-        .select("id, token, candidate_email, expires_at, used_at, created_at")
+        supabase.table("tokens")
+        .select("*")
         .eq("assessment_id", assessment_id)
         .order("created_at", desc=True)
         .execute()
@@ -235,32 +350,34 @@ async def list_invites(
 @router.post("/{assessment_id}/invites", status_code=status.HTTP_201_CREATED)
 async def create_invite(
     assessment_id: str,
-    body: InviteCreate,
-    _admin: dict = Depends(get_current_admin),
+    body: CreateInviteRequest,
+    admin: dict = Depends(get_current_admin),
 ):
     supabase = get_supabase()
 
-    check = supabase.table("assessments").select("id").eq("id", assessment_id).execute()
+    check = supabase.table("assessments").select("id, title").eq("id", assessment_id).execute()
     if not check.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
 
-    token = secrets.token_urlsafe(32)
-    expires_at = int(time.time()) + body.expires_in_hours * 3600
+    token_value = generate_token_value()
 
-    row: dict = {
-        "assessment_id": assessment_id,
-        "token": token,
+    row = {
         "candidate_email": str(body.candidate_email),
-        "expires_at": expires_at,
+        "candidate_name": body.candidate_name,
+        "assessment_id": assessment_id,
+        "mock_ids": body.mock_ids,
+        "expiry_at": body.expiry_at.isoformat(),
+        "usage_limit": body.usage_limit,
+        "used_count": 0,
+        "token_value": token_value,
+        "created_by": admin.get("id", ""),
+        "notes": body.notes,
     }
-    if body.candidate_name:
-        row["candidate_name"] = body.candidate_name
 
-    result = (
-        supabase.table("assessment_invites")
-        .insert(row)
-        .execute()
-    )
+    result = supabase.table("tokens").insert(row).execute()
     if not result.data:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create invite")
-    return result.data[0]
+
+    token = result.data[0]
+    token["assessment_title"] = check.data[0]["title"]
+    return token

@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from core.dependencies import get_current_admin
 from core.supabase import get_supabase
 from schemas.tokens import (
-    CreateTokenRequest,
     PatchTokenRequest,
     ValidateTokenRequest,
     ValidateTokenResponse,
@@ -65,80 +64,6 @@ def _strip_hidden_data(question: dict) -> dict:
 
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
-
-@router.post("", status_code=status.HTTP_201_CREATED)
-async def create_token(
-    body: CreateTokenRequest,
-    admin: dict = Depends(get_current_admin),
-):
-    supabase = get_supabase()
-
-    check = supabase.table("assessments").select("id, title").eq("id", body.assessment_id).execute()
-    if not check.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
-
-    token_value = generate_token_value()
-
-    row = {
-        "candidate_email": str(body.candidate_email),
-        "candidate_name": body.candidate_name,
-        "assessment_id": body.assessment_id,
-        "mock_ids": body.mock_ids,
-        "expiry_at": body.expiry_at.isoformat(),
-        "usage_limit": body.usage_limit,
-        "used_count": 0,
-        "token_value": token_value,
-        "created_by": admin.get("id", ""),
-        "notes": body.notes,
-    }
-
-    result = supabase.table("tokens").insert(row).execute()
-    if not result.data:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create token")
-
-    token = result.data[0]
-    token["assessment_title"] = check.data[0]["title"]
-    return token
-
-
-@router.get("")
-async def list_tokens(
-    assessment_id: Optional[str] = Query(None),
-    active: Optional[bool] = Query(None),
-    _admin: dict = Depends(get_current_admin),
-):
-    supabase = get_supabase()
-    query = supabase.table("tokens").select("*").order("created_at", desc=True)
-
-    if assessment_id:
-        query = query.eq("assessment_id", assessment_id)
-    if active is True:
-        now_iso = datetime.now(tz=timezone.utc).isoformat()
-        query = query.eq("is_revoked", False).gt("expiry_at", now_iso)
-    elif active is False:
-        now_iso = datetime.now(tz=timezone.utc).isoformat()
-        query = query.or_(f"is_revoked.eq.true,expiry_at.lte.{now_iso}")
-
-    result = query.execute()
-    tokens = result.data or []
-
-    # Join assessment titles
-    assessment_ids = list({t["assessment_id"] for t in tokens if t.get("assessment_id")})
-    titles: dict[str, str] = {}
-    if assessment_ids:
-        a_result = (
-            supabase.table("assessments")
-            .select("id, title")
-            .in_("id", assessment_ids)
-            .execute()
-        )
-        titles = {a["id"]: a["title"] for a in (a_result.data or [])}
-
-    for t in tokens:
-        t["assessment_title"] = titles.get(t.get("assessment_id", ""), "")
-
-    return tokens
-
 
 @router.get("/{token_id}")
 async def get_token(

@@ -1,6 +1,8 @@
 import { getSession } from './auth-client'
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+// Always use the Next.js proxy path so browser requests are same-origin.
+// next.config.ts rewrites /api/backend/* → FastAPI (localhost:8000) server-side.
+const BASE = '/api/backend'
 
 export class ApiError extends Error {
   constructor(

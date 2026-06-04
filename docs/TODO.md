@@ -332,6 +332,24 @@
 
 ---
 
+## feat/f8-results-scoring
+
+- [x] Rebuild CompletionPage with score card (bg-white rounded-2xl), CSS draw-check animation, score color coding, stats pills
+- [x] Add GET /attempts admin list endpoint with filters (assessment_id, status, date_from, date_to)
+- [x] Add GET /attempts/{id} enrichment: assessment_title, usage_limit, question_title/weightage/options per answer
+- [x] Add PATCH /attempts/{id}/answers/{answer_id}/score endpoint with final score recomputation
+- [x] Add ManualScoreRequest/ManualScoreResponse Pydantic schemas
+- [x] Add AttemptListItem, AttemptDetail, AnswerDetail, TestResult types to admin api.ts
+- [x] Add attemptsApi (list, get, scoreAnswer) to admin api.ts
+- [x] Add "Results" nav item to Sidebar (below Assessments)
+- [x] Create admin results list page with filter bar, stats row, and table with pending review badges
+- [x] Create admin attempt detail page with two-column header, score breakdown table, expandable question rows
+- [x] Coding expansion: read-only source code block + test cases table with pass/fail row borders
+- [x] MCQ expansion: all options with candidate selection and correct answer highlighted
+- [x] Text expansion: submitted answer + amber manual scoring form with save button
+
+---
+
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 219 complete / 221 total
+- Total tasks: 232 complete / 234 total

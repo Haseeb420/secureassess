@@ -121,18 +121,9 @@ async def start_attempt(body: StartAttemptRequest):
         "attempt_number": 1,
     }).execute()
 
-    # 6. Increment token usage + log
-    supabase.table("tokens").update({
-        "used_count": token.get("used_count", 0) + 1,
-    }).eq("id", token["id"]).execute()
-
-    supabase.table("token_usage_log").insert({
-        "token_id": token["id"],
-        "used_at": now.isoformat(),
-        "ip_address": None,
-    }).execute()
-
-    # 7. Fetch questions via assessment_questions ordered by order_index
+    # 6. Fetch questions via assessment_questions ordered by order_index
+    # NOTE: token.used_count is NOT incremented here — /tokens/validate owns that.
+    # Incrementing in both places would double-burn the usage limit per session.
     aq_result = (
         supabase.table("assessment_questions")
         .select("*")

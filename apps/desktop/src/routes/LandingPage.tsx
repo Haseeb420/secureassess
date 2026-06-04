@@ -11,7 +11,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { cn } from '@secureassess/ui'
-import type { Assessment, AssessmentStatus } from '@secureassess/shared-types'
+import type { Assessment, AssessmentStatus, QuestionForCandidate } from '@secureassess/shared-types'
 import { useAssessmentStore } from '../store/assessmentStore'
 import { CountdownTimer } from '../components/CountdownTimer'
 
@@ -87,7 +87,14 @@ export function LandingPage() {
 
   const handleStartMock = (mock: Assessment) => {
     setAssessmentData(mock.id, mock.title, mock.durationMins)
-    setQuestions([])
+    // Convert AssessmentQuestion[] → QuestionForCandidate[] so AssessmentPage can render them
+    // without calling /attempts/start (mocks have no dedicated token).
+    const mockQuestions: QuestionForCandidate[] = (mock.questions ?? []).map((aq) => ({
+      ...aq.question,
+      weightage:  aq.weightage,
+      orderIndex: aq.orderIndex,
+    }))
+    setQuestions(mockQuestions)
     navigate('/pre-assessment')
   }
 

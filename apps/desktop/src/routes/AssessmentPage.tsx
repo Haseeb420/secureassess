@@ -83,9 +83,13 @@ export function AssessmentPage() {
 
   const { violationCount, lastViolation } = useSecurityMonitor({ enabled: true })
 
-  // Start attempt on mount if not already started
+  // Mock assessments (assessmentId !== token.assessmentId) skip the attempt API entirely —
+  // they have no dedicated token and must not burn usage from the real assessment token.
+  const isMockAssessment = token ? assessmentId !== token.assessmentId : false
+
+  // Start attempt on mount if not already started (real assessment only)
   useEffect(() => {
-    if (currentAttemptId || !token) return
+    if (currentAttemptId || !token || isMockAssessment) return
     setIsStarting(true)
     startAttempt(token.tokenValue)
       .then(() => setIsStarting(false))
@@ -205,6 +209,19 @@ export function AssessmentPage() {
         req.answerText = answers[currentQuestion.id]?.answerText
       }
 
+      if (isMockAssessment) {
+        // Mock: no API calls — advance state locally, results not recorded
+        const { markQuestionSubmitted: markSubmitted, advanceQuestion } = useAssessmentStore.getState()
+        markSubmitted(currentQuestion.id)
+        const isLast = currentQuestionIdx >= questions.length - 1
+        advanceQuestion()
+        if (isLast) {
+          await exitKioskMode().catch(() => {})
+          navigate('/completion', { replace: true })
+        }
+        return
+      }
+
       const response = await submitAnswer(req)
 
       if (!response.nextQuestionAvailable) {
@@ -228,6 +245,7 @@ export function AssessmentPage() {
   }, [
     currentQuestion, currentAttemptId, currentLanguage,
     codeByLanguage, answers, runResult, navigate,
+    isMockAssessment, currentQuestionIdx, questions.length,
   ])
 
   // Navigate to completion when assessment is locked server-side

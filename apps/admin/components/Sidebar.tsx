@@ -6,13 +6,14 @@ import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   ClipboardList, HelpCircle, Monitor, BarChart2,
-  ChevronLeft, ChevronRight, LogOut, Settings,
+  ChevronLeft, ChevronRight, LogOut, Settings, FileCheck,
 } from 'lucide-react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { signOut } from '../lib/auth-client'
 
 const NAV = [
   { label: 'Assessments', href: '/dashboard/assessments', icon: ClipboardList },
+  { label: 'Results',     href: '/dashboard/results',     icon: FileCheck },
   { label: 'Questions',   href: '/dashboard/questions',   icon: HelpCircle },
   { label: 'Monitor',     href: '/dashboard/monitor',     icon: Monitor },
   { label: 'Reports',     href: '/dashboard/reports',     icon: BarChart2 },

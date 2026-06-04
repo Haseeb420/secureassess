@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from postgrest.exceptions import APIError as PostgRESTError
 from pydantic import BaseModel, EmailStr
 
 from core.dependencies import get_current_admin, get_current_candidate
@@ -111,16 +112,20 @@ async def create_assessment(
     assessment_id = result.data[0]["id"]
 
     if body.questions:
-        aq_rows = [
-            {
-                "assessment_id": assessment_id,
-                "question_id": q.question_id,
-                "weightage": q.weightage,
-                "order_index": q.order_index,
-            }
-            for q in body.questions
-        ]
-        supabase.table("assessment_questions").insert(aq_rows).execute()
+        try:
+            aq_rows = [
+                {
+                    "assessment_id": assessment_id,
+                    "question_id": q.question_id,
+                    "weightage": q.weightage,
+                    "order_index": q.order_index,
+                }
+                for q in body.questions
+            ]
+            supabase.table("assessment_questions").insert(aq_rows).execute()
+        except PostgRESTError as exc:
+            if exc.code != "PGRST205":
+                raise
 
     row = result.data[0]
     row["candidate_count"] = 0
@@ -177,14 +182,22 @@ async def get_assessment(
     assessment = result.data[0]
 
     # Fetch assessment_questions with joined question data
-    aq_result = (
-        supabase.table("assessment_questions")
-        .select("*")
-        .eq("assessment_id", assessment_id)
-        .order("order_index")
-        .execute()
-    )
-    aq_rows = aq_result.data or []
+    # Gracefully falls back to legacy question_ids if the table doesn't exist yet (pre-migration)
+    aq_rows: list[dict] = []
+    try:
+        aq_result = (
+            supabase.table("assessment_questions")
+            .select("*")
+            .eq("assessment_id", assessment_id)
+            .order("order_index")
+            .execute()
+        )
+        aq_rows = aq_result.data or []
+    except PostgRESTError as exc:
+        if exc.code == "PGRST205":
+            aq_rows = []
+        else:
+            raise
 
     if aq_rows:
         q_ids = [aq["question_id"] for aq in aq_rows]
@@ -293,20 +306,24 @@ async def patch_assessment(
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
 
-    # Sync assessment_questions if questions were updated
+    # Sync assessment_questions if questions were updated (skipped pre-migration)
     if questions_input is not None:
-        supabase.table("assessment_questions").delete().eq("assessment_id", assessment_id).execute()
-        if questions_input:
-            aq_rows = [
-                {
-                    "assessment_id": assessment_id,
-                    "question_id": q.question_id,
-                    "weightage": q.weightage,
-                    "order_index": q.order_index,
-                }
-                for q in questions_input
-            ]
-            supabase.table("assessment_questions").insert(aq_rows).execute()
+        try:
+            supabase.table("assessment_questions").delete().eq("assessment_id", assessment_id).execute()
+            if questions_input:
+                aq_rows = [
+                    {
+                        "assessment_id": assessment_id,
+                        "question_id": q.question_id,
+                        "weightage": q.weightage,
+                        "order_index": q.order_index,
+                    }
+                    for q in questions_input
+                ]
+                supabase.table("assessment_questions").insert(aq_rows).execute()
+        except PostgRESTError as exc:
+            if exc.code != "PGRST205":
+                raise
 
     return result.data[0]
 

@@ -287,6 +287,49 @@ docs/
 
 ---
 
+## Feature Architecture
+
+### Invite / Token Flow
+
+- **Token = Assessment Invite.** Tokens are created inside the assessment detail page (Invites tab), not from a standalone token management page.
+- Admin opens an assessment → Invites tab → "+ Invite Candidate" → token generated.
+- Token format: `XXXX-XXXX-XXXX` (e.g. `F4KL-R8TX-9WQA`).
+- API: `POST /assessments/{id}/invites` creates the token and associates it with the assessment.
+- Candidate enters the token in the desktop app → `POST /tokens/validate` → `LandingPageData` returned (assessment info, allowed mocks, etc.).
+
+### Weightage Rule
+
+- Questions in the question bank have **no weightage field** — weightage belongs to the assessment, not the question.
+- Weightage is set when adding a question to an assessment, stored in `assessment_questions`.
+- Schema: `assessment_questions { assessment_id, question_id, weightage, order_index }`
+- **All weightages in an assessment must sum to exactly 100%.** Enforced in three places:
+  - Admin UI: live total bar blocks "Create" if sum ≠ 100
+  - API: `POST /assessments` and `PATCH /assessments` validate on write
+  - Scoring: `final_score = sum(weighted_scores)` — a wrong sum produces a wrong score
+
+### Scoring
+
+| Type   | Auto-score formula                         | Weighted score              |
+|--------|--------------------------------------------|-----------------------------|
+| MCQ    | `is_correct → 100%` or `0%`               | `score × weightage / 100`   |
+| Coding | `(passed_tests / total_tests) × 100`       | `score × weightage / 100`   |
+| Text   | `manual_score` set by admin after review   | `manual_score × weightage / 100` |
+
+- `final_score = sum of all weighted_scores` for the attempt.
+- Text questions with no `manual_score` yet contribute **0** to the final score until an admin scores them.
+- Recomputation happens automatically when `PATCH /attempts/{id}/answers/{answer_id}/score` is called.
+
+### Mock vs Real Assessments
+
+- `is_mock = true` assessments use the **`mock_attempts`** table, not `assessment_attempts`.
+- Mock answers are stored in `mock_attempts.answers` (JSONB column), not in the `question_answers` table.
+- Mock completions reveal correct answers immediately. No `final_score` is recorded.
+- No kiosk mode or security monitoring during mocks.
+- `isMock` flag in `assessmentStore` controls which flow is active in the desktop app.
+- Real attempts: full security layer, `assessment_attempts` + `question_answers` tables, scored by `scoring.py`.
+
+---
+
 ## Milestone Overview
 
 | # | Branch | Description |

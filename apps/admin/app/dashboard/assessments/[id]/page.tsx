@@ -183,7 +183,7 @@ function InviteDrawer({
 
   const usageMode = watch('usageMode')
 
-  const mockOptions = allAssessments.filter((a) => a.id !== assessmentId)
+  const mockOptions = allAssessments.filter((a) => a.id !== assessmentId && a.is_mock)
 
   const create = useMutation({
     mutationFn: (data: InviteFormValues) =>

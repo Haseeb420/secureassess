@@ -18,5 +18,9 @@ echo "  API  → https://${NGROK_STATIC_DOMAIN}"
 echo "  Admin → dynamic URL (check ngrok dashboard or terminal output)"
 echo ""
 
-# Use config file
-ngrok start --config ngrok.yml api admin
+# Substitute domain into a temp config (ngrok.yml does not expand shell vars)
+TMPCONF=$(mktemp /tmp/ngrok-secureassess-XXXXXX.yml)
+trap "rm -f $TMPCONF" EXIT
+sed "s|\$NGROK_STATIC_DOMAIN|${NGROK_STATIC_DOMAIN}|g" ngrok.yml > "$TMPCONF"
+
+ngrok start --config "$TMPCONF" api admin

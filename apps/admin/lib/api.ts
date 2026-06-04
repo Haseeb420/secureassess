@@ -49,6 +49,7 @@ export interface Assessment {
   window_start?: string
   window_end?: string
   timezone: string
+  is_mock: boolean
 }
 
 export interface AssessmentQuestionInput {
@@ -75,6 +76,7 @@ export interface CreateAssessmentBody {
   window_start?: string
   window_end?: string
   timezone?: string
+  is_mock?: boolean
 }
 
 export interface PatchAssessmentBody {

@@ -97,6 +97,8 @@ async def start_attempt(body: StartAttemptRequest):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
 
     assessment = a_result.data[0]
+    if assessment.get("is_mock"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Use /mock-attempts/start for practice rounds")
     if assessment.get("status") not in ("active", "published"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Assessment is not active")
 

@@ -31,6 +31,7 @@ class AssessmentCreate(BaseModel):
     window_start: Optional[str] = None
     window_end: Optional[str] = None
     timezone: str = "Asia/Karachi"
+    is_mock: bool = False
 
 
 class AssessmentPatch(BaseModel):
@@ -53,7 +54,7 @@ async def list_assessments(_admin: dict = Depends(get_current_admin)):
     supabase = get_supabase()
     result = (
         supabase.table("assessments")
-        .select("id, title, status, duration_minutes, allowed_languages, security_level, created_at")
+        .select("id, title, status, duration_minutes, allowed_languages, security_level, created_at, assessment_type, is_mock")
         .order("created_at", desc=True)
         .execute()
     )
@@ -102,6 +103,7 @@ async def create_assessment(
                 "window_start": body.window_start,
                 "window_end": body.window_end,
                 "timezone": body.timezone,
+                "is_mock": body.is_mock,
             }
         )
         .execute()

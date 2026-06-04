@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
-import { Terminal, ListChecks, FileText, CheckCircle2, Trash2, AlertTriangle, Info } from 'lucide-react'
+import { Terminal, ListChecks, FileText, CheckCircle2, Trash2, AlertTriangle } from 'lucide-react'
 import { questionsApi, type CreateQuestionBody, type TestCase, type McqOption } from '../../../../lib/api'
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false })
@@ -48,7 +48,6 @@ export default function NewQuestionPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState<string | undefined>('')
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
-  const [weightage, setWeightage] = useState(0)
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [timeLimitMs, setTimeLimitMs] = useState(2000)
@@ -119,7 +118,6 @@ export default function NewQuestionPage() {
       description: description ?? '',
       type: questionType,
       difficulty,
-      weightage,
       tags,
     }
 
@@ -181,31 +179,6 @@ export default function NewQuestionPage() {
                   )
                 })}
               </div>
-            </div>
-
-            {/* Weightage */}
-            <div>
-              <label htmlFor="weightage" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-brand-navy">
-                Weightage %
-                <span
-                  title="All questions in an assessment must total 100%."
-                  className="cursor-help text-brand-navy/40 hover:text-brand-navy/60 transition-colors"
-                >
-                  <Info size={13} aria-hidden="true" />
-                </span>
-              </label>
-              <input
-                id="weightage"
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                required
-                value={weightage}
-                onChange={(e) => setWeightage(Number(e.target.value))}
-                aria-required="true"
-                className="input w-28"
-              />
             </div>
 
             <Field label="Title">

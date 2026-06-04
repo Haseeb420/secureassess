@@ -22,11 +22,12 @@ export function InviteDialog({ assessmentId, assessmentTitle, onClose }: Props) 
     mutationFn: () =>
       assessmentsApi.createInvite(assessmentId, {
         candidate_email: email,
-        candidate_name: name || undefined,
-        expires_in_hours: expiresInHours,
+        candidate_name: name || 'Candidate',
+        expiry_at: new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString(),
+        usage_limit: 1,
       }),
     onSuccess: (data) => {
-      setCreatedToken(data.token)
+      setCreatedToken(data.token_value)
       qc.invalidateQueries({ queryKey: ['invites', assessmentId] })
     },
   })

@@ -27,18 +27,18 @@ export type TokenValidationResult =
 export type AssessmentType = 'open' | 'deadline' | 'window'
 
 export type Assessment = {
-  id:           string
-  title:        string
-  description?: string
-  type:         AssessmentType
-  deadlineAt?:  string
-  windowStart?: string
-  windowEnd?:   string
-  timezone:     string
-  durationMins: number
-  isMock:       boolean
-  questions:    Question[]
-  createdAt:    string
+  id:                  string
+  title:               string
+  description?:        string
+  type:                AssessmentType
+  deadlineAt?:         string
+  windowStart?:        string
+  windowEnd?:          string
+  timezone:            string
+  durationMins:        number
+  isMock:              boolean
+  questions:           AssessmentQuestion[]
+  createdAt:           string
 }
 
 export type AssessmentStatus =
@@ -63,13 +63,19 @@ export type Question = {
   title:            string
   description:      string
   type:             QuestionType
-  weightage:        number       // 0–100; all questions in an assessment must sum to 100
   timeLimitMs:      number
   memoryLimitMb:    number
   isManuallyScored: boolean      // text questions only
   options?:         MCQOption[]  // MCQ only
   sampleTests?:     TestCase[]   // coding only (visible to candidate)
   hiddenTests?:     TestCase[]   // coding only (never sent to candidate)
+}
+
+export type AssessmentQuestion = {
+  id:         string | null   // assessment_questions row id
+  question:   Question        // the question from the bank
+  weightage:  number          // 0–100, set per assessment
+  orderIndex: number
 }
 
 // ─── TEST CASE RESULT ────────────────────────────────────────────────────────

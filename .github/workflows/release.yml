@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/release-workflow
     paths-ignore:
       - 'docs/**'
       - '*.md'
@@ -133,7 +134,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add VERSION apps/desktop/src-tauri/tauri.conf.json apps/desktop/src-tauri/Cargo.toml
           git commit -m "chore(release): bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
-          git push origin main
+          git push origin HEAD
 
       - name: Create and push tag
         if: steps.bump.outputs.skip == 'false'
@@ -191,7 +192,7 @@ jobs:
       - name: Checkout (after version commit)
         uses: actions/checkout@v4
         with:
-          ref: main          # always checkout main which now has the bumped version
+          ref: ${{ github.ref_name }}   # checkout the branch that triggered the workflow
 
       - name: Setup Node 20
         uses: actions/setup-node@v4

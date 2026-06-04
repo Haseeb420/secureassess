@@ -5,6 +5,11 @@ import { ConfirmDialog } from '@secureassess/ui'
 import { useSyncStatus } from '../features/sync/useSyncStatus'
 import { useTimerPersistence } from '../features/persistence/useTimerPersistence'
 
+interface ProgressItem {
+  submitted: boolean
+  current: boolean
+}
+
 interface TopBarProps {
   candidateName: string
   assessmentTitle?: string
@@ -20,6 +25,12 @@ interface TopBarProps {
   onExitClick?: () => void
   isExitLocked?: boolean
   isExitDialogOpen?: boolean
+  /** When true: hides nav arrows and shows progress dots */
+  sequentialMode?: boolean
+  /** Progress dot state for each question in sequential mode */
+  progressItems?: ProgressItem[]
+  /** Hide the top-right submit button (used when bottom bar has per-question submit) */
+  hideSubmitButton?: boolean
 }
 
 const RING_R = 14
@@ -78,6 +89,9 @@ export function TopBar({
   onExitClick,
   isExitLocked = false,
   isExitDialogOpen = false,
+  sequentialMode = false,
+  progressItems,
+  hideSubmitButton = false,
 }: TopBarProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { isOnline, pendingCount } = useSyncStatus()
@@ -183,7 +197,30 @@ export function TopBar({
 
           {/* Center: question nav + assessment title */}
           <div className="flex flex-1 flex-col items-center justify-center">
-            {isMultiQuestion && (
+            {sequentialMode ? (
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-medium text-white/80" style={DM_SANS}>
+                  Question {questionIndex} of {totalQuestions}
+                </span>
+                {progressItems && progressItems.length > 0 && (
+                  <div className="mt-0.5 flex gap-1.5 justify-center" aria-hidden="true">
+                    {progressItems.map((item, i) => (
+                      <span
+                        key={i}
+                        className={[
+                          'h-2 w-2 rounded-full transition-colors',
+                          item.submitted
+                            ? 'bg-brand-orange'
+                            : item.current
+                              ? 'border-2 border-brand-orange bg-transparent'
+                              : 'bg-white/20',
+                        ].join(' ')}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : isMultiQuestion ? (
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -210,7 +247,7 @@ export function TopBar({
                   <ChevronRight size={14} aria-hidden="true" />
                 </button>
               </div>
-            )}
+            ) : null}
             <span className="mt-0.5 text-xs text-white/30" style={DM_SANS}>
               {assessmentTitle}
             </span>
@@ -275,28 +312,32 @@ export function TopBar({
               </span>
             </div>
 
-            <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+            {!hideSubmitButton && (
+              <>
+                <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
 
-            {/* Submit button */}
-            <button
-              type="button"
-              onClick={() => setConfirmOpen(true)}
-              disabled={submitDisabled}
-              aria-label={isSubmitting ? 'Submitting…' : 'Submit assessment'}
-              className="flex items-center rounded-xl border border-white/15 bg-white/8 px-4 py-1.5 text-sm font-medium text-white/80 transition-all hover:border-brand-orange/40 hover:bg-white/15 hover:text-brand-orange disabled:opacity-50"
-              style={DM_SANS}
-            >
-              {isSubmitting && (
-                <svg className="mr-1.5 h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              )}
-              {isSubmitting ? 'Submitting…' : 'Submit'}
-              {!isSubmitting && (
-                <ChevronRight size={14} className="ml-1" aria-hidden="true" />
-              )}
-            </button>
+                {/* Submit button */}
+                <button
+                  type="button"
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={submitDisabled}
+                  aria-label={isSubmitting ? 'Submitting…' : 'Submit assessment'}
+                  className="flex items-center rounded-xl border border-white/15 bg-white/8 px-4 py-1.5 text-sm font-medium text-white/80 transition-all hover:border-brand-orange/40 hover:bg-white/15 hover:text-brand-orange disabled:opacity-50"
+                  style={DM_SANS}
+                >
+                  {isSubmitting && (
+                    <svg className="mr-1.5 h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  )}
+                  {isSubmitting ? 'Submitting…' : 'Submit'}
+                  {!isSubmitting && (
+                    <ChevronRight size={14} className="ml-1" aria-hidden="true" />
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </Tooltip.Provider>

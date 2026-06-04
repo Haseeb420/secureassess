@@ -27,6 +27,7 @@ export function useCrashRecovery(): UseCrashRecoveryReturn {
   const [activeSession, setActiveSession] = useState<AssessmentSession | null>(null)
 
   useEffect(() => {
+    if (!('__TAURI_INTERNALS__' in window)) return
     invoke<AssessmentSession | null>('get_active_session').then((session) => {
       if (session && session.status === 'active') {
         setActiveSession(session)

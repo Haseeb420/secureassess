@@ -5,6 +5,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
+  ArrowLeft,
   Bot,
   CheckCircle2,
   Loader2,
@@ -149,6 +150,7 @@ export function PreAssessmentPage() {
   const authToken     = useAssessmentStore((s) => s.authToken)
   const storeAssId    = useAssessmentStore((s) => s.assessmentId)
   const { setAssessmentData, setQuestions, setSessionId } = useAssessmentStore()
+  const landingData = useAssessmentStore((s) => s.landingData)
   const candidateId = useAssessmentStore((s) => s.candidateId)
   const timerSeconds = useAssessmentStore((s) => s.timerSeconds)
   const questions = useAssessmentStore((s) => s.questions)
@@ -250,7 +252,7 @@ export function PreAssessmentPage() {
       for (const q of questions) {
         await invoke('save_test_cases', {
           questionId: q.id,
-          testCases: q.sampleTests.map((tc) => ({
+          testCases: (q.sampleTests ?? []).map((tc) => ({
             id: tc.id,
             question_id: q.id,
             input: tc.input,
@@ -286,13 +288,27 @@ export function PreAssessmentPage() {
 
       {/* ── Top bar ── */}
       <div className="flex h-[52px] shrink-0 items-center border-b border-white/[0.08] bg-brand-navy px-5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-orange/20">
-            <ShieldCheck size={14} className="text-brand-orange" />
+        <div className="flex items-center gap-3">
+          {landingData && (
+            <button
+              type="button"
+              onClick={() => navigate('/landing')}
+              aria-label="Back to dashboard"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white/70"
+              style={DMSANS}
+            >
+              <ArrowLeft size={14} />
+              <span className="text-[12px]">Dashboard</span>
+            </button>
+          )}
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-orange/20">
+              <ShieldCheck size={14} className="text-brand-orange" />
+            </div>
+            <span className="text-[15px] font-bold tracking-tight text-white" style={SYNE}>
+              SecureAssess
+            </span>
           </div>
-          <span className="text-[15px] font-bold tracking-tight text-white" style={SYNE}>
-            SecureAssess
-          </span>
         </div>
         {candidate?.name && (
           <span className="ml-auto text-[13px] text-white/45" style={DMSANS}>

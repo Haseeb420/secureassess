@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Search, Plus, Minus, CheckCircle2, Infinity, CalendarX2, Clock, GripVertical, Trash2, FileCode2 } from 'lucide-react'
+import { ArrowLeft, Search, Plus, Minus, CheckCircle2, Infinity, CalendarX2, Clock, GripVertical, Trash2, FileCode2, Info } from 'lucide-react'
 import Link from 'next/link'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -176,6 +176,7 @@ export default function NewAssessmentPage() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
 
+  const [isMock, setIsMock] = useState(false)
   const [assessmentType, setAssessmentType] = useState<'open' | 'deadline' | 'window'>('open')
   const [deadlineAt, setDeadlineAt] = useState('')
   const [windowStart, setWindowStart] = useState('')
@@ -249,8 +250,10 @@ export default function NewAssessmentPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const err = validateSchedule()
-    if (err) { setScheduleError(err); return }
+    if (!isMock) {
+      const err = validateSchedule()
+      if (err) { setScheduleError(err); return }
+    }
     setScheduleError(null)
     create.mutate({
       title,
@@ -262,11 +265,12 @@ export default function NewAssessmentPage() {
         weightage: questionWeightages[id] ?? 0,
         order_index: idx,
       })),
-      assessment_type: assessmentType,
-      deadline_at:  assessmentType === 'deadline' ? deadlineAt  : undefined,
-      window_start: assessmentType === 'window'   ? windowStart : undefined,
-      window_end:   assessmentType === 'window'   ? windowEnd   : undefined,
+      assessment_type: isMock ? 'open' : assessmentType,
+      deadline_at:  !isMock && assessmentType === 'deadline' ? deadlineAt  : undefined,
+      window_start: !isMock && assessmentType === 'window'   ? windowStart : undefined,
+      window_end:   !isMock && assessmentType === 'window'   ? windowEnd   : undefined,
       timezone,
+      is_mock: isMock,
     })
   }
 
@@ -281,13 +285,59 @@ export default function NewAssessmentPage() {
           <ArrowLeft size={12} aria-hidden="true" />
           Assessments
         </Link>
-        <h1 className="text-xl font-semibold text-brand-navy">New Assessment</h1>
-        <p className="mt-0.5 text-sm text-brand-navy/50">Configure and launch a new coding assessment for candidates</p>
+        <h1 className="text-xl font-semibold text-brand-navy">
+          {isMock ? 'New Practice Round' : 'New Assessment'}
+        </h1>
+        <p className="mt-0.5 text-sm text-brand-navy/50">
+          {isMock
+            ? 'Create a practice round that candidates can attempt unlimited times before the real assessment'
+            : 'Configure and launch a new coding assessment for candidates'}
+        </p>
       </div>
 
       <div className="p-8 max-w-3xl">
         <form onSubmit={handleSubmit}>
           <motion.div variants={formVariants} initial="hidden" animate="show" className="space-y-5">
+
+            {/* Assessment category toggle */}
+            <motion.div variants={sectionVariants}>
+              <div className="flex gap-1 rounded-xl border border-brand-border bg-brand-surface p-1">
+                {[
+                  { value: false, label: 'Real Assessment' },
+                  { value: true,  label: 'Mock / Practice Round' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={String(value)}
+                    type="button"
+                    onClick={() => { setIsMock(value); setScheduleError(null) }}
+                    className={[
+                      'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                      isMock === value
+                        ? 'bg-white text-brand-navy shadow-sm border border-brand-border'
+                        : 'text-brand-navy/50 hover:text-brand-navy',
+                    ].join(' ')}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Mock info notice */}
+            {isMock && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-start gap-3 overflow-hidden rounded-xl border border-blue-200 bg-blue-50 px-4 py-3"
+              >
+                <Info size={15} className="mt-0.5 shrink-0 text-blue-500" aria-hidden="true" />
+                <p className="text-sm text-blue-700">
+                  Practice rounds can be attempted unlimited times. Results are not recorded.
+                </p>
+              </motion.div>
+            )}
 
             {/* Section 1: Basic info */}
             <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
@@ -433,8 +483,8 @@ export default function NewAssessmentPage() {
               </div>
             </motion.div>
 
-            {/* Section 4: Schedule */}
-            <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
+            {/* Section 4: Schedule — hidden for mock assessments */}
+            {!isMock && <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
               <div className="border-b border-brand-border bg-brand-surface/50 px-6 py-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-navy/60">Assessment Type</h2>
               </div>
@@ -544,7 +594,7 @@ export default function NewAssessmentPage() {
                   </p>
                 )}
               </div>
-            </motion.div>
+            </motion.div>}
 
             {/* Section 5: Questions — split panel */}
             <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
@@ -698,7 +748,7 @@ export default function NewAssessmentPage() {
             <motion.div variants={sectionVariants} className="flex items-center gap-3 pt-1">
               <button
                 type="submit"
-                disabled={create.isPending || languages.length === 0 || (questionIds.length > 0 && weightageTotal !== 100)}
+                disabled={create.isPending || languages.length === 0 || (!isMock && questionIds.length > 0 && weightageTotal !== 100)}
                 className="inline-flex items-center gap-2 rounded-lg bg-brand-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors shadow-sm disabled:opacity-50 disabled:pointer-events-none"
               >
                 {create.isPending ? (
@@ -712,7 +762,7 @@ export default function NewAssessmentPage() {
                 ) : (
                   <>
                     <Plus size={15} aria-hidden="true" />
-                    Create Assessment
+                    {isMock ? 'Create Practice Round' : 'Create Assessment'}
                   </>
                 )}
               </button>

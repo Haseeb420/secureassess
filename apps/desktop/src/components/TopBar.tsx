@@ -31,6 +31,8 @@ interface TopBarProps {
   progressItems?: ProgressItem[]
   /** Hide the top-right submit button (used when bottom bar has per-question submit) */
   hideSubmitButton?: boolean
+  /** When true: replace timer ring with amber Practice Round badge, hide kiosk controls */
+  mockMode?: boolean
 }
 
 const RING_R = 14
@@ -92,6 +94,7 @@ export function TopBar({
   sequentialMode = false,
   progressItems,
   hideSubmitButton = false,
+  mockMode = false,
 }: TopBarProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { isOnline, pendingCount } = useSyncStatus()
@@ -253,7 +256,7 @@ export function TopBar({
             </span>
           </div>
 
-          {/* Right: sync + divider + timer + divider + submit */}
+          {/* Right: sync + divider + timer (or mock badge) + divider + submit */}
           <div className="flex w-1/4 items-center justify-end gap-3">
             {/* Sync indicator */}
             <div
@@ -268,49 +271,59 @@ export function TopBar({
 
             <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
 
-            {/* Timer: SVG ring + centered time + "REMAINING" label */}
-            <div className="flex flex-col items-center gap-px">
-              <div className="relative flex items-center justify-center">
-                <svg
-                  width="36"
-                  height="36"
-                  viewBox="0 0 36 36"
-                  className="-rotate-90"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="18" cy="18" r={RING_R}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.10)"
-                    strokeWidth="2.5"
-                  />
-                  <circle
-                    cx="18" cy="18" r={RING_R}
-                    fill="none"
-                    stroke={ringColor}
-                    strokeWidth="2.5"
-                    strokeDasharray={RING_C}
-                    strokeDashoffset={dashOffset}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
-                  />
-                </svg>
-                <span
-                  className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${timerNumClass(timerSeconds)}`}
-                  style={{ ...SYNE, letterSpacing: '-0.01em' }}
-                  aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
-                  aria-live="off"
-                >
-                  {formatTime(timerSeconds)}
-                </span>
-              </div>
+            {mockMode ? (
+              /* Practice Round badge — replaces the countdown timer */
               <span
-                className="text-[9px] uppercase tracking-widest text-white/25"
+                className="rounded-full border border-amber-400/40 bg-amber-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-300"
                 style={DM_MONO}
               >
-                remaining
+                Practice Round
               </span>
-            </div>
+            ) : (
+              /* Timer: SVG ring + centered time + "REMAINING" label */
+              <div className="flex flex-col items-center gap-px">
+                <div className="relative flex items-center justify-center">
+                  <svg
+                    width="36"
+                    height="36"
+                    viewBox="0 0 36 36"
+                    className="-rotate-90"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="18" cy="18" r={RING_R}
+                      fill="none"
+                      stroke="rgba(255,255,255,0.10)"
+                      strokeWidth="2.5"
+                    />
+                    <circle
+                      cx="18" cy="18" r={RING_R}
+                      fill="none"
+                      stroke={ringColor}
+                      strokeWidth="2.5"
+                      strokeDasharray={RING_C}
+                      strokeDashoffset={dashOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
+                    />
+                  </svg>
+                  <span
+                    className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${timerNumClass(timerSeconds)}`}
+                    style={{ ...SYNE, letterSpacing: '-0.01em' }}
+                    aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
+                    aria-live="off"
+                  >
+                    {formatTime(timerSeconds)}
+                  </span>
+                </div>
+                <span
+                  className="text-[9px] uppercase tracking-widest text-white/25"
+                  style={DM_MONO}
+                >
+                  remaining
+                </span>
+              </div>
+            )}
 
             {!hideSubmitButton && (
               <>

@@ -12,7 +12,10 @@ function getMessage(violation: SecurityViolation): string {
   if (violation.kind === 'focus-loss') {
     return 'Focus loss detected. Return to the assessment.'
   }
-  return `Unauthorized application detected: ${violation.payload.name}`
+  if (violation.kind === 'process') {
+    return `Unauthorized application detected: ${violation.payload.name}`
+  }
+  return 'Fullscreen mode was exited. Please stay in the assessment window.'
 }
 
 export function ViolationBanner({ violation, violationCount }: ViolationBannerProps) {

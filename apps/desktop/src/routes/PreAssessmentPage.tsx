@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import {
   AlertCircle,
-  AlertTriangle,
   ArrowRight,
   ArrowLeft,
   Bot,
@@ -112,9 +111,9 @@ const LANGUAGES = ['python', 'javascript', 'typescript', 'java', 'go', 'cpp']
 // ─── Animations ──────────────────────────────────────────────────────────────
 
 const listVariants  = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }
-const cardVariants  = {
+const cardVariants: Variants = {
   hidden:  { opacity: 0, x: -10 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const } },
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

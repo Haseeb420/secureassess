@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
-import { invoke } from '@tauri-apps/api/core'
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import { AlertCircle, FileQuestion, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -27,6 +26,10 @@ import {
   submitAnswer,
   completeAttempt,
 } from '../features/attempt/attemptService'
+import {
+  submitMockAnswer,
+  completeMock,
+} from '../features/attempt/mockAttemptService'
 import {
   runSampleTests,
   type RunResult,
@@ -60,6 +63,8 @@ export function AssessmentPage() {
     currentAttemptId,
     submittedQuestions,
     answers,
+    isMock,
+    mockAttemptId,
     setLanguage,
     setCode,
     appendOutput,
@@ -81,15 +86,11 @@ export function AssessmentPage() {
   const [exitDialogOpen, setExitDialogOpen]     = useState(false)
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false)
 
-  const { violationCount, lastViolation } = useSecurityMonitor({ enabled: true })
-
-  // Mock assessments (assessmentId !== token.assessmentId) skip the attempt API entirely —
-  // they have no dedicated token and must not burn usage from the real assessment token.
-  const isMockAssessment = token ? assessmentId !== token.assessmentId : false
+  const { violationCount, lastViolation } = useSecurityMonitor({ enabled: !isMock })
 
   // Start attempt on mount if not already started (real assessment only)
   useEffect(() => {
-    if (currentAttemptId || !token || isMockAssessment) return
+    if (currentAttemptId || !token || isMock) return
     setIsStarting(true)
     startAttempt(token.tokenValue)
       .then(() => setIsStarting(false))
@@ -182,12 +183,58 @@ export function AssessmentPage() {
   })()
 
   const handleSubmitAnswer = useCallback(async () => {
-    if (!currentQuestion || !currentAttemptId) return
+    if (!currentQuestion) return
+    if (!isMock && !currentAttemptId) return
     setIsSubmittingAnswer(true)
 
     try {
+      if (isMock && mockAttemptId) {
+        // Mock path: submit via mock API, reveal results on last question
+        const mockReq = {
+          attemptId:    mockAttemptId,
+          questionId:   currentQuestion.id,
+          questionType: currentQuestion.type,
+          ...(currentQuestion.type === 'coding' ? {
+            sourceCode:   codeByLanguage[currentLanguage],
+            language:     currentLanguage,
+            testResults:  runResult?.outcomes.map((o) => ({
+              testCaseId: o.test_case_id ?? '',
+              passed:     o.passed,
+              timeMsec:   o.execution_time_ms,
+              memoryMb:   0,
+            })),
+            testOutcomes: runResult?.outcomes.map((o) => ({
+              testCaseId: o.test_case_id ?? '',
+              passed:     o.passed,
+              timeMsec:   o.execution_time_ms,
+              stdout:     o.stdout,
+              stderr:     o.stderr,
+            })),
+          } : {}),
+          ...(currentQuestion.type === 'mcq' ? {
+            selectedOption: answers[currentQuestion.id]?.selectedOption,
+          } : {}),
+          ...(currentQuestion.type === 'text' ? {
+            answerText: answers[currentQuestion.id]?.answerText,
+          } : {}),
+        }
+
+        const result = await submitMockAnswer(mockReq)
+
+        if (!result.next) {
+          try {
+            await completeMock(mockAttemptId)
+          } catch (completeErr) {
+            toast.error(completeErr instanceof Error ? completeErr.message : 'Failed to finalize practice round')
+          }
+          navigate('/mock-results', { replace: true })
+        }
+        return
+      }
+
+      // Real assessment path
       const req: SubmitAnswerRequest = {
-        attemptId:    currentAttemptId,
+        attemptId:    currentAttemptId!,
         questionId:   currentQuestion.id,
         questionType: currentQuestion.type,
       }
@@ -209,25 +256,12 @@ export function AssessmentPage() {
         req.answerText = answers[currentQuestion.id]?.answerText
       }
 
-      if (isMockAssessment) {
-        // Mock: no API calls — advance state locally, results not recorded
-        const { markQuestionSubmitted: markSubmitted, advanceQuestion } = useAssessmentStore.getState()
-        markSubmitted(currentQuestion.id)
-        const isLast = currentQuestionIdx >= questions.length - 1
-        advanceQuestion()
-        if (isLast) {
-          await exitKioskMode().catch(() => {})
-          navigate('/completion', { replace: true })
-        }
-        return
-      }
-
       const response = await submitAnswer(req)
 
       if (!response.nextQuestionAvailable) {
         // Last question submitted — complete the attempt
         try {
-          await completeAttempt(currentAttemptId)
+          await completeAttempt(currentAttemptId!)
         } catch (completeErr) {
           toast.error(completeErr instanceof Error ? completeErr.message : 'Failed to finalize assessment')
         }
@@ -243,9 +277,8 @@ export function AssessmentPage() {
       setIsSubmittingAnswer(false)
     }
   }, [
-    currentQuestion, currentAttemptId, currentLanguage,
-    codeByLanguage, answers, runResult, navigate,
-    isMockAssessment, currentQuestionIdx, questions.length,
+    currentQuestion, currentAttemptId, mockAttemptId, isMock, currentLanguage,
+    codeByLanguage, answers, runResult, navigate, currentQuestionIdx, questions.length,
   ])
 
   // Navigate to completion when assessment is locked server-side
@@ -282,9 +315,9 @@ export function AssessmentPage() {
   }, [handleRun, forceSave])
 
   const handleExitWithoutSubmit = useCallback(async () => {
-    await exitKioskMode()
-    navigate('/login', { replace: true })
-  }, [navigate])
+    if (!isMock) await exitKioskMode()
+    navigate(isMock ? '/landing' : '/login', { replace: true })
+  }, [navigate, isMock])
 
   // Build progress dots for TopBar
   const progressItems = questions.map((q, i) => ({
@@ -351,7 +384,7 @@ export function AssessmentPage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <ViolationBanner violation={lastViolation} violationCount={violationCount} />
+      {!isMock && <ViolationBanner violation={lastViolation} violationCount={violationCount} />}
 
       <TopBar
         candidateName={candidate?.name ?? candidate?.email ?? 'Candidate'}
@@ -368,6 +401,7 @@ export function AssessmentPage() {
         sequentialMode
         progressItems={progressItems}
         hideSubmitButton
+        mockMode={isMock}
       />
 
       <div className="min-h-0 flex-1">

@@ -6,13 +6,16 @@ import {
   CalendarX2,
   CheckCircle2,
   Clock,
+  Loader2,
   LogOut,
   Tag,
   XCircle,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@secureassess/ui'
-import type { Assessment, AssessmentStatus, QuestionForCandidate } from '@secureassess/shared-types'
+import type { Assessment, AssessmentStatus } from '@secureassess/shared-types'
 import { useAssessmentStore } from '../store/assessmentStore'
+import { startMock } from '../features/attempt/mockAttemptService'
 import { CountdownTimer } from '../components/CountdownTimer'
 
 const SYNE   = { fontFamily: "'Syne', system-ui, sans-serif" } as const
@@ -47,7 +50,7 @@ function formatDate(isoString: string, timezone: string): string {
 
 function questionTypeSummary(questions: Assessment['questions']): string {
   const list = questions ?? []
-  const types = [...new Set(list.map((q) => q.type))].map((t) =>
+  const types = [...new Set(list.map((q) => q.question.type))].map((t) =>
     t === 'coding' ? 'Coding' : t === 'mcq' ? 'MCQ' : 'Written',
   )
   return `${list.length} question${list.length !== 1 ? 's' : ''}  ·  ${types.join(', ')}`
@@ -61,6 +64,7 @@ export function LandingPage() {
   const [assessmentStatus, setAssessmentStatus] = useState<AssessmentStatus>(
     landingData.assessmentStatus,
   )
+  const [startingMockId, setStartingMockId] = useState<string | null>(null)
 
   const { token, assessment, mocks } = landingData
   // Guard against snake_case API responses (candidate_name vs candidateName)
@@ -85,17 +89,19 @@ export function LandingPage() {
     navigate('/pre-assessment')
   }
 
-  const handleStartMock = (mock: Assessment) => {
-    setAssessmentData(mock.id, mock.title, mock.durationMins)
-    // Convert AssessmentQuestion[] → QuestionForCandidate[] so AssessmentPage can render them
-    // without calling /attempts/start (mocks have no dedicated token).
-    const mockQuestions: QuestionForCandidate[] = (mock.questions ?? []).map((aq) => ({
-      ...aq.question,
-      weightage:  aq.weightage,
-      orderIndex: aq.orderIndex,
-    }))
-    setQuestions(mockQuestions)
-    navigate('/pre-assessment')
+  const handleStartMock = async (mock: Assessment) => {
+    if (startingMockId) return  // prevent double-click
+    setStartingMockId(mock.id)
+    try {
+      setAssessmentData(mock.id, mock.title, mock.durationMins)
+      // startMock sets isMock=true, mockAttemptId, and questions in the store
+      await startMock(token.tokenValue, mock.id)
+      navigate('/assessment')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start practice round')
+    } finally {
+      setStartingMockId(null)
+    }
   }
 
   const typeBadge = {
@@ -243,10 +249,18 @@ export function LandingPage() {
                       <button
                         type="button"
                         onClick={() => handleStartMock(mock)}
-                        className="rounded-xl bg-brand-navy px-4 py-1.5 text-sm text-white transition-opacity hover:opacity-80"
+                        disabled={!!startingMockId}
+                        className="inline-flex items-center gap-2 rounded-xl bg-brand-navy px-4 py-1.5 text-sm text-white transition-opacity hover:opacity-80 disabled:opacity-60 disabled:pointer-events-none"
                         style={DMSANS}
                       >
-                        Start Practice
+                        {startingMockId === mock.id ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                            Starting…
+                          </>
+                        ) : (
+                          'Start Practice'
+                        )}
                       </button>
                     </div>
                   </motion.div>
@@ -306,7 +320,7 @@ export function LandingPage() {
                       style={DMSANS}
                     >
                       <Tag size={14} className="shrink-0 text-brand-navy/40" />
-                      {[...new Set((assessment.questions ?? []).map((q) => q.type))]
+                      {[...new Set((assessment.questions ?? []).map((q) => q.question.type))]
                         .map((t) =>
                           t === 'coding' ? 'Coding' : t === 'mcq' ? 'MCQ' : 'Written',
                         )

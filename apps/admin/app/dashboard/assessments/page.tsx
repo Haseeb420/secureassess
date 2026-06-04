@@ -16,6 +16,7 @@ import { InviteDialog } from '../../../components/InviteDialog'
 import { assessmentsApi, type Assessment } from '../../../lib/api'
 
 type FilterStatus = 'all' | 'active' | 'archived'
+type FilterType   = 'all' | 'assessments' | 'practice'
 
 const STATUS_CONFIG = {
   active:   { label: 'Active',   dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
@@ -70,6 +71,7 @@ export default function AssessmentsPage() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
+  const [typeFilter, setTypeFilter] = useState<FilterType>('all')
   const [archiveTarget, setArchiveTarget] = useState<Assessment | null>(null)
   const [inviteAssessment, setInviteAssessment] = useState<Assessment | null>(null)
 
@@ -95,7 +97,11 @@ export default function AssessmentsPage() {
   const filtered = data.filter((a) => {
     const matchSearch = a.title.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || a.status === statusFilter
-    return matchSearch && matchStatus
+    const matchType   =
+      typeFilter === 'all'         ? true :
+      typeFilter === 'practice'    ? a.is_mock :
+      /* assessments */              !a.is_mock
+    return matchSearch && matchStatus && matchType
   })
 
   return (
@@ -141,6 +147,29 @@ export default function AssessmentsPage() {
             ))}
           </motion.div>
         )}
+
+        {/* Type filter tabs */}
+        <div className="flex gap-1 border-b border-brand-border pb-0">
+          {([
+            { key: 'all',         label: 'All' },
+            { key: 'assessments', label: 'Assessments' },
+            { key: 'practice',    label: 'Practice Rounds' },
+          ] as { key: FilterType; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTypeFilter(key)}
+              className={[
+                'px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                typeFilter === key
+                  ? 'border-brand-orange text-brand-navy'
+                  : 'border-transparent text-brand-navy/50 hover:text-brand-navy',
+              ].join(' ')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {/* Search + filter */}
         <div className="flex flex-wrap items-center gap-3">
@@ -290,9 +319,16 @@ function AssessmentRow({
     >
       {/* Title + meta */}
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm text-brand-navy truncate group-hover:text-brand-orange transition-colors">
-          {assessment.title}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-sm text-brand-navy truncate group-hover:text-brand-orange transition-colors">
+            {assessment.title}
+          </p>
+          {assessment.is_mock && (
+            <span className="shrink-0 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700 ring-1 ring-violet-200">
+              Practice
+            </span>
+          )}
+        </div>
         <div className="mt-1 flex items-center gap-2.5 text-xs text-brand-navy/50">
           <span className="flex items-center gap-1">
             <Clock size={11} aria-hidden="true" />

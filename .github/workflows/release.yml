@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.github/workflows/ci.yml'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       bump:

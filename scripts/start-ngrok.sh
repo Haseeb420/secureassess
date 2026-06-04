@@ -18,9 +18,20 @@ echo "  API  → https://${NGROK_STATIC_DOMAIN}"
 echo "  Admin → dynamic URL (check ngrok dashboard or terminal output)"
 echo ""
 
+# Resolve ngrok's default config (contains the authtoken)
+if [ -f "$HOME/Library/Application Support/ngrok/ngrok.yml" ]; then
+  DEFAULT_CONFIG="$HOME/Library/Application Support/ngrok/ngrok.yml"
+elif [ -f "$HOME/.config/ngrok/ngrok.yml" ]; then
+  DEFAULT_CONFIG="$HOME/.config/ngrok/ngrok.yml"
+else
+  echo "Error: ngrok default config not found. Run: ngrok config add-authtoken YOUR_TOKEN"
+  exit 1
+fi
+
 # Substitute domain into a temp config (ngrok.yml does not expand shell vars)
 TMPCONF=$(mktemp /tmp/ngrok-secureassess-XXXXXX.yml)
 trap "rm -f $TMPCONF" EXIT
 sed "s|\$NGROK_STATIC_DOMAIN|${NGROK_STATIC_DOMAIN}|g" ngrok.yml > "$TMPCONF"
 
-ngrok start --config "$TMPCONF" api admin
+# Pass both configs: default (authtoken) + project (tunnel definitions)
+ngrok start --config "$DEFAULT_CONFIG" --config "$TMPCONF" api admin

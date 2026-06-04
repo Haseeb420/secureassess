@@ -4,10 +4,18 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Search, Plus, Minus, Check, CheckCircle2, Infinity, CalendarX2, Clock } from 'lucide-react'
+import { ArrowLeft, Search, Plus, Minus, CheckCircle2, Infinity, CalendarX2, Clock, GripVertical, Trash2, FileCode2 } from 'lucide-react'
 import Link from 'next/link'
-import { assessmentsApi, type CreateAssessmentBody } from '../../../../lib/api'
-import { questionsApi } from '../../../../lib/api'
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
+  useSortable, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { assessmentsApi, questionsApi, type Question, type CreateAssessmentBody } from '../../../../lib/api'
 
 const LANGUAGES = ['python', 'javascript', 'typescript', 'cpp', 'java', 'go'] as const
 
@@ -98,6 +106,65 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: stri
   )
 }
 
+function SortableQuestionCard({
+  question,
+  weightage,
+  onWeightageChange,
+  onRemove,
+}: {
+  question: Question
+  weightage: number
+  onWeightageChange: (v: number) => void
+  onRemove: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: question.id })
+  const style = { transform: CSS.Transform.toString(transform), transition }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-white border border-brand-border rounded-xl p-3 mb-2 flex items-center gap-2"
+    >
+      <button
+        type="button"
+        aria-label="Drag to reorder"
+        className="cursor-grab text-brand-navy/30 hover:text-brand-navy/50 touch-none shrink-0"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical size={14} aria-hidden="true" />
+      </button>
+      <p className="flex-1 text-sm font-medium text-brand-navy truncate min-w-0">{question.title}</p>
+      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ${TYPE_BADGE[question.type] ?? 'bg-brand-surface text-brand-navy/50'}`}>
+        {question.type}
+      </span>
+      <div className="flex items-center gap-0.5 shrink-0">
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={weightage}
+          onChange={(e) => onWeightageChange(Number(e.target.value))}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          aria-label={`Weightage for ${question.title}`}
+          className="w-16 text-center font-mono text-sm border border-brand-border rounded-lg px-2 py-1 outline-none focus:border-brand-orange transition-colors"
+        />
+        <span className="text-xs text-brand-navy/50 ml-0.5">%</span>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${question.title}`}
+        className="text-brand-navy/30 hover:text-red-400 transition-colors shrink-0"
+      >
+        <Trash2 size={14} aria-hidden="true" />
+      </button>
+    </div>
+  )
+}
+
 export default function NewAssessmentPage() {
   const router = useRouter()
   const [title, setTitle] = useState('')
@@ -107,6 +174,7 @@ export default function NewAssessmentPage() {
   const [questionIds, setQuestionIds] = useState<string[]>([])
   const [questionWeightages, setQuestionWeightages] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
 
   const [assessmentType, setAssessmentType] = useState<'open' | 'deadline' | 'window'>('open')
   const [deadlineAt, setDeadlineAt] = useState('')
@@ -115,14 +183,25 @@ export default function NewAssessmentPage() {
   const [timezone, setTimezone] = useState('Asia/Karachi')
   const [scheduleError, setScheduleError] = useState<string | null>(null)
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
   const { data: questions = [], isLoading: questionsLoading } = useQuery({
     queryKey: ['questions'],
     queryFn: () => questionsApi.list(),
   })
 
-  const filtered = questions.filter((q) =>
-    q.title.toLowerCase().includes(search.toLowerCase()),
+  const availableQuestions = questions.filter((q) =>
+    !questionIds.includes(q.id) &&
+    q.title.toLowerCase().includes(search.toLowerCase()) &&
+    (typeFilter ? q.type === typeFilter : true),
   )
+
+  const addedQuestions = questionIds
+    .map((id) => questions.find((q) => q.id === id))
+    .filter((q): q is Question => q !== undefined)
 
   const create = useMutation({
     mutationFn: (body: CreateAssessmentBody) => assessmentsApi.create(body),
@@ -134,15 +213,23 @@ export default function NewAssessmentPage() {
       prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang],
     )
 
-  const toggleQuestion = (id: string, defaultWeightage?: number) => {
-    setQuestionIds((prev) => {
-      if (prev.includes(id)) {
-        setQuestionWeightages((w) => { const next = { ...w }; delete next[id]; return next })
-        return prev.filter((q) => q !== id)
-      }
-      setQuestionWeightages((w) => ({ ...w, [id]: defaultWeightage ?? 0 }))
-      return [...prev, id]
-    })
+  const addQuestion = (id: string) => {
+    setQuestionIds((prev) => [...prev, id])
+    setQuestionWeightages((w) => ({ ...w, [id]: 0 }))
+  }
+
+  const removeQuestion = (id: string) => {
+    setQuestionIds((prev) => prev.filter((q) => q !== id))
+    setQuestionWeightages((w) => { const next = { ...w }; delete next[id]; return next })
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setQuestionIds((ids) =>
+        arrayMove(ids, ids.indexOf(active.id as string), ids.indexOf(over.id as string)),
+      )
+    }
   }
 
   const weightageTotal = questionIds.reduce((sum, id) => sum + (questionWeightages[id] ?? 0), 0)
@@ -170,8 +257,11 @@ export default function NewAssessmentPage() {
       duration_minutes: duration,
       allowed_languages: languages,
       security_level: securityLevel,
-      question_ids: questionIds,
-      question_weightages: questionIds.length > 0 ? questionWeightages : undefined,
+      questions: questionIds.map((id, idx) => ({
+        question_id: id,
+        weightage: questionWeightages[id] ?? 0,
+        order_index: idx,
+      })),
       assessment_type: assessmentType,
       deadline_at:  assessmentType === 'deadline' ? deadlineAt  : undefined,
       window_start: assessmentType === 'window'   ? windowStart : undefined,
@@ -456,7 +546,7 @@ export default function NewAssessmentPage() {
               </div>
             </motion.div>
 
-            {/* Section 5: Questions */}
+            {/* Section 5: Questions — split panel */}
             <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
               <div className="border-b border-brand-border bg-brand-surface/50 px-6 py-3 flex items-center justify-between">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Questions</h2>
@@ -466,99 +556,128 @@ export default function NewAssessmentPage() {
                   </span>
                 )}
               </div>
-              <div className="p-6">
-                <div className="relative mb-3">
-                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-navy/35" aria-hidden="true" />
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search question bank…"
-                    className="w-full rounded-lg border border-brand-border bg-white py-2.5 pl-9 pr-3 text-sm text-brand-navy placeholder-brand-navy/30 outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
-                  />
-                </div>
-                <div className="max-h-72 overflow-y-auto rounded-lg border border-brand-border divide-y divide-brand-border bg-white">
-                  {questionsLoading ? (
-                    <div className="animate-pulse">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3">
-                          <div className="h-4 w-4 bg-brand-border rounded" />
-                          <div className="flex-1 h-3.5 bg-brand-border rounded" />
-                          <div className="h-4 w-14 bg-brand-border/60 rounded-full" />
-                        </div>
-                      ))}
+              <div className="flex" style={{ height: 420 }}>
+                {/* Left: question bank browser */}
+                <div className="flex flex-col border-r border-brand-border" style={{ width: '60%' }}>
+                  <div className="p-3 border-b border-brand-border space-y-2">
+                    <div className="relative">
+                      <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-navy/35" aria-hidden="true" />
+                      <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search question bank…"
+                        className="w-full rounded-lg border border-brand-border bg-white py-2 pl-8 pr-3 text-sm text-brand-navy placeholder-brand-navy/30 outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
+                      />
                     </div>
-                  ) : filtered.length === 0 ? (
-                    <div className="px-4 py-6 text-center text-sm text-brand-navy/40">
-                      {search ? `No questions match "${search}"` : 'No questions in the question bank yet.'}
-                    </div>
-                  ) : (
-                    filtered.map((q) => {
-                      const selected = questionIds.includes(q.id)
-                      return (
-                        <div
-                          key={q.id}
-                          role="checkbox"
-                          aria-checked={selected}
-                          tabIndex={0}
-                          onClick={() => toggleQuestion(q.id, q.weightage)}
-                          onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleQuestion(q.id, q.weightage) } }}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {['', 'coding', 'mcq', 'text'].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setTypeFilter(t)}
                           className={[
-                            'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors select-none',
-                            selected ? 'bg-brand-orange-pale' : 'hover:bg-brand-surface',
+                            'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all',
+                            typeFilter === t
+                              ? 'bg-brand-navy text-white'
+                              : 'bg-brand-surface border border-brand-border text-brand-navy/60 hover:border-brand-navy/40',
                           ].join(' ')}
                         >
-                          <div className={[
-                            'h-4 w-4 shrink-0 rounded border-2 flex items-center justify-center transition-colors',
-                            selected ? 'border-brand-orange bg-brand-orange' : 'border-brand-border bg-white',
-                          ].join(' ')} aria-hidden="true">
-                            {selected && <Check size={10} className="text-white" />}
+                          {t === '' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto divide-y divide-brand-border">
+                    {questionsLoading ? (
+                      <div className="animate-pulse p-3 space-y-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-3 px-1 py-2">
+                            <div className="flex-1 h-3.5 bg-brand-border rounded" />
+                            <div className="h-4 w-12 bg-brand-border/60 rounded-full" />
                           </div>
+                        ))}
+                      </div>
+                    ) : availableQuestions.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-sm text-brand-navy/40 text-center p-4">
+                        {search || typeFilter ? 'No questions match your filters.' : 'No questions in the bank yet.'}
+                      </div>
+                    ) : (
+                      availableQuestions.map((q) => (
+                        <div key={q.id} className="flex items-center gap-3 px-4 py-3 hover:bg-brand-surface transition-colors">
                           <span className="flex-1 text-sm text-brand-navy truncate">{q.title}</span>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 ${TYPE_BADGE[q.type] ?? 'bg-brand-surface text-brand-navy/50'}`}>
                             {q.type}
                           </span>
-                          {selected && (
-                            <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={questionWeightages[q.id] ?? 0}
-                              onChange={(e) => setQuestionWeightages((prev) => ({ ...prev, [q.id]: Number(e.target.value) }))}
-                              onClick={(e) => e.stopPropagation()}
-                              onKeyDown={(e) => e.stopPropagation()}
-                              aria-label={`Weightage for ${q.title}`}
-                              className="w-16 rounded border border-brand-border bg-white px-2 py-1 text-xs text-center text-brand-navy outline-none focus:border-brand-orange shrink-0"
-                            />
-                          )}
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 ${DIFFICULTY_BADGE[q.difficulty] ?? 'bg-brand-surface text-brand-navy/50'}`}>
-                            {q.difficulty}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => addQuestion(q.id)}
+                            aria-label={`Add ${q.title}`}
+                            className="rounded-md p-1 text-brand-navy/40 hover:bg-brand-orange-pale hover:text-brand-orange transition-colors shrink-0"
+                          >
+                            <Plus size={14} aria-hidden="true" />
+                          </button>
                         </div>
-                      )
-                    })
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
 
-                {/* Live weightage total bar */}
-                {questionIds.length > 0 && (
-                  <div className={[
-                    'mt-2 rounded-lg border px-4 py-2.5 flex items-center justify-between text-sm font-medium transition-colors',
-                    weightageTotal === 100
-                      ? 'bg-green-50 border-green-200 text-green-700'
-                      : weightageTotal < 100
-                        ? 'bg-amber-50 border-amber-200 text-amber-700'
-                        : 'bg-red-50 border-red-200 text-red-600',
-                  ].join(' ')}>
-                    <span>Total: {weightageTotal}% / 100%</span>
-                    <span className="text-xs font-normal">
-                      {weightageTotal === 100
-                        ? '✓ Balanced'
-                        : weightageTotal < 100
-                          ? `${100 - weightageTotal}% remaining to assign`
-                          : `${weightageTotal - 100}% over limit`}
-                    </span>
+                {/* Right: added questions with weightage */}
+                <div className="flex flex-col" style={{ width: '40%' }}>
+                  <div className="px-4 py-3 border-b border-brand-border shrink-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-brand-navy/50">
+                      Assessment Questions ({questionIds.length})
+                    </p>
                   </div>
-                )}
+
+                  {questionIds.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                      <FileCode2 size={28} className="text-brand-navy/15 mb-2" aria-hidden="true" />
+                      <p className="text-xs text-brand-navy/40">Add questions from the bank</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex-1 overflow-y-auto p-3">
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                          <SortableContext items={questionIds} strategy={verticalListSortingStrategy}>
+                            {addedQuestions.map((q) => (
+                              <SortableQuestionCard
+                                key={q.id}
+                                question={q}
+                                weightage={questionWeightages[q.id] ?? 0}
+                                onWeightageChange={(v) => setQuestionWeightages((p) => ({ ...p, [q.id]: v }))}
+                                onRemove={() => removeQuestion(q.id)}
+                              />
+                            ))}
+                          </SortableContext>
+                        </DndContext>
+                      </div>
+
+                      {/* Weightage total bar */}
+                      <div className="border-t border-brand-border p-3 bg-white shrink-0">
+                        <div className="mb-1.5 h-2 rounded-full bg-brand-border overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-200"
+                            style={{
+                              width: `${Math.min(100, weightageTotal)}%`,
+                              backgroundColor: weightageTotal === 100 ? '#16a34a' : weightageTotal > 100 ? '#ef4444' : '#DE5E1F',
+                            }}
+                          />
+                        </div>
+                        <p className={[
+                          'text-sm font-medium',
+                          weightageTotal === 100 ? 'text-green-600' : weightageTotal > 100 ? 'text-red-600' : 'text-amber-600',
+                        ].join(' ')}>
+                          {weightageTotal === 100
+                            ? '✓ Balanced — 100%'
+                            : weightageTotal < 100
+                              ? `${100 - weightageTotal}% remaining`
+                              : `${weightageTotal - 100}% over limit`}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </motion.div>
 

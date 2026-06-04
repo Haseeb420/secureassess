@@ -5,7 +5,8 @@ import { useSession } from "@/lib/auth-client"
 export function useCurrentUser() {
   const { data: session, isPending, error } = useSession()
 
-  const user = session?.user as (typeof session.user & { role?: string; organizationId?: string }) | null | undefined
+  type SessionUser = NonNullable<typeof session>['user'] & { role?: string; organizationId?: string }
+  const user = session?.user as SessionUser | null | undefined
 
   return {
     user:            user ?? null,

@@ -3,13 +3,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
+import { invoke } from '@tauri-apps/api/core'
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels'
-import { ChevronLeft, ChevronRight, FileQuestion } from 'lucide-react'
+import { AlertCircle, FileQuestion, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { cn, Badge, ConfirmDialog } from '@secureassess/ui'
+import type { SubmitAnswerRequest } from '@secureassess/shared-types'
 import { CodeEditor } from '../features/ide/CodeEditor'
 import { ConsoleOutput, type ConsoleStatus } from '../features/ide/ConsoleOutput'
 import { EditorToolbar } from '../features/ide/EditorToolbar'
+import { MCQAnswerPanel } from '../features/ide/MCQAnswerPanel'
+import { TextAnswerPanel } from '../features/ide/TextAnswerPanel'
 import { QuestionPanel } from '../features/ide/QuestionPanel'
-import { SubmissionModal } from '../features/ide/SubmissionModal'
 import { ViolationBanner } from '../features/security/ViolationBanner'
 import { useSecurityMonitor } from '../features/security/useSecurityMonitor'
 import { exitKioskMode } from '../features/security/securityService'
@@ -18,12 +23,24 @@ import { ExitAssessmentDialog } from '../components/ExitAssessmentDialog'
 import { useAutoSave } from '../features/persistence/useAutoSave'
 import { useAssessmentStore } from '../store/assessmentStore'
 import {
+  startAttempt,
+  submitAnswer,
+  completeAttempt,
+} from '../features/attempt/attemptService'
+import {
   runSampleTests,
-  submitSolution,
   type RunResult,
-  type SubmitResult,
 } from '../features/ide/evaluationService'
 import { defaultTemplates } from '../features/ide/templates'
+
+const DMSANS: React.CSSProperties = { fontFamily: "'DM Sans', system-ui, sans-serif" }
+const DMMONO: React.CSSProperties = { fontFamily: "'DM Mono', 'Courier New', monospace" }
+
+const TYPE_BADGE_VARIANT = {
+  coding: 'neutral',
+  mcq:    'blue',
+  text:   'warning',
+} as const
 
 export function AssessmentPage() {
   const navigate = useNavigate()
@@ -33,50 +50,61 @@ export function AssessmentPage() {
     sessionId,
     assessmentTitle,
     questions,
-    currentQuestionIndex,
+    currentQuestionIdx,
     currentLanguage,
     codeByLanguage,
     consoleOutput,
     timerSeconds,
     timerTotalSeconds,
-    status,
+    token,
+    currentAttemptId,
+    submittedQuestions,
+    answers,
     setLanguage,
     setCode,
     appendOutput,
     clearOutput,
     decrementTimer,
-    setCurrentQuestionIndex,
+    saveAnswer,
   } = useAssessmentStore()
 
-  const currentQuestion = questions[currentQuestionIndex] ?? null
+  const currentQuestion = questions[currentQuestionIdx] ?? null
 
-  const [isRunning, setIsRunning] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [runResult, setRunResult] = useState<RunResult | null>(null)
-  const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null)
-  const [compileError, setCompileError] = useState<string | null>(null)
-  const [fontSize, setFontSize] = useState(14)
-  const [runHistory, setRunHistory] = useState<RunResult[]>([])
-  const [exitDialogOpen, setExitDialogOpen] = useState(false)
-  const [submittedQuestions, setSubmittedQuestions] = useState(new Set<number>())
+  const [isStarting, setIsStarting]             = useState(false)
+  const [startError, setStartError]             = useState<string | null>(null)
+  const [isRunning, setIsRunning]               = useState(false)
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false)
+  const [runResult, setRunResult]               = useState<RunResult | null>(null)
+  const [compileError, setCompileError]         = useState<string | null>(null)
+  const [fontSize, setFontSize]                 = useState(14)
+  const [runHistory, setRunHistory]             = useState<RunResult[]>([])
+  const [exitDialogOpen, setExitDialogOpen]     = useState(false)
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false)
 
   const { violationCount, lastViolation } = useSecurityMonitor({ enabled: true })
 
-  // Track which questions have been submitted
+  // Start attempt on mount if not already started
   useEffect(() => {
-    if (submitResult) {
-      setSubmittedQuestions((prev) => new Set([...prev, currentQuestionIndex]))
-    }
-  }, [submitResult, currentQuestionIndex])
+    if (currentAttemptId || !token) return
+    setIsStarting(true)
+    startAttempt(token.tokenValue)
+      .then(() => setIsStarting(false))
+      .catch((err: unknown) => {
+        setStartError(err instanceof Error ? err.message : 'Failed to start assessment')
+        setIsStarting(false)
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Reset run state when switching questions
+  // Reset run state when moving to a new question
   useEffect(() => {
     setRunResult(null)
     setCompileError(null)
     setRunHistory([])
     clearOutput()
-  }, [currentQuestionIndex, clearOutput])
+  }, [currentQuestionIdx, clearOutput])
 
+  // Global timer countdown
   useEffect(() => {
     const id = setInterval(() => decrementTimer(), 1000)
     return () => clearInterval(id)
@@ -95,7 +123,7 @@ export function AssessmentPage() {
   }, [forceSave, appendOutput])
 
   const handleRun = useCallback(async () => {
-    if (!currentQuestion) return
+    if (!currentQuestion || currentQuestion.type !== 'coding') return
     setIsRunning(true)
     setRunResult(null)
     setCompileError(null)
@@ -107,7 +135,7 @@ export function AssessmentPage() {
         currentQuestion.id,
         currentLanguage,
         codeByLanguage[currentLanguage],
-        currentQuestion.sampleTests,
+        currentQuestion.sampleTests ?? [],
         currentQuestion.timeLimitMs,
         currentQuestion.memoryLimitMb,
       )
@@ -135,31 +163,72 @@ export function AssessmentPage() {
     }
   }, [currentQuestion, currentLanguage, codeByLanguage, appendOutput, clearOutput])
 
-  const handleSubmit = useCallback(async () => {
-    if (!currentQuestion) return
-    setIsSubmitting(true)
-    appendOutput({ type: 'system', text: 'Submitting solution…' })
-
-    try {
-      const result = await submitSolution(
-        sessionId ?? assessmentId ?? 'unknown-session',
-        currentQuestion.id,
-        currentLanguage,
-        codeByLanguage[currentLanguage],
-      )
-      setSubmitResult(result)
-    } catch (err) {
-      appendOutput({ type: 'stderr', text: String(err) })
-      appendOutput({ type: 'system', text: 'Submission failed.' })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [assessmentId, currentQuestion, currentLanguage, codeByLanguage, appendOutput])
-
   const handleResetCode = useCallback(() => {
     setCode(currentLanguage, defaultTemplates[currentLanguage])
     setCompileError(null)
   }, [currentLanguage, setCode])
+
+  // Determine if submit is allowed for the current question
+  const canSubmit = (() => {
+    if (!currentQuestion) return false
+    if (currentQuestion.type === 'coding') return !!codeByLanguage[currentLanguage]?.trim()
+    if (currentQuestion.type === 'mcq') return !!answers[currentQuestion.id]?.selectedOption
+    if (currentQuestion.type === 'text') return !!(answers[currentQuestion.id]?.answerText?.trim())
+    return false
+  })()
+
+  const handleSubmitAnswer = useCallback(async () => {
+    if (!currentQuestion || !currentAttemptId) return
+    setIsSubmittingAnswer(true)
+
+    try {
+      const req: SubmitAnswerRequest = {
+        attemptId:    currentAttemptId,
+        questionId:   currentQuestion.id,
+        questionType: currentQuestion.type,
+      }
+
+      if (currentQuestion.type === 'coding') {
+        req.sourceCode = codeByLanguage[currentLanguage]
+        req.language = currentLanguage
+        if (runResult) {
+          req.testResults = runResult.outcomes.map((o) => ({
+            testCaseId: o.test_case_id ?? '',
+            passed:     o.passed,
+            timeMsec:   o.execution_time_ms,
+            memoryMb:   0,
+          }))
+        }
+      } else if (currentQuestion.type === 'mcq') {
+        req.selectedOption = answers[currentQuestion.id]?.selectedOption
+      } else if (currentQuestion.type === 'text') {
+        req.answerText = answers[currentQuestion.id]?.answerText
+      }
+
+      const response = await submitAnswer(req)
+
+      if (!response.nextQuestionAvailable) {
+        // Last question submitted — complete the attempt
+        try {
+          await completeAttempt(currentAttemptId)
+        } catch (completeErr) {
+          toast.error(completeErr instanceof Error ? completeErr.message : 'Failed to finalize assessment')
+        }
+        await exitKioskMode().catch(() => {})
+        navigate('/completion', { replace: true })
+      }
+      // advanceQuestion() is called inside submitAnswer service on accepted=true
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to submit answer. Please try again.', {
+        action: { label: 'Retry', onClick: () => handleSubmitAnswer() },
+      })
+    } finally {
+      setIsSubmittingAnswer(false)
+    }
+  }, [
+    currentQuestion, currentAttemptId, currentLanguage,
+    codeByLanguage, answers, runResult, navigate,
+  ])
 
   // Navigate to completion when assessment is locked server-side
   useEffect(() => {
@@ -169,7 +238,7 @@ export function AssessmentPage() {
     return () => { unlisten.then((fn) => fn()) }
   }, [navigate])
 
-  // Open exit dialog when native window close button is clicked during assessment
+  // Open exit dialog when native window close is requested during assessment
   useEffect(() => {
     const unlisten = listen('window:close-requested', () => {
       setExitDialogOpen(true)
@@ -177,14 +246,12 @@ export function AssessmentPage() {
     return () => { unlisten.then((fn) => fn()) }
   }, [])
 
+  // Keyboard shortcuts (coding only)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
-      if (e.shiftKey && e.key === 'Enter') {
-        e.preventDefault()
-        handleSubmit()
-      } else if (e.key === 'Enter') {
+      if (e.key === 'Enter') {
         e.preventDefault()
         handleRun()
       } else if (e.key === 's') {
@@ -194,35 +261,20 @@ export function AssessmentPage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleRun, handleSubmit, forceSave])
-
-  const handleFinish = useCallback(() => {
-    navigate('/completion', { replace: true })
-  }, [navigate])
-
-  const handleSubmitAndExit = useCallback(async () => {
-    if (currentQuestion) {
-      try {
-        await submitSolution(
-          sessionId ?? assessmentId ?? 'unknown-session',
-          currentQuestion.id,
-          currentLanguage,
-          codeByLanguage[currentLanguage],
-        )
-      } catch {
-        // best-effort: proceed with exit even if submission fails
-      }
-    }
-    await exitKioskMode()
-    navigate('/completion', { replace: true })
-  }, [currentQuestion, sessionId, assessmentId, currentLanguage, codeByLanguage, navigate])
+  }, [handleRun, forceSave])
 
   const handleExitWithoutSubmit = useCallback(async () => {
     await exitKioskMode()
     navigate('/login', { replace: true })
   }, [navigate])
 
-  const consoleStatus: ConsoleStatus = isRunning || isSubmitting
+  // Build progress dots for TopBar
+  const progressItems = questions.map((q, i) => ({
+    submitted: submittedQuestions.has(q.id),
+    current:   i === currentQuestionIdx,
+  }))
+
+  const consoleStatus: ConsoleStatus = isRunning
     ? 'running'
     : runResult == null
       ? 'idle'
@@ -232,15 +284,41 @@ export function AssessmentPage() {
           ? 'pass'
           : 'fail'
 
-  const isExitLocked = isRunning || isSubmitting
-  const isAssessmentCompleted = status === 'completed'
+  // ── Loading state ────────────────────────────────────────────────────────────
 
-  // No questions loaded yet
+  if (isStarting) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-brand-navy">
+        <Loader2 size={28} className="animate-spin text-brand-orange" aria-hidden="true" />
+        <p className="mt-3 font-dm-sans text-sm text-white/50" style={DMSANS}>
+          Starting assessment…
+        </p>
+      </div>
+    )
+  }
+
+  if (startError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-brand-navy px-4">
+        <AlertCircle size={32} className="text-red-400 mb-3" aria-hidden="true" />
+        <p className="font-dm-sans text-sm text-white/70 text-center max-w-xs" style={DMSANS}>
+          {startError}
+        </p>
+        <button
+          onClick={() => { setStartError(null); setIsStarting(true); startAttempt(token!.tokenValue).then(() => setIsStarting(false)).catch((e: unknown) => { setStartError(e instanceof Error ? e.message : 'Failed'); setIsStarting(false) }) }}
+          className="mt-4 rounded-lg border border-white/10 px-4 py-2 text-xs text-white/60 hover:border-white/30 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
   if (questions.length === 0) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-brand-navy text-white/50">
         <FileQuestion size={36} className="mb-3 text-white/20" />
-        <p className="text-sm">No questions loaded for this assessment.</p>
+        <p className="font-dm-sans text-sm" style={DMSANS}>No questions loaded for this assessment.</p>
         <button
           onClick={() => navigate('/pre-assessment')}
           className="mt-4 rounded-lg border border-white/10 px-4 py-2 text-xs hover:border-white/30 transition-colors"
@@ -251,6 +329,8 @@ export function AssessmentPage() {
     )
   }
 
+  // ── Assessment UI ────────────────────────────────────────────────────────────
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <ViolationBanner violation={lastViolation} violationCount={violationCount} />
@@ -258,122 +338,176 @@ export function AssessmentPage() {
       <TopBar
         candidateName={candidate?.name ?? candidate?.email ?? 'Candidate'}
         assessmentTitle={assessmentTitle ?? 'Assessment'}
-        questionIndex={currentQuestionIndex + 1}
+        questionIndex={currentQuestionIdx + 1}
         totalQuestions={questions.length}
         timerSeconds={timerSeconds}
         timerTotalSeconds={timerTotalSeconds}
         sessionId={assessmentId}
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
+        onSubmit={() => {}}
         onExitClick={() => setExitDialogOpen(true)}
-        isExitLocked={isExitLocked}
+        isExitLocked={isRunning || isSubmittingAnswer}
         isExitDialogOpen={exitDialogOpen}
+        sequentialMode
+        progressItems={progressItems}
+        hideSubmitButton
       />
 
       <div className="min-h-0 flex-1">
         <PanelGroup orientation="horizontal" className="h-full">
+          {/* Left: question description */}
           <Panel defaultSize="38%" minSize="28%" maxSize="50%">
-            {currentQuestion ? (
+            {currentQuestion && (
               <QuestionPanel question={currentQuestion} runHistory={runHistory} />
-            ) : null}
+            )}
           </Panel>
 
           <PanelResizeHandle className="w-1.5 cursor-col-resize bg-brand-border transition-colors hover:bg-brand-orange" />
 
+          {/* Right: answer area */}
           <Panel defaultSize="62%" minSize="50%">
-            <div className="flex h-full flex-col">
-              <EditorToolbar
-                language={currentLanguage}
-                onLanguageChange={setLanguage}
-                onRun={handleRun}
-                onSave={handleSave}
-                onResetCode={handleResetCode}
-                isRunning={isRunning}
-                fontSize={fontSize}
-                onFontSizeChange={setFontSize}
+            {currentQuestion?.type === 'coding' ? (
+              <div className="flex h-full flex-col">
+                <EditorToolbar
+                  language={currentLanguage}
+                  onLanguageChange={setLanguage}
+                  onRun={handleRun}
+                  onSave={handleSave}
+                  onResetCode={handleResetCode}
+                  isRunning={isRunning}
+                  fontSize={fontSize}
+                  onFontSizeChange={setFontSize}
+                />
+
+                <PanelGroup orientation="vertical" className="min-h-0 flex-1">
+                  <Panel defaultSize="72%" minSize="30%">
+                    <CodeEditor
+                      language={currentLanguage}
+                      value={codeByLanguage[currentLanguage]}
+                      onChange={(val) => {
+                        setCode(currentLanguage, val)
+                        setCompileError(null)
+                      }}
+                      onSave={handleSave}
+                      compileError={compileError}
+                      fontSize={fontSize}
+                    />
+                  </Panel>
+
+                  <PanelResizeHandle className="h-1.5 cursor-row-resize bg-brand-border transition-colors hover:bg-brand-orange" />
+
+                  <Panel defaultSize="28%" minSize="15%">
+                    <ConsoleOutput
+                      lines={consoleOutput}
+                      status={consoleStatus}
+                      onClear={clearOutput}
+                    />
+                  </Panel>
+                </PanelGroup>
+              </div>
+            ) : currentQuestion?.type === 'mcq' ? (
+              <MCQAnswerPanel
+                question={currentQuestion}
+                selectedOption={answers[currentQuestion.id]?.selectedOption}
+                onSelect={(optionId) =>
+                  saveAnswer(currentQuestion.id, {
+                    selectedOption: optionId,
+                    questionType: 'mcq',
+                  } as never)
+                }
               />
-
-              <PanelGroup orientation="vertical" className="min-h-0 flex-1">
-                <Panel defaultSize="72%" minSize="30%">
-                  <CodeEditor
-                    language={currentLanguage}
-                    value={codeByLanguage[currentLanguage]}
-                    onChange={(val) => {
-                      setCode(currentLanguage, val)
-                      setCompileError(null)
-                    }}
-                    onSave={handleSave}
-                    compileError={compileError}
-                    fontSize={fontSize}
-                  />
-                </Panel>
-
-                <PanelResizeHandle className="h-1.5 cursor-row-resize bg-brand-border transition-colors hover:bg-brand-orange" />
-
-                <Panel defaultSize="28%" minSize="15%">
-                  <ConsoleOutput
-                    lines={consoleOutput}
-                    status={consoleStatus}
-                    onClear={clearOutput}
-                  />
-                </Panel>
-              </PanelGroup>
-            </div>
+            ) : currentQuestion?.type === 'text' ? (
+              <TextAnswerPanel
+                question={currentQuestion}
+                answerText={answers[currentQuestion.id]?.answerText ?? ''}
+                onChange={(text) =>
+                  saveAnswer(currentQuestion.id, {
+                    answerText: text,
+                    questionType: 'text',
+                  } as never)
+                }
+              />
+            ) : null}
           </Panel>
         </PanelGroup>
       </div>
 
-      {/* Bottom status bar */}
-      <div
-        className="flex h-[22px] shrink-0 items-center gap-6 border-t border-white/10 bg-brand-navy px-4 text-xs font-mono text-white/40"
-        aria-hidden="true"
-      >
-        <span>{isRunning || isSubmitting ? 'Running…' : 'Ready'}</span>
-        <span>{currentLanguage}</span>
+      {/* Bottom submit bar */}
+      <div className="flex h-14 shrink-0 items-center justify-between border-t border-brand-border bg-brand-surface px-6">
+        {/* Left: type badge + weightage */}
+        <div className="flex items-center">
+          {currentQuestion && (
+            <>
+              <Badge
+                variant={TYPE_BADGE_VARIANT[currentQuestion.type] ?? 'neutral'}
+                className="font-dm-mono"
+              >
+                {currentQuestion.type === 'coding' ? 'Coding' : currentQuestion.type === 'mcq' ? 'MCQ' : 'Written'}
+              </Badge>
+              <span
+                className="ml-3 text-xs text-brand-navy/40"
+                style={DMMONO}
+              >
+                Worth {currentQuestion.weightage}%
+              </span>
+            </>
+          )}
+        </div>
 
-        {questions.length > 1 && (
-          <div className="flex items-center gap-1 ml-2">
-            <button
-              onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
-              disabled={currentQuestionIndex === 0}
-              aria-label="Previous question"
-              className="flex items-center rounded p-0.5 hover:text-white/70 disabled:opacity-30 transition-colors"
-            >
-              <ChevronLeft size={12} />
-            </button>
-            <span className="tabular-nums">
-              Q{currentQuestionIndex + 1}/{questions.length}
+        {/* Right: auto-save indicator + submit button */}
+        <div className="flex items-center gap-3">
+          {currentQuestion?.type === 'coding' && (
+            <span className="text-xs text-brand-navy/40" style={DMSANS}>
+              Auto-save on
             </span>
-            <button
-              onClick={() => setCurrentQuestionIndex(Math.min(questions.length - 1, currentQuestionIndex + 1))}
-              disabled={currentQuestionIndex === questions.length - 1}
-              aria-label="Next question"
-              className="flex items-center rounded p-0.5 hover:text-white/70 disabled:opacity-30 transition-colors"
-            >
-              <ChevronRight size={12} />
-            </button>
-          </div>
-        )}
+          )}
 
-        {timerSeconds < 300 && (
-          <span className="ml-auto text-brand-orange">
-            {Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2, '0')} remaining
-          </span>
-        )}
+          <button
+            type="button"
+            disabled={!canSubmit || isSubmittingAnswer}
+            onClick={() => setConfirmSubmitOpen(true)}
+            className={cn(
+              'flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-medium transition-all',
+              canSubmit && !isSubmittingAnswer
+                ? 'bg-brand-navy text-white hover:bg-brand-navy/90'
+                : 'bg-brand-navy/20 text-brand-navy/30 cursor-not-allowed',
+            )}
+            style={DMSANS}
+          >
+            {isSubmittingAnswer ? (
+              <>
+                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                Submitting…
+              </>
+            ) : (
+              'Submit Answer →'
+            )}
+          </button>
+        </div>
       </div>
 
-      {submitResult && (
-        <SubmissionModal result={submitResult} onFinish={handleFinish} />
-      )}
+      {/* Submit confirmation dialog */}
+      <ConfirmDialog
+        open={confirmSubmitOpen}
+        title="Submit this answer?"
+        description="You cannot change your answer after submitting."
+        confirmLabel="Submit"
+        cancelLabel="Go back"
+        variant="primary"
+        onConfirm={() => { setConfirmSubmitOpen(false); handleSubmitAnswer() }}
+        onCancel={() => setConfirmSubmitOpen(false)}
+      />
 
       <ExitAssessmentDialog
         open={exitDialogOpen}
         onClose={() => setExitDialogOpen(false)}
-        onSubmitAndExit={handleSubmitAndExit}
+        onSubmitAndExit={async () => {
+          await exitKioskMode()
+          navigate('/completion', { replace: true })
+        }}
         onExitWithoutSubmit={handleExitWithoutSubmit}
         questionsCompleted={submittedQuestions.size}
         questionsTotal={questions.length}
-        isAssessmentCompleted={isAssessmentCompleted}
+        isAssessmentCompleted={submittedQuestions.size === questions.length}
       />
     </div>
   )

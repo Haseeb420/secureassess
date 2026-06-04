@@ -73,6 +73,21 @@ secureassess/
 
 Every UI change must meet these standards. No exceptions.
 
+## UI / Design System
+
+**App**: SecureAssess — secure desktop coding assessment platform (Tauri 2)
+**Audience**: Recruiters (admin dashboard) + Candidates (locked-down assessment window)
+**Aesthetic**: Industrial/utilitarian — precision tool, not consumer app.
+  Think: terminal meets IDE. Dark-first. Monospace accents. Tight density.
+**Stack**: React + Tailwind CSS + shadcn/ui
+**Rules**:
+- Dark mode default, light mode optional
+- No purple gradients. No Inter. No generic shadows.
+- Typography: monospace for code/labels, sharp sans for headings
+- Motion: only meaningful (status change, submission confirm, timer warning)
+- Responsive: desktop-first (Tauri window), but admin dashboard needs 1280px+ breakpoint
+- shadcn primitives first, customize second
+
 **Forms**
 - All forms use `react-hook-form` with `zodResolver` — never uncontrolled forms or manual state
 - Every field has a `<label>` element, never placeholder-only

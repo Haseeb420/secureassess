@@ -2,27 +2,35 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { ArrowDown, Clock, History } from 'lucide-react'
 import { cn } from '@secureassess/ui'
-import type { Question } from '@secureassess/shared-types'
+import type { QuestionForCandidate } from '@secureassess/shared-types'
 import type { RunResult } from './evaluationService'
 
 interface QuestionPanelProps {
-  question: Question
+  question: QuestionForCandidate
   isLoading?: boolean
   runHistory?: RunResult[]
 }
 
 type Tab = 'problem' | 'examples' | 'runs'
 
-const DIFFICULTY_BADGE: Record<Question['difficulty'], string> = {
+type Difficulty = 'easy' | 'medium' | 'hard'
+
+const DIFFICULTY_BADGE: Record<Difficulty, string> = {
   easy:   'bg-green-50 text-green-700 border-green-200',
   medium: 'bg-orange-50 text-brand-orange border-orange-200',
   hard:   'bg-red-50 text-red-600 border-red-200',
 }
 
-const DIFFICULTY_LABEL: Record<Question['difficulty'], string> = {
+const DIFFICULTY_LABEL: Record<Difficulty, string> = {
   easy:   'Easy',
   medium: 'Medium',
   hard:   'Hard',
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  coding: 'Coding',
+  mcq:    'MCQ',
+  text:   'Written',
 }
 
 const TABS: Array<{ key: Tab; label: string }> = [
@@ -55,7 +63,7 @@ export function QuestionPanel({ question, isLoading = false, runHistory = [] }: 
     )
   }
 
-  const visibleSamples = question.sampleTests.filter((t) => !t.isHidden)
+  const visibleSamples = (question.sampleTests ?? []).filter((t) => !t.isHidden)
   const timeLimitSec = Math.round(question.timeLimitMs / 1000)
 
   return (
@@ -66,16 +74,18 @@ export function QuestionPanel({ question, isLoading = false, runHistory = [] }: 
         <div className="px-5 pt-4 pb-0">
           {/* Meta row */}
           <div className="flex items-center gap-2 mb-2">
-            <span
-              className={cn(
-                'font-dm-mono text-xs rounded-full px-2.5 py-0.5 border',
-                DIFFICULTY_BADGE[question.difficulty],
-              )}
-            >
-              {DIFFICULTY_LABEL[question.difficulty]}
-            </span>
+            {question.difficulty && (
+              <span
+                className={cn(
+                  'font-dm-mono text-xs rounded-full px-2.5 py-0.5 border',
+                  DIFFICULTY_BADGE[question.difficulty],
+                )}
+              >
+                {DIFFICULTY_LABEL[question.difficulty]}
+              </span>
+            )}
             <span className="font-dm-mono text-xs rounded-full bg-brand-surface text-brand-navy/60 border border-brand-border px-2.5 py-0.5">
-              Coding
+              {TYPE_LABEL[question.type] ?? question.type}
             </span>
             <div className="ml-auto flex items-center gap-1">
               <Clock size={12} className="text-brand-navy/40" aria-hidden="true" />

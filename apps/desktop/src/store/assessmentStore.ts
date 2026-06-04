@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type {
   Candidate,
-  Question,
+  QuestionForCandidate,
   Token,
   LandingPageData,
   Assessment,
@@ -22,7 +22,7 @@ interface AssessmentState {
   timerTotalSeconds: number
   candidate: Candidate | null
   authToken: string | null
-  questions: Question[]
+  questions: QuestionForCandidate[]
   currentQuestionIndex: number
   currentLanguage: Language
   codeByLanguage: Record<Language, string>
@@ -34,6 +34,8 @@ interface AssessmentState {
   mocks: Assessment[]
   currentAttemptId: string | null
   currentQuestionIdx: number
+  submittedQuestions: Set<string>
+  finalScore: number | null
   answers: Record<string, QuestionAnswer>
 
   setCandidate: (id: string) => void
@@ -47,7 +49,7 @@ interface AssessmentState {
   setAuthToken: (token: string) => void
   clearAuth: () => void
   setAssessmentData: (id: string, title: string, durationMinutes: number) => void
-  setQuestions: (questions: Question[]) => void
+  setQuestions: (questions: QuestionForCandidate[]) => void
   setCurrentQuestionIndex: (index: number) => void
   setLanguage: (lang: Language) => void
   setCode: (lang: Language, code: string) => void
@@ -55,9 +57,13 @@ interface AssessmentState {
   clearOutput: () => void
   reset: () => void
 
-  // Landing page / token flow actions
+  // Attempt flow actions
   setToken: (token: Token) => void
   setLandingData: (data: LandingPageData) => void
+  setAttempt: (attemptId: string, questions: QuestionForCandidate[]) => void
+  advanceQuestion: () => void
+  markQuestionSubmitted: (questionId: string) => void
+  setFinalScore: (score: number) => void
   setCurrentAttemptId: (id: string) => void
   setCurrentQuestionIdx: (idx: number) => void
   saveAnswer: (questionId: string, answer: Partial<QuestionAnswer>) => void
@@ -74,7 +80,7 @@ const initialState = {
   timerTotalSeconds: 3600,
   candidate: null,
   authToken: null,
-  questions: [] as Question[],
+  questions: [] as QuestionForCandidate[],
   currentQuestionIndex: 0,
   currentLanguage: 'python' as Language,
   codeByLanguage: { ...defaultTemplates },
@@ -85,6 +91,8 @@ const initialState = {
   mocks: [] as Assessment[],
   currentAttemptId: null,
   currentQuestionIdx: 0,
+  submittedQuestions: new Set<string>(),
+  finalScore: null,
   answers: {} as Record<string, QuestionAnswer>,
 }
 
@@ -118,10 +126,24 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
   appendOutput: (line) =>
     set((state) => ({ consoleOutput: [...state.consoleOutput, line] })),
   clearOutput: () => set({ consoleOutput: [] }),
-  reset: () => set(initialState),
+  reset: () => set({ ...initialState, submittedQuestions: new Set<string>() }),
 
   setToken: (token) => set({ token }),
   setLandingData: (data) => set({ landingData: data, mocks: data.mocks }),
+  setAttempt: (attemptId, questions) =>
+    set({
+      currentAttemptId: attemptId,
+      questions,
+      currentQuestionIdx: 0,
+      submittedQuestions: new Set<string>(),
+    }),
+  advanceQuestion: () =>
+    set((state) => ({ currentQuestionIdx: state.currentQuestionIdx + 1 })),
+  markQuestionSubmitted: (questionId) =>
+    set((state) => ({
+      submittedQuestions: new Set([...state.submittedQuestions, questionId]),
+    })),
+  setFinalScore: (score) => set({ finalScore: score }),
   setCurrentAttemptId: (id) => set({ currentAttemptId: id }),
   setCurrentQuestionIdx: (idx) => set({ currentQuestionIdx: idx }),
   saveAnswer: (questionId, answer) =>
@@ -132,5 +154,12 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
       },
     })),
   clearAttempt: () =>
-    set({ currentAttemptId: null, currentQuestionIdx: 0, answers: {}, consoleOutput: [] }),
+    set({
+      currentAttemptId: null,
+      currentQuestionIdx: 0,
+      submittedQuestions: new Set<string>(),
+      finalScore: null,
+      answers: {},
+      consoleOutput: [],
+    }),
 }))

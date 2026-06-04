@@ -55,7 +55,7 @@ function formatDuration(seconds: number): string {
 }
 
 export function CompletionPage() {
-  const { timerSeconds, timerTotalSeconds, questions } = useAssessmentStore()
+  const { timerSeconds, timerTotalSeconds, questions, finalScore } = useAssessmentStore()
   const elapsed = timerTotalSeconds - timerSeconds
 
   useEffect(() => {
@@ -108,7 +108,7 @@ export function CompletionPage() {
         />
 
         {/* Stats */}
-        <motion.div variants={itemVariants} className="mt-6 flex gap-3 justify-center">
+        <motion.div variants={itemVariants} className="mt-6 flex gap-3 justify-center flex-wrap">
           <div className="flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-1.5">
             <span className="font-dm-mono text-xs text-brand-navy/50">Questions</span>
             <span className="font-dm-mono text-xs font-medium text-brand-navy">
@@ -121,6 +121,14 @@ export function CompletionPage() {
               {formatDuration(elapsed)}
             </span>
           </div>
+          {finalScore !== null && (
+            <div className="flex items-center gap-2 rounded-full border border-brand-orange/30 bg-brand-orange-pale/20 px-4 py-1.5">
+              <span className="font-dm-mono text-xs text-brand-navy/50">Score</span>
+              <span className="font-dm-mono text-xs font-medium text-brand-orange">
+                {finalScore.toFixed(1)}%
+              </span>
+            </div>
+          )}
         </motion.div>
 
         {/* Close note */}

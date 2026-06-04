@@ -1,4 +1,10 @@
-import type { Question, TokenValidationResult } from '@secureassess/shared-types'
+import type {
+  Question,
+  Token,
+  Assessment,
+  AssessmentQuestion,
+  TokenValidationResult,
+} from '@secureassess/shared-types'
 import { useAssessmentStore } from '../store/assessmentStore'
 
 const BASE = import.meta.env.VITE_API_BASE_URL as string
@@ -64,7 +70,12 @@ interface ApiQuestion {
   test_cases: ApiTestCase[]
 }
 
-// ── Mappers ──────────────────────────────────────────────────────────────────
+// ── Raw API shapes for validate token response ────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RawRecord = Record<string, any>
+
+// ── Mappers ───────────────────────────────────────────────────────────────────
 
 function toQuestion(q: ApiQuestion): Question {
   return {
@@ -74,12 +85,73 @@ function toQuestion(q: ApiQuestion): Question {
     difficulty: q.difficulty,
     timeLimitMs: q.time_limit_ms,
     memoryLimitMb: q.memory_limit_mb,
-    sampleTests: q.test_cases.map((tc) => ({
+    isManuallyScored: false,
+    sampleTests: (q.test_cases ?? []).map((tc) => ({
       id: tc.id,
       input: tc.input,
       expectedOutput: tc.expected_output,
       isHidden: tc.is_hidden,
     })),
+  }
+}
+
+function normalizeToken(raw: RawRecord): Token {
+  return {
+    id:             raw['id'],
+    candidateEmail: raw['candidateEmail'] ?? raw['candidate_email'] ?? '',
+    candidateName:  raw['candidateName']  ?? raw['candidate_name']  ?? '',
+    assessmentId:   raw['assessmentId']   ?? raw['assessment_id']   ?? '',
+    mockIds:        raw['mockIds']        ?? raw['mock_ids']         ?? [],
+    expiryAt:       raw['expiryAt']       ?? raw['expiry_at']        ?? '',
+    usageLimit:     raw['usageLimit']     ?? raw['usage_limit']      ?? 1,
+    usedCount:      raw['usedCount']      ?? raw['used_count']       ?? 0,
+    tokenValue:     raw['tokenValue']     ?? raw['token_value']      ?? '',
+    organizationId: raw['organizationId'] ?? raw['organization_id'],
+    createdBy:      raw['createdBy']      ?? raw['created_by']       ?? '',
+    createdAt:      raw['createdAt']      ?? raw['created_at']       ?? '',
+    notes:          raw['notes'],
+  }
+}
+
+function normalizeAssessment(raw: RawRecord): Assessment {
+  // questions array from /tokens/validate is a flat list of question objects
+  const rawQuestions: RawRecord[] = raw['questions'] ?? []
+  const questions: AssessmentQuestion[] = rawQuestions.map((q, i) => ({
+    id: null,
+    weightage: 0,
+    orderIndex: i,
+    question: {
+      id:               q['id'] ?? '',
+      title:            q['title'] ?? '',
+      description:      q['description'] ?? '',
+      type:             q['type'] ?? 'coding',
+      difficulty:       q['difficulty'],
+      timeLimitMs:      q['time_limit_ms']   ?? q['timeLimitMs']   ?? 5000,
+      memoryLimitMb:    q['memory_limit_mb'] ?? q['memoryLimitMb'] ?? 256,
+      isManuallyScored: q['type'] === 'text',
+      options:          q['options'],
+      sampleTests:      (q['test_cases'] ?? q['sampleTests'] ?? []).map((tc: RawRecord) => ({
+        id:             tc['id'],
+        input:          tc['input'],
+        expectedOutput: tc['expected_output'] ?? tc['expectedOutput'] ?? '',
+        isHidden:       tc['is_hidden']       ?? tc['isHidden']       ?? false,
+      })),
+    },
+  }))
+
+  return {
+    id:           raw['id'],
+    title:        raw['title'] ?? '',
+    description:  raw['description'],
+    type:         raw['assessment_type'] ?? raw['type'] ?? 'open',
+    deadlineAt:   raw['deadline_at']   ?? raw['deadlineAt'],
+    windowStart:  raw['window_start']  ?? raw['windowStart'],
+    windowEnd:    raw['window_end']    ?? raw['windowEnd'],
+    timezone:     raw['timezone']      ?? 'UTC',
+    durationMins: raw['duration_minutes'] ?? raw['durationMins'] ?? 0,
+    isMock:       raw['is_mock']       ?? raw['isMock']       ?? false,
+    questions,
+    createdAt:    raw['created_at']    ?? raw['createdAt']    ?? '',
   }
 }
 
@@ -120,7 +192,19 @@ export async function validateToken(tokenValue: string): Promise<TokenValidation
     const body = await res.json().catch(() => ({}))
     throw new Error((body as { detail?: string }).detail ?? `Request failed: ${res.status}`)
   }
-  return res.json() as Promise<TokenValidationResult>
+
+  const raw: RawRecord = await res.json()
+
+  if (!raw['valid']) {
+    return { valid: false, reason: raw['reason'] ?? 'not_found' }
+  }
+
+  return {
+    valid:      true,
+    token:      normalizeToken(raw['token'] ?? {}),
+    assessment: normalizeAssessment(raw['assessment'] ?? {}),
+    mocks:      (raw['mocks'] ?? []).map((m: RawRecord) => normalizeAssessment(m)),
+  }
 }
 
 export async function fetchAssessmentWithQuestions(): Promise<{

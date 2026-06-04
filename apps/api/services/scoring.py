@@ -1,6 +1,10 @@
 def score_mcq_answer(question: dict, selected_option_id: str) -> dict:
     # question["weightage"] comes from assessment_questions, not the questions table
-    correct = next((o for o in question["options"] if o["isCorrect"]), None)
+    # Options may use snake_case "is_correct" (DB default) or camelCase "isCorrect" (legacy)
+    correct = next(
+        (o for o in question["options"] if o.get("is_correct") or o.get("isCorrect")),
+        None,
+    )
     is_correct = correct is not None and correct["id"] == selected_option_id
     auto_score = 100.0 if is_correct else 0.0
     weighted = auto_score * question["weightage"] / 100

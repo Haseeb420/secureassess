@@ -185,7 +185,12 @@ export function PreAssessmentPage() {
     fetchAssessmentWithQuestions()
       .then(({ assessment, questions }) => {
         setAssessmentData(assessment.id, assessment.title, assessment.duration_minutes)
-        setQuestions(questions)
+        // Map Question[] → QuestionForCandidate[] by supplying required attempt fields with defaults.
+        setQuestions(questions.map((q, i) => ({
+          ...q,
+          weightage: 0,
+          orderIndex: i,
+        })))
         setAssessmentTitle(assessment.title)
       })
       .catch((err: unknown) => {

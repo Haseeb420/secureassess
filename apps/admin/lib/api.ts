@@ -51,13 +51,40 @@ export interface Assessment {
   timezone: string
 }
 
+export interface AssessmentQuestionInput {
+  question_id: string
+  weightage: number
+  order_index: number
+}
+
+export interface AssessmentQuestion {
+  id: string | null
+  question: Question
+  weightage: number
+  order_index: number
+}
+
 export interface CreateAssessmentBody {
   title: string
   duration_minutes: number
   allowed_languages: string[]
   security_level: 'standard' | 'strict'
-  question_ids: string[]
-  question_weightages?: Record<string, number>
+  questions: AssessmentQuestionInput[]
+  assessment_type?: 'open' | 'deadline' | 'window'
+  deadline_at?: string
+  window_start?: string
+  window_end?: string
+  timezone?: string
+}
+
+export interface PatchAssessmentBody {
+  title?: string
+  duration_minutes?: number
+  allowed_languages?: string[]
+  security_level?: string
+  questions?: AssessmentQuestionInput[]
+  question_ids?: string[]
+  status?: string
   assessment_type?: 'open' | 'deadline' | 'window'
   deadline_at?: string
   window_start?: string
@@ -67,6 +94,7 @@ export interface CreateAssessmentBody {
 
 export interface AssessmentDetail extends Assessment {
   question_ids: string[]
+  assessment_questions: AssessmentQuestion[]
   candidates: CandidateRow[]
 }
 
@@ -81,18 +109,28 @@ export interface CandidateRow {
 
 export interface Invite {
   id: string
-  token: string
+  token_value: string
   candidate_email: string
   candidate_name: string
-  expires_at: number
-  used_at: number | null
+  expiry_at: string         // ISO datetime
+  usage_limit: number
+  used_count: number
+  is_revoked: boolean
+  mock_ids: string[]
+  notes: string | null
+  assessment_id: string
+  created_by: string
   created_at: string
+  assessment_title?: string
 }
 
 export interface CreateInviteBody {
   candidate_email: string
-  candidate_name?: string
-  expires_in_hours?: number
+  candidate_name: string
+  mock_ids?: string[]
+  expiry_at: string         // ISO datetime
+  usage_limit?: number
+  notes?: string | null
 }
 
 export const assessmentsApi = {
@@ -100,7 +138,7 @@ export const assessmentsApi = {
   create: (body: CreateAssessmentBody) =>
     apiFetch<Assessment>('/assessments', { method: 'POST', body: JSON.stringify(body) }),
   get: (id: string) => apiFetch<AssessmentDetail>(`/assessments/${id}`),
-  patch: (id: string, body: Partial<CreateAssessmentBody>) =>
+  patch: (id: string, body: PatchAssessmentBody) =>
     apiFetch<Assessment>(`/assessments/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   archive: (id: string) =>
     apiFetch<Assessment>(`/assessments/${id}`, {
@@ -126,7 +164,6 @@ export interface Question {
   type: 'coding' | 'mcq' | 'text' | 'debugging' | 'sql' | 'system_design'
   difficulty: 'easy' | 'medium' | 'hard'
   tags: string[]
-  weightage: number
   time_limit_ms: number
   memory_limit_mb: number
   created_at: string
@@ -143,7 +180,6 @@ export interface CreateQuestionBody {
   description: string
   type: Question['type']
   difficulty: Question['difficulty']
-  weightage: number
   time_limit_ms?: number
   memory_limit_mb?: number
   tags?: string[]

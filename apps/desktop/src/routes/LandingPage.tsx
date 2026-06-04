@@ -79,13 +79,15 @@ export function LandingPage() {
 
   const handleBeginAssessment = () => {
     setAssessmentData(assessment.id, assessment.title, assessment.durationMins)
-    setQuestions(assessment.questions ?? [])
+    // Questions will be populated from /attempts/start once the assessment begins.
+    // Clear any stale questions from a previous session.
+    setQuestions([])
     navigate('/pre-assessment')
   }
 
   const handleStartMock = (mock: Assessment) => {
     setAssessmentData(mock.id, mock.title, mock.durationMins)
-    setQuestions(mock.questions ?? [])
+    setQuestions([])
     navigate('/pre-assessment')
   }
 

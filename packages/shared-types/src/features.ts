@@ -63,12 +63,57 @@ export type Question = {
   title:            string
   description:      string
   type:             QuestionType
+  difficulty?:      'easy' | 'medium' | 'hard'
   timeLimitMs:      number
   memoryLimitMb:    number
   isManuallyScored: boolean      // text questions only
   options?:         MCQOption[]  // MCQ only
   sampleTests?:     TestCase[]   // coding only (visible to candidate)
   hiddenTests?:     TestCase[]   // coding only (never sent to candidate)
+}
+
+// QuestionForCandidate is returned by the attempt API (/attempts/start).
+// It includes weightage from assessment_questions and never exposes correct answers.
+export type QuestionForCandidate = {
+  id:            string
+  title:         string
+  description:   string
+  type:          QuestionType
+  difficulty?:   'easy' | 'medium' | 'hard'
+  weightage:     number
+  orderIndex:    number
+  timeLimitMs:   number
+  memoryLimitMb: number
+  options?:      Array<{ id: string; text: string }>  // MCQ only — isCorrect stripped
+  sampleTests?:  TestCase[]                            // coding only — hidden excluded
+}
+
+// Attempt API response types
+export type StartAttemptResponse = {
+  attemptId: string
+  questions: QuestionForCandidate[]
+}
+
+export type SubmitAnswerRequest = {
+  attemptId:       string
+  questionId:      string
+  questionType:    QuestionType
+  answerText?:     string
+  selectedOption?: string
+  sourceCode?:     string
+  language?:       string
+  testResults?:    TestCaseResult[]
+}
+
+export type SubmitAnswerResponse = {
+  questionId:            string
+  accepted:              boolean
+  nextQuestionAvailable: boolean
+}
+
+export type CompleteAttemptResponse = {
+  finalScore:    number
+  totalTimeSecs: number
 }
 
 export type AssessmentQuestion = {

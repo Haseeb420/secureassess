@@ -2,12 +2,14 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from core.dependencies import get_current_admin
 from core.supabase import get_supabase
 from schemas.attempts import (
     CompleteAttemptResponse,
+    ManualScoreRequest,
+    ManualScoreResponse,
     QuestionForCandidate,
     StartAttemptRequest,
     StartAttemptResponse,
@@ -381,7 +383,74 @@ async def complete_attempt(attempt_id: str):
     return CompleteAttemptResponse(final_score=final_score, total_time_secs=total_time_secs)
 
 
-# ── Admin endpoint ────────────────────────────────────────────────────────────
+# ── Admin endpoints ───────────────────────────────────────────────────────────
+
+@router.get("")
+async def list_attempts(
+    assessment_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    _admin: dict = Depends(get_current_admin),
+):
+    supabase = get_supabase()
+
+    query = (
+        supabase.table("assessment_attempts")
+        .select("*")
+        .order("completed_at", desc=True)
+    )
+    if assessment_id:
+        query = query.eq("assessment_id", assessment_id)
+    if status:
+        query = query.eq("status", status)
+    if date_from:
+        query = query.gte("started_at", date_from)
+    if date_to:
+        query = query.lte("started_at", date_to)
+
+    result = query.execute()
+    attempts = result.data or []
+
+    if not attempts:
+        return []
+
+    # Bulk-fetch assessment titles
+    a_ids = list({a["assessment_id"] for a in attempts})
+    a_result = supabase.table("assessments").select("id, title").in_("id", a_ids).execute()
+    assessment_map = {row["id"]: row["title"] for row in (a_result.data or [])}
+
+    # Bulk-fetch token usage limits
+    token_ids = list({a["token_id"] for a in attempts if a.get("token_id")})
+    if token_ids:
+        t_result = supabase.table("tokens").select("id, usage_limit").in_("id", token_ids).execute()
+        token_map = {row["id"]: row["usage_limit"] for row in (t_result.data or [])}
+    else:
+        token_map: dict = {}
+
+    # Bulk-fetch pending-review flags: text answers with null manual_score
+    attempt_ids = [a["id"] for a in attempts]
+    pending_result = (
+        supabase.table("question_answers")
+        .select("attempt_id")
+        .in_("attempt_id", attempt_ids)
+        .eq("question_type", "text")
+        .is_("manual_score", "null")
+        .execute()
+    )
+    pending_set = {row["attempt_id"] for row in (pending_result.data or [])}
+
+    enriched = []
+    for a in attempts:
+        enriched.append({
+            **a,
+            "assessment_title": assessment_map.get(a["assessment_id"]),
+            "usage_limit": token_map.get(a.get("token_id", "")) if a.get("token_id") else None,
+            "has_pending_review": a["id"] in pending_set and a.get("status") == "completed",
+        })
+
+    return enriched
+
 
 @router.get("/{attempt_id}")
 async def get_attempt(
@@ -399,8 +468,30 @@ async def get_attempt(
     if not a_result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attempt not found")
 
-    attempt = a_result.data[0]
+    attempt = dict(a_result.data[0])
 
+    # Enrich with assessment title
+    assmt = (
+        supabase.table("assessments")
+        .select("title")
+        .eq("id", attempt["assessment_id"])
+        .execute()
+    )
+    if assmt.data:
+        attempt["assessment_title"] = assmt.data[0]["title"]
+
+    # Enrich with token usage limit
+    if attempt.get("token_id"):
+        tok = (
+            supabase.table("tokens")
+            .select("usage_limit")
+            .eq("id", attempt["token_id"])
+            .execute()
+        )
+        if tok.data:
+            attempt["usage_limit"] = tok.data[0]["usage_limit"]
+
+    # Fetch answers
     answers_result = (
         supabase.table("question_answers")
         .select("*")
@@ -408,6 +499,119 @@ async def get_attempt(
         .order("submitted_at")
         .execute()
     )
-    attempt["answers"] = answers_result.data or []
+    answers = list(answers_result.data or [])
 
+    if answers:
+        q_ids = [ans["question_id"] for ans in answers]
+
+        # Bulk-fetch question details
+        qs = supabase.table("questions").select("id, title, options").in_("id", q_ids).execute()
+        q_map = {q["id"]: q for q in (qs.data or [])}
+
+        # Bulk-fetch weightages + order from assessment_questions
+        aqs = (
+            supabase.table("assessment_questions")
+            .select("question_id, weightage, order_index")
+            .eq("assessment_id", attempt["assessment_id"])
+            .in_("question_id", q_ids)
+            .execute()
+        )
+        aq_map = {aq["question_id"]: aq for aq in (aqs.data or [])}
+
+        for ans in answers:
+            qid = ans["question_id"]
+            q = q_map.get(qid, {})
+            aq = aq_map.get(qid, {})
+            ans["question_title"] = q.get("title")
+            ans["question_weightage"] = float(aq.get("weightage", 0))
+            ans["order_index"] = aq.get("order_index", 0)
+            if ans.get("question_type") == "mcq" and q.get("options"):
+                ans["question_options"] = q["options"]
+
+        answers.sort(key=lambda a: a.get("order_index", 0))
+
+    attempt["answers"] = answers
     return attempt
+
+
+@router.patch("/{attempt_id}/answers/{answer_id}/score", response_model=ManualScoreResponse)
+async def score_answer(
+    attempt_id: str,
+    answer_id: str,
+    body: ManualScoreRequest,
+    _admin: dict = Depends(get_current_admin),
+):
+    supabase = get_supabase()
+
+    # 1. Fetch the answer
+    ans_result = (
+        supabase.table("question_answers")
+        .select("*")
+        .eq("id", answer_id)
+        .eq("attempt_id", attempt_id)
+        .execute()
+    )
+    if not ans_result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Answer not found")
+
+    answer = ans_result.data[0]
+    if answer["question_type"] != "text":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Manual scoring only applies to text questions",
+        )
+
+    # 2. Fetch attempt to get assessment_id
+    attempt_result = (
+        supabase.table("assessment_attempts")
+        .select("assessment_id")
+        .eq("id", attempt_id)
+        .execute()
+    )
+    if not attempt_result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attempt not found")
+
+    assessment_id = attempt_result.data[0]["assessment_id"]
+
+    # 3. Fetch weightage from assessment_questions
+    aq_result = (
+        supabase.table("assessment_questions")
+        .select("weightage")
+        .eq("assessment_id", assessment_id)
+        .eq("question_id", answer["question_id"])
+        .execute()
+    )
+    if not aq_result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not in assessment")
+
+    weightage = float(aq_result.data[0]["weightage"])
+
+    # 4. Update the answer
+    weighted_score = body.manual_score * weightage / 100
+    supabase.table("question_answers").update({
+        "manual_score": body.manual_score,
+        "weighted_score": weighted_score,
+    }).eq("id", answer_id).execute()
+
+    # 5. Recompute attempt final_score
+    all_ans = (
+        supabase.table("question_answers")
+        .select("weighted_score")
+        .eq("attempt_id", attempt_id)
+        .execute()
+    )
+    new_final_score = round(
+        sum(a["weighted_score"] for a in (all_ans.data or []) if a.get("weighted_score") is not None),
+        2,
+    )
+
+    supabase.table("assessment_attempts").update({
+        "final_score": new_final_score,
+    }).eq("id", attempt_id).execute()
+
+    return ManualScoreResponse(
+        answer_id=answer_id,
+        manual_score=body.manual_score,
+        weighted_score=weighted_score,
+        new_final_score=new_final_score,
+    )

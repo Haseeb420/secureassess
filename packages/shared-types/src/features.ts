@@ -215,3 +215,52 @@ export type LandingPageData = {
   mocks:             Assessment[]
   previousAttempts:  AssessmentAttempt[]
 }
+
+// ─── MOCK ATTEMPT ─────────────────────────────────────────────────────────────
+
+export type MockAnswerRequest = {
+  attemptId:       string
+  questionId:      string
+  questionType:    QuestionType
+  answerText?:     string
+  selectedOption?: string
+  sourceCode?:     string
+  language?:       string
+  testResults?:    TestCaseResult[]
+  testOutcomes?:   Array<{
+    testCaseId:  string
+    passed:      boolean
+    timeMsec:    number
+    stdout?:     string
+    stderr?:     string
+  }>
+}
+
+export type MockTestOutcome = {
+  index:          number
+  passed:         boolean
+  timeMsec:       number
+  input:          string
+  expectedOutput: string
+  actualOutput:   string
+}
+
+export type MockQuestionResult = {
+  questionId:     string
+  questionTitle:  string
+  questionType:   QuestionType
+  yourAnswer: {
+    selectedOption?: string
+    answerText?:     string
+    sourceCode?:     string
+    language?:       string
+  }
+  isCorrect?:     boolean | null
+  correctOption?: { id: string; text: string } | null
+  testOutcomes?:  MockTestOutcome[]
+  explanation?:   string | null
+}
+
+export type CompleteMockResponse = {
+  questionResults: MockQuestionResult[]
+}

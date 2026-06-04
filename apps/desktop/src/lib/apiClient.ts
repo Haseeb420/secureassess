@@ -1,5 +1,6 @@
 import type {
   Question,
+  QuestionType,
   Token,
   Assessment,
   AssessmentQuestion,
@@ -83,6 +84,7 @@ function toQuestion(q: ApiQuestion): Question {
     title: q.title,
     description: q.description,
     difficulty: q.difficulty,
+    type: q.type as QuestionType,
     timeLimitMs: q.time_limit_ms,
     memoryLimitMb: q.memory_limit_mb,
     isManuallyScored: false,

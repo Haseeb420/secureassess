@@ -50,7 +50,7 @@ function formatDate(isoString: string, timezone: string): string {
 
 function questionTypeSummary(questions: Assessment['questions']): string {
   const list = questions ?? []
-  const types = [...new Set(list.map((q) => q.type))].map((t) =>
+  const types = [...new Set(list.map((q) => q.question.type))].map((t) =>
     t === 'coding' ? 'Coding' : t === 'mcq' ? 'MCQ' : 'Written',
   )
   return `${list.length} question${list.length !== 1 ? 's' : ''}  ·  ${types.join(', ')}`
@@ -320,7 +320,7 @@ export function LandingPage() {
                       style={DMSANS}
                     >
                       <Tag size={14} className="shrink-0 text-brand-navy/40" />
-                      {[...new Set((assessment.questions ?? []).map((q) => q.type))]
+                      {[...new Set((assessment.questions ?? []).map((q) => q.question.type))]
                         .map((t) =>
                           t === 'coding' ? 'Coding' : t === 'mcq' ? 'MCQ' : 'Written',
                         )

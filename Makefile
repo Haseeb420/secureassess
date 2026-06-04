@@ -11,7 +11,11 @@
         type-check type-check-admin type-check-desktop \
         api-start api-dev api-migrate \
         clean clean-rust clean-node \
-        setup-rust setup-python check-deps
+        setup-rust setup-python check-deps \
+        version version-next-patch version-next-minor version-next-major \
+        release-patch release-minor release-major \
+        release-status release-watch release-logs \
+        releases-list release-open release-delete-old
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 BOLD  := \033[1m
@@ -435,3 +439,61 @@ env-check: ## Verify all required env vars are set across all apps
 			echo "  ✗  $$var  ← not set"; \
 		fi; \
 	done
+
+# ─── RELEASE MANAGEMENT ───────────────────────────────────────────
+
+version: ## Show current version
+	@cat VERSION
+
+version-next-patch: ## Preview what next patch version would be
+	@V=$$(cat VERSION); IFS='.' read -r MA MI PA <<< "$$V"; echo "Next patch: $$MA.$$MI.$$((PA+1))"
+
+version-next-minor: ## Preview what next minor version would be
+	@V=$$(cat VERSION); IFS='.' read -r MA MI PA <<< "$$V"; echo "Next minor: $$MA.$$((MI+1)).0"
+
+version-next-major: ## Preview what next major version would be
+	@V=$$(cat VERSION); IFS='.' read -r MA MI PA <<< "$$V"; echo "Next major: $$((MA+1)).0.0"
+
+release-patch: ## Manually trigger a patch release via GitHub Actions
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@gh workflow run release.yml -f bump=patch
+	@echo "Patch release triggered. Check: gh run list --workflow=release.yml"
+
+release-minor: ## Manually trigger a minor release via GitHub Actions
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@gh workflow run release.yml -f bump=minor
+	@echo "Minor release triggered. Check: gh run list --workflow=release.yml"
+
+release-major: ## Manually trigger a major release via GitHub Actions
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@gh workflow run release.yml -f bump=major
+	@echo "Major release triggered. Check: gh run list --workflow=release.yml"
+
+release-status: ## Show status of latest release workflow run
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@gh run list --workflow=release.yml --limit 5
+
+release-watch: ## Watch the latest release workflow run live
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@RUN_ID=$$(gh run list --workflow=release.yml --limit 1 --json databaseId -q '.[0].databaseId'); \
+	gh run watch $$RUN_ID
+
+release-logs: ## Show logs from the latest release run
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@RUN_ID=$$(gh run list --workflow=release.yml --limit 1 --json databaseId -q '.[0].databaseId'); \
+	gh run view $$RUN_ID --log
+
+releases-list: ## List all GitHub releases
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@gh release list --limit 10
+
+release-open: ## Open the latest release page in browser
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@gh release view --web
+
+release-delete-old: ## Delete releases older than 10, keeping the 10 most recent
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@echo "Keeping 10 most recent releases, deleting older ones..."
+	@gh release list --limit 100 --json tagName -q '.[10:][].tagName' | \
+		xargs -I{} gh release delete {} --yes --cleanup-tag 2>/dev/null || true
+	@echo "Done."

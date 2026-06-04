@@ -298,6 +298,26 @@
 
 ---
 
+## feat/f5-question-types
+
+- [x] Add McqOption type and update Question/CreateQuestionBody in apps/admin/lib/api.ts
+- [x] Add question_weightages to CreateAssessmentBody in apps/admin/lib/api.ts
+- [x] Rebuild question create form: type selector cards (Coding/MCQ/Text), weightage field
+- [x] MCQ builder: dynamic options list, radio for correct answer, Trash2 remove, min 2/max 8
+- [x] Text question info box (amber, manual scoring notice)
+- [x] Coding fields (test cases, time/memory limits) shown only for coding type
+- [x] Strip is_correct from MCQ options in GET /questions/:id (candidate endpoint)
+- [x] Add weightage + options to QuestionCreate/QuestionPatch Pydantic models
+- [x] Persist weightage and options in POST/PUT /questions
+- [x] Serialize McqOption objects in PATCH /questions/:id
+- [x] Assessment wizard: inline weightage input per selected question
+- [x] Assessment wizard: type badge per question row
+- [x] Assessment wizard: live weightage total bar (green/amber/red)
+- [x] Assessment wizard: disable submit when sum ≠ 100
+- [x] Create apps/api/services/scoring.py (score_mcq_answer, score_coding_answer, compute_final_score)
+
+---
+
 ## feat/f3-assessment-scheduling
 
 - [x] Add createAssessmentScheduleSchema to packages/shared-types/src/schemas.ts
@@ -314,4 +334,4 @@
 
 ## Progress Summary
 <!-- Auto-updated -->
-- Total tasks: 204 complete / 206 total
+- Total tasks: 219 complete / 221 total

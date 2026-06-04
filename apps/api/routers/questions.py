@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -15,15 +15,23 @@ class TestCaseIn(BaseModel):
     is_hidden: bool
 
 
+class McqOptionIn(BaseModel):
+    id: str
+    text: str
+    is_correct: bool
+
+
 class QuestionCreate(BaseModel):
     title: str
     description: str
     type: str
     difficulty: str
-    time_limit_ms: int
-    memory_limit_mb: int
-    tags: list[str]
-    test_cases: list[TestCaseIn]
+    weightage: float = 0.0
+    time_limit_ms: Optional[int] = 2000
+    memory_limit_mb: Optional[int] = 256
+    tags: Optional[list[str]] = []
+    test_cases: Optional[list[TestCaseIn]] = []
+    options: Optional[list[McqOptionIn]] = None
 
 
 class QuestionPatch(BaseModel):
@@ -31,9 +39,11 @@ class QuestionPatch(BaseModel):
     description: Optional[str] = None
     type: Optional[str] = None
     difficulty: Optional[str] = None
+    weightage: Optional[float] = None
     time_limit_ms: Optional[int] = None
     memory_limit_mb: Optional[int] = None
     tags: Optional[list[str]] = None
+    options: Optional[list[McqOptionIn]] = None
 
 
 @router.get("")
@@ -65,6 +75,10 @@ async def create_question(
 ):
     supabase = get_supabase()
 
+    options_json: Any = None
+    if body.type == "mcq" and body.options:
+        options_json = [o.model_dump() for o in body.options]
+
     question_result = (
         supabase.table("questions")
         .insert(
@@ -73,9 +87,11 @@ async def create_question(
                 "description": body.description,
                 "type": body.type,
                 "difficulty": body.difficulty,
+                "weightage": body.weightage,
                 "time_limit_ms": body.time_limit_ms,
                 "memory_limit_mb": body.memory_limit_mb,
-                "tags": body.tags,
+                "tags": body.tags or [],
+                "options": options_json,
             }
         )
         .execute()
@@ -124,6 +140,14 @@ async def get_question(
         .execute()
     ).data or []
     question["test_cases"] = cases
+
+    # Strip is_correct from MCQ options before sending to candidates
+    if question.get("type") == "mcq" and question.get("options"):
+        question["options"] = [
+            {k: v for k, v in opt.items() if k != "is_correct"}
+            for opt in question["options"]
+        ]
+
     return question
 
 
@@ -135,6 +159,10 @@ async def update_question(
 ):
     supabase = get_supabase()
 
+    options_json: Any = None
+    if body.type == "mcq" and body.options:
+        options_json = [o.model_dump() for o in body.options]
+
     result = (
         supabase.table("questions")
         .update({
@@ -142,9 +170,11 @@ async def update_question(
             "description": body.description,
             "type": body.type,
             "difficulty": body.difficulty,
+            "weightage": body.weightage,
             "time_limit_ms": body.time_limit_ms,
             "memory_limit_mb": body.memory_limit_mb,
-            "tags": body.tags,
+            "tags": body.tags or [],
+            "options": options_json,
         })
         .eq("id", question_id)
         .execute()
@@ -178,6 +208,10 @@ async def patch_question(
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
+
+    # Serialize McqOption objects to plain dicts for Supabase
+    if "options" in updates and updates["options"] is not None:
+        updates["options"] = [o if isinstance(o, dict) else o.model_dump() for o in updates["options"]]
 
     result = (
         supabase.table("questions")

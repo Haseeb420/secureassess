@@ -26,6 +26,12 @@ const DIFFICULTY_BADGE: Record<string, string> = {
   hard:   'bg-red-50 text-red-600',
 }
 
+const TYPE_BADGE: Record<string, string> = {
+  coding: 'bg-blue-50 text-blue-700',
+  mcq:    'bg-violet-50 text-violet-700',
+  text:   'bg-amber-50 text-amber-700',
+}
+
 const DURATION_PRESETS = [30, 60, 90, 120]
 
 const TIMEZONES = [
@@ -99,6 +105,7 @@ export default function NewAssessmentPage() {
   const [languages, setLanguages] = useState<string[]>(['python'])
   const [securityLevel, setSecurityLevel] = useState<'standard' | 'strict'>('standard')
   const [questionIds, setQuestionIds] = useState<string[]>([])
+  const [questionWeightages, setQuestionWeightages] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
 
   const [assessmentType, setAssessmentType] = useState<'open' | 'deadline' | 'window'>('open')
@@ -127,10 +134,18 @@ export default function NewAssessmentPage() {
       prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang],
     )
 
-  const toggleQuestion = (id: string) =>
-    setQuestionIds((prev) =>
-      prev.includes(id) ? prev.filter((q) => q !== id) : [...prev, id],
-    )
+  const toggleQuestion = (id: string, defaultWeightage?: number) => {
+    setQuestionIds((prev) => {
+      if (prev.includes(id)) {
+        setQuestionWeightages((w) => { const next = { ...w }; delete next[id]; return next })
+        return prev.filter((q) => q !== id)
+      }
+      setQuestionWeightages((w) => ({ ...w, [id]: defaultWeightage ?? 0 }))
+      return [...prev, id]
+    })
+  }
+
+  const weightageTotal = questionIds.reduce((sum, id) => sum + (questionWeightages[id] ?? 0), 0)
 
   const validateSchedule = (): string | null => {
     if (assessmentType === 'deadline') {
@@ -156,6 +171,7 @@ export default function NewAssessmentPage() {
       allowed_languages: languages,
       security_level: securityLevel,
       question_ids: questionIds,
+      question_weightages: questionIds.length > 0 ? questionWeightages : undefined,
       assessment_type: assessmentType,
       deadline_at:  assessmentType === 'deadline' ? deadlineAt  : undefined,
       window_start: assessmentType === 'window'   ? windowStart : undefined,
@@ -460,7 +476,7 @@ export default function NewAssessmentPage() {
                     className="w-full rounded-lg border border-brand-border bg-white py-2.5 pl-9 pr-3 text-sm text-brand-navy placeholder-brand-navy/30 outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
                   />
                 </div>
-                <div className="max-h-56 overflow-y-auto rounded-lg border border-brand-border divide-y divide-brand-border bg-white">
+                <div className="max-h-72 overflow-y-auto rounded-lg border border-brand-border divide-y divide-brand-border bg-white">
                   {questionsLoading ? (
                     <div className="animate-pulse">
                       {Array.from({ length: 4 }).map((_, i) => (
@@ -479,10 +495,15 @@ export default function NewAssessmentPage() {
                     filtered.map((q) => {
                       const selected = questionIds.includes(q.id)
                       return (
-                        <label
+                        <div
                           key={q.id}
+                          role="checkbox"
+                          aria-checked={selected}
+                          tabIndex={0}
+                          onClick={() => toggleQuestion(q.id, q.weightage)}
+                          onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleQuestion(q.id, q.weightage) } }}
                           className={[
-                            'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
+                            'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors select-none',
                             selected ? 'bg-brand-orange-pale' : 'hover:bg-brand-surface',
                           ].join(' ')}
                         >
@@ -492,22 +513,52 @@ export default function NewAssessmentPage() {
                           ].join(' ')} aria-hidden="true">
                             {selected && <Check size={10} className="text-white" />}
                           </div>
-                          <span className="flex-1 text-sm text-brand-navy">{q.title}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${DIFFICULTY_BADGE[q.difficulty] ?? 'bg-brand-surface text-brand-navy/50'}`}>
+                          <span className="flex-1 text-sm text-brand-navy truncate">{q.title}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 ${TYPE_BADGE[q.type] ?? 'bg-brand-surface text-brand-navy/50'}`}>
+                            {q.type}
+                          </span>
+                          {selected && (
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={questionWeightages[q.id] ?? 0}
+                              onChange={(e) => setQuestionWeightages((prev) => ({ ...prev, [q.id]: Number(e.target.value) }))}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              aria-label={`Weightage for ${q.title}`}
+                              className="w-16 rounded border border-brand-border bg-white px-2 py-1 text-xs text-center text-brand-navy outline-none focus:border-brand-orange shrink-0"
+                            />
+                          )}
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0 ${DIFFICULTY_BADGE[q.difficulty] ?? 'bg-brand-surface text-brand-navy/50'}`}>
                             {q.difficulty}
                           </span>
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => toggleQuestion(q.id)}
-                            aria-label={`Select question: ${q.title}`}
-                            className="sr-only"
-                          />
-                        </label>
+                        </div>
                       )
                     })
                   )}
                 </div>
+
+                {/* Live weightage total bar */}
+                {questionIds.length > 0 && (
+                  <div className={[
+                    'mt-2 rounded-lg border px-4 py-2.5 flex items-center justify-between text-sm font-medium transition-colors',
+                    weightageTotal === 100
+                      ? 'bg-green-50 border-green-200 text-green-700'
+                      : weightageTotal < 100
+                        ? 'bg-amber-50 border-amber-200 text-amber-700'
+                        : 'bg-red-50 border-red-200 text-red-600',
+                  ].join(' ')}>
+                    <span>Total: {weightageTotal}% / 100%</span>
+                    <span className="text-xs font-normal">
+                      {weightageTotal === 100
+                        ? '✓ Balanced'
+                        : weightageTotal < 100
+                          ? `${100 - weightageTotal}% remaining to assign`
+                          : `${weightageTotal - 100}% over limit`}
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -528,7 +579,7 @@ export default function NewAssessmentPage() {
             <motion.div variants={sectionVariants} className="flex items-center gap-3 pt-1">
               <button
                 type="submit"
-                disabled={create.isPending || languages.length === 0}
+                disabled={create.isPending || languages.length === 0 || (questionIds.length > 0 && weightageTotal !== 100)}
                 className="inline-flex items-center gap-2 rounded-lg bg-brand-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors shadow-sm disabled:opacity-50 disabled:pointer-events-none"
               >
                 {create.isPending ? (

@@ -330,3 +330,70 @@ export const tokensApi = {
   revoke: (id: string) =>
     apiFetch<void>(`/tokens/${id}`, { method: 'DELETE' }),
 }
+
+// ── Attempts ──────────────────────────────────────────────────────────────────
+
+export interface TestResult {
+  input?: string
+  expected_output?: string
+  actual_output?: string
+  passed: boolean
+  time_ms?: number
+  is_hidden?: boolean
+}
+
+export interface AnswerDetail {
+  id: string
+  question_id: string
+  question_type: 'coding' | 'mcq' | 'text'
+  answer_text?: string
+  selected_option?: string
+  source_code?: string
+  language?: string
+  test_results?: TestResult[]
+  auto_score?: number
+  manual_score?: number
+  weighted_score?: number
+  is_correct?: boolean
+  submitted_at: string
+  question_title?: string
+  question_weightage?: number
+  order_index?: number
+  question_options?: McqOption[]
+}
+
+export interface AttemptListItem {
+  id: string
+  assessment_id: string
+  assessment_title?: string
+  candidate_email: string
+  candidate_name: string
+  status: 'in_progress' | 'completed' | 'abandoned' | 'timed_out'
+  started_at: string
+  completed_at?: string
+  final_score?: number
+  total_time_secs?: number
+  attempt_number: number
+  token_id?: string
+  usage_limit?: number
+  has_pending_review: boolean
+}
+
+export interface AttemptDetail extends AttemptListItem {
+  answers: AnswerDetail[]
+}
+
+export const attemptsApi = {
+  list: (params?: { assessment_id?: string; status?: string; date_from?: string; date_to?: string }) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params ?? {}).filter(([, v]) => v)),
+    ).toString()
+    return apiFetch<AttemptListItem[]>(`/attempts${qs ? `?${qs}` : ''}`)
+  },
+  get: (id: string) => apiFetch<AttemptDetail>(`/attempts/${id}`),
+  scoreAnswer: (attemptId: string, answerId: string, manualScore: number) =>
+    apiFetch<{ answer_id: string; manual_score: number; weighted_score: number; new_final_score: number }>(
+      `/attempts/${attemptId}/answers/${answerId}/score`,
+      { method: 'PATCH', body: JSON.stringify({ manual_score: manualScore }) },
+    ),
+}

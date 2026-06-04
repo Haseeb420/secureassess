@@ -14,35 +14,36 @@ const itemVariants: Variants = {
 }
 
 function AnimatedCheck() {
-  const [pathDone, setPathDone] = useState(false)
+  const [draw, setDraw] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setDraw(true), 200)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
-    <motion.svg
-      width="88" height="88"
-      viewBox="0 0 88 88"
-      fill="none"
-      aria-hidden="true"
-      animate={pathDone ? { scale: [1, 1.04, 1] } : { scale: 1 }}
-      transition={pathDone ? { duration: 0.2, ease: 'easeInOut' } : {}}
-    >
-      <circle
-        cx="44" cy="44" r="42"
-        stroke="rgba(42,42,71,0.08)"
-        strokeWidth="2"
-      />
-      <motion.path
-        d="M 26 44 L 38 56 L 62 32"
-        stroke="#DE5E1F"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-        onAnimationComplete={() => setPathDone(true)}
-      />
-    </motion.svg>
+    <>
+      <style>{`
+        .check-path {
+          stroke-dasharray: 80;
+          stroke-dashoffset: 80;
+          animation: draw-check 600ms ease forwards;
+        }
+        @keyframes draw-check { to { stroke-dashoffset: 0; } }
+      `}</style>
+      <svg width="88" height="88" viewBox="0 0 88 88" fill="none" aria-hidden="true">
+        <circle cx="44" cy="44" r="42" stroke="rgba(42,42,71,0.10)" strokeWidth="2" />
+        <path
+          d="M 26 44 L 38 56 L 62 32"
+          stroke="#DE5E1F"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+          className={draw ? 'check-path' : ''}
+        />
+      </svg>
+    </>
   )
 }
 
@@ -50,8 +51,7 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   if (m < 1) return `${s}s`
-  if (s === 0) return `${m}m`
-  return `${m}m`
+  return `${m}m ${String(s).padStart(2, '0')}s`
 }
 
 export function CompletionPage() {
@@ -65,78 +65,75 @@ export function CompletionPage() {
     return () => window.removeEventListener('popstate', handlePop)
   }, [])
 
+  const scoreColor =
+    finalScore === null ? 'text-brand-navy'
+    : finalScore >= 70  ? 'text-green-600'
+    : finalScore >= 50  ? 'text-brand-orange'
+    : 'text-red-500'
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#F7F8FA] to-[#EEEEF5] px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-brand-surface px-4">
       <motion.div
         className="flex w-full max-w-sm flex-col items-center text-center"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Logo + name */}
+        {/* 1. Logo + brand name */}
         <motion.div variants={itemVariants} className="mb-8 flex items-center gap-2">
-          <ShieldCheck size={28} className="text-brand-navy/20" aria-hidden="true" />
-          <span className="font-syne text-sm text-brand-navy/30">SecureAssess</span>
+          <ShieldCheck size={20} className="text-brand-navy/30" aria-hidden="true" />
+          <span className="font-dm-sans text-sm text-brand-navy/40">SecureAssess</span>
         </motion.div>
 
-        {/* Animated checkmark */}
+        {/* 2. Animated checkmark */}
         <motion.div variants={itemVariants}>
           <AnimatedCheck />
         </motion.div>
 
-        {/* Title */}
+        {/* 3. Title */}
         <motion.h1
           variants={itemVariants}
           className="mt-6 font-syne text-2xl font-bold text-brand-navy"
         >
-          Assessment complete
+          Assessment Complete
         </motion.h1>
 
-        {/* Subtitle */}
-        <motion.p
-          variants={itemVariants}
-          className="mt-3 max-w-[260px] font-dm-sans text-sm leading-relaxed text-brand-navy/60"
-        >
-          Your answers have been recorded and will be reviewed by your team.
-        </motion.p>
-
-        {/* Divider */}
+        {/* 4. Score card */}
         <motion.div
           variants={itemVariants}
-          className="mx-auto mt-6 h-px w-12 bg-brand-border"
-          aria-hidden="true"
-        />
-
-        {/* Stats */}
-        <motion.div variants={itemVariants} className="mt-6 flex gap-3 justify-center flex-wrap">
-          <div className="flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-1.5">
-            <span className="font-dm-mono text-xs text-brand-navy/50">Questions</span>
-            <span className="font-dm-mono text-xs font-medium text-brand-navy">
-              {questions.length}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-1.5">
-            <span className="font-dm-mono text-xs text-brand-navy/50">Duration</span>
-            <span className="font-dm-mono text-xs font-medium text-brand-navy">
-              {formatDuration(elapsed)}
-            </span>
-          </div>
-          {finalScore !== null && (
-            <div className="flex items-center gap-2 rounded-full border border-brand-orange/30 bg-brand-orange-pale/20 px-4 py-1.5">
-              <span className="font-dm-mono text-xs text-brand-navy/50">Score</span>
-              <span className="font-dm-mono text-xs font-medium text-brand-orange">
-                {finalScore.toFixed(1)}%
-              </span>
-            </div>
-          )}
+          className="mx-auto mt-6 w-full max-w-xs rounded-2xl border border-brand-border bg-white p-6"
+        >
+          <p className="font-dm-sans text-xs uppercase tracking-[0.12em] text-brand-navy/50">
+            YOUR SCORE
+          </p>
+          <p className={`mt-2 font-syne text-5xl font-bold ${scoreColor}`}>
+            {finalScore !== null ? `${finalScore.toFixed(1)}%` : '—'}
+          </p>
+          <p className="mt-2 font-dm-sans text-xs text-brand-navy/40 text-center">
+            Your detailed results will be reviewed by the assessment team.
+          </p>
         </motion.div>
 
-        {/* Close note */}
+        {/* 5. Stats pills */}
+        <motion.div variants={itemVariants} className="mt-4 flex gap-3 justify-center">
+          <div className="rounded-full border border-brand-border bg-white px-4 py-1.5">
+            <span className="font-dm-mono text-xs text-brand-navy/60">
+              Questions&nbsp;&nbsp;{questions.length}
+            </span>
+          </div>
+          <div className="rounded-full border border-brand-border bg-white px-4 py-1.5">
+            <span className="font-dm-mono text-xs text-brand-navy/60">
+              Duration&nbsp;&nbsp;{formatDuration(elapsed)}
+            </span>
+          </div>
+        </motion.div>
+
+        {/* 6. Close note */}
         <motion.p
           variants={itemVariants}
-          className="mt-8 font-dm-sans text-xs text-brand-navy/25"
+          className="mt-8 font-dm-sans text-xs text-brand-navy/30 text-center"
         >
-          You may close this window
+          You may close this window.
         </motion.p>
       </motion.div>
     </div>

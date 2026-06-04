@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class QuestionForCandidate(BaseModel):
@@ -45,3 +45,14 @@ class SubmitAnswerResponse(BaseModel):
 class CompleteAttemptResponse(BaseModel):
     final_score: float
     total_time_secs: int
+
+
+class ManualScoreRequest(BaseModel):
+    manual_score: float = Field(ge=0, le=100)
+
+
+class ManualScoreResponse(BaseModel):
+    answer_id: str
+    manual_score: float
+    weighted_score: float
+    new_final_score: float

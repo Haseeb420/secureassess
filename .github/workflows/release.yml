@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/release-workflow
     paths-ignore:
       - 'docs/**'
       - '*.md'
@@ -44,35 +43,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # full history needed for commit analysis
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine version bump
         id: bump
         run: |
-          # Read current version
           CURRENT=$(cat VERSION)
           echo "Current version: $CURRENT"
-
-          # Parse parts
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
-          # Manual override from workflow_dispatch
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BUMP_TYPE="${{ github.event.inputs.bump }}"
           else
-            # Analyze commits since last tag
             LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
             if [ -z "$LAST_TAG" ]; then
               COMMITS=$(git log --format="%s" HEAD)
             else
               COMMITS=$(git log --format="%s" "$LAST_TAG"..HEAD)
             fi
-
             echo "Commits since last tag:"
             echo "$COMMITS"
 
-            # Check for breaking changes first
             if echo "$COMMITS" | grep -qE "^(feat|fix|refactor|perf)!:|BREAKING CHANGE:"; then
               BUMP_TYPE="major"
             elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
@@ -83,8 +75,6 @@ jobs:
           fi
 
           echo "Bump type: $BUMP_TYPE"
-
-          # Calculate new version
           case "$BUMP_TYPE" in
             major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
             minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
@@ -93,25 +83,20 @@ jobs:
 
           NEW_VERSION="$MAJOR.$MINOR.$PATCH"
           NEW_TAG="v$NEW_VERSION"
-
           echo "New version: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "new_tag=$NEW_TAG"         >> $GITHUB_OUTPUT
-          echo "skip=false"              >> $GITHUB_OUTPUT
+          echo "skip=false"               >> $GITHUB_OUTPUT
 
-      - name: Update VERSION file and Tauri config
+      - name: Update VERSION and tauri.conf.json
         if: steps.bump.outputs.skip == 'false'
         run: |
           NEW_VERSION="${{ steps.bump.outputs.new_version }}"
-
-          # Update VERSION file
           echo "$NEW_VERSION" > VERSION
 
-          # Update Tauri config version
-          # tauri.conf.json has "version": "x.y.z"
           if [ -f apps/desktop/src-tauri/tauri.conf.json ]; then
             python3 -c "
-          import json, sys
+          import json
           with open('apps/desktop/src-tauri/tauri.conf.json', 'r') as f:
               data = json.load(f)
           data['version'] = '$NEW_VERSION'
@@ -121,7 +106,6 @@ jobs:
           "
           fi
 
-          # Update Cargo.toml version
           if [ -f apps/desktop/src-tauri/Cargo.toml ]; then
             sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" \
               apps/desktop/src-tauri/Cargo.toml
@@ -141,7 +125,7 @@ jobs:
         run: |
           NEW_TAG="${{ steps.bump.outputs.new_tag }}"
           if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
-            echo "Tag $NEW_TAG already exists — skipping tag creation"
+            echo "Tag $NEW_TAG already exists — skipping"
           else
             git tag "$NEW_TAG"
             git push origin "$NEW_TAG"
@@ -159,45 +143,41 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS Universal (ARM64 + Intel in one binary)
-          - platform: macos-latest
-            target:   universal-apple-darwin
-            label:    macOS Universal
-            artifact: mac-universal
-            bundles:  dmg,app
+          - platform:     macos-latest
+            target:       universal-apple-darwin
+            label:        macOS Universal
+            artifact:     mac-universal
+            bundles:      dmg,app
             rust_targets: aarch64-apple-darwin x86_64-apple-darwin
 
-          # Linux x86_64 (most servers, desktops)
-          - platform: ubuntu-22.04
-            target:   x86_64-unknown-linux-gnu
-            label:    Linux x86_64
-            artifact: linux-x86_64
-            bundles:  appimage,deb
+          - platform:     ubuntu-22.04
+            target:       x86_64-unknown-linux-gnu
+            label:        Linux x86_64
+            artifact:     linux-x86_64
+            bundles:      appimage,deb
             rust_targets: x86_64-unknown-linux-gnu
 
-          # Linux ARM64 — native runner, no cross-compilation needed
-          - platform: ubuntu-24.04-arm
-            target:   aarch64-unknown-linux-gnu
-            label:    Linux ARM64
-            artifact: linux-arm64
-            bundles:  appimage,deb
+          - platform:     ubuntu-24.04-arm
+            target:       aarch64-unknown-linux-gnu
+            label:        Linux ARM64
+            artifact:     linux-arm64
+            bundles:      appimage,deb
             rust_targets: aarch64-unknown-linux-gnu
 
-          # Windows x64
-          - platform: windows-latest
-            target:   x86_64-pc-windows-msvc
-            label:    Windows x64
-            artifact: windows-x64
-            bundles:  msi,nsis
+          - platform:     windows-latest
+            target:       x86_64-pc-windows-msvc
+            label:        Windows x64
+            artifact:     windows-x64
+            bundles:      msi,nsis
             rust_targets: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - name: Checkout (after version commit)
+      - name: Checkout (post-version-bump)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}   # checkout the branch that triggered the workflow
+          ref: main    # always pull the freshest main, which includes the version commit
 
       - name: Setup Node 20
         uses: actions/setup-node@v4
@@ -228,71 +208,67 @@ jobs:
           workspaces: apps/desktop/src-tauri -> target
           key: ${{ matrix.target }}
 
-      # ── Linux x86_64 system deps ──────────────────────────────────
+      # ── Linux x86_64 system deps ────────────────────────────────
       - name: Install Linux x86_64 deps
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
-            libwebkit2gtk-4.1-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libgtk-3-dev \
-            libglib2.0-dev \
-            libsoup-3.0-dev
+            libwebkit2gtk-4.1-dev libssl-dev libayatana-appindicator3-dev \
+            librsvg2-dev patchelf libgtk-3-dev libglib2.0-dev libsoup-3.0-dev
 
-      # ── Linux ARM64 system deps (native runner — no cross-compile) ──
+      # ── Linux ARM64 system deps (native runner) ─────────────────
       - name: Install Linux ARM64 deps
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
-            libwebkit2gtk-4.1-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libgtk-3-dev \
-            libglib2.0-dev \
-            libsoup-3.0-dev
+            libwebkit2gtk-4.1-dev libssl-dev libayatana-appindicator3-dev \
+            librsvg2-dev patchelf libgtk-3-dev libglib2.0-dev libsoup-3.0-dev
 
-      # ── macOS: register both targets for lipo universal build ─────
+      # ── macOS: both targets for universal binary ─────────────────
       - name: Add macOS universal targets
         if: matrix.platform == 'macos-latest'
         run: |
           rustup target add aarch64-apple-darwin
           rustup target add x86_64-apple-darwin
 
-      # ── Build ─────────────────────────────────────────────────────
+      # ── Build ────────────────────────────────────────────────────
       - name: Build Tauri app
         env:
-          VITE_API_BASE_URL:      ${{ secrets.VITE_API_BASE_URL }}
-          VITE_SUPABASE_URL:      ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_BETTER_AUTH_URL:   ${{ secrets.VITE_BETTER_AUTH_URL }}
-          # macOS signing — only active when APPLE_CERTIFICATE secret is set
-          APPLE_CERTIFICATE:      ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID:               ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD:         ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID:          ${{ secrets.APPLE_TEAM_ID }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Frontend env vars embedded into the JS bundle at build time
+          VITE_API_BASE_URL:        ${{ secrets.VITE_API_BASE_URL }}
+          VITE_SUPABASE_URL:        ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY:   ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_JUDGE0_URL:          ${{ secrets.VITE_JUDGE0_URL }}
+          VITE_EXECUTION_BACKEND:   ${{ secrets.VITE_EXECUTION_BACKEND }}
+          # macOS code signing (skipped when secrets are absent)
+          APPLE_CERTIFICATE:              ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD:     ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY:         ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID:                       ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD:                 ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID:                  ${{ secrets.APPLE_TEAM_ID }}
+          # Tauri updater signing
+          TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: bash
         run: |
           cd apps/desktop
-          # Skip macOS code signing when no certificate is provided
-          if [ "${{ matrix.platform }}" = "macos-latest" ] && [ -z "${{ secrets.APPLE_CERTIFICATE }}" ]; then
+
+          # Skip macOS signing when no certificate is configured
+          if [ "${{ matrix.platform }}" = "macos-latest" ] && [ -z "$APPLE_CERTIFICATE" ]; then
             unset APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY
             unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
           fi
-          pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+          pnpm tauri build \
+            --target   ${{ matrix.target }} \
+            --bundles  ${{ matrix.bundles }} \
+            --config   src-tauri/tauri.conf.prod.json
 
       # ── Collect artifacts ─────────────────────────────────────────
-      - name: Collect build artifacts
+      - name: Collect artifacts
         id: collect
         shell: bash
         run: |
@@ -301,17 +277,12 @@ jobs:
           OUT="dist/release/${{ matrix.artifact }}"
           mkdir -p "$OUT"
 
-          # Copy all installable files
           find "$BUNDLE_DIR" \( \
-            -name "*.dmg" \
-            -o -name "*.AppImage" \
-            -o -name "*.deb" \
-            -o -name "*.msi" \
-            -o -name "*.exe" \
-            -o -name "*.rpm" \
+            -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" \
+            -o -name "*.msi" -o -name "*.exe" \
           \) -exec cp {} "$OUT/" \;
 
-          echo "Files in $OUT:"
+          echo "Artifacts collected:"
           ls -lh "$OUT/"
 
       - name: Upload artifact
@@ -341,23 +312,20 @@ jobs:
         with:
           path: dist/release/
 
-      - name: List all downloaded files
-        run: |
-          echo "Release artifacts:"
-          find dist/release -type f | sort | awk '{print "  " $0}'
+      - name: List release artifacts
+        run: find dist/release -type f | sort | awk '{print "  " $0}'
 
       - name: Generate release notes
         id: notes
         run: |
           VERSION="${{ needs.version.outputs.new_version }}"
           TAG="${{ needs.version.outputs.new_tag }}"
-
-          # Get commits since last tag (excluding the version bump commit itself)
           PREV_TAG=$(git tag --sort=-v:refname | grep -v "^$TAG$" | head -1)
 
           if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log "$PREV_TAG"..HEAD --format="- %s (%h)" \
-              --grep -v "chore(release):" 2>/dev/null || true)
+            COMMITS=$(git log "$PREV_TAG"..HEAD \
+              --format="- %s (%h)" 2>/dev/null \
+              | grep -v "chore(release):" || true)
           else
             COMMITS=$(git log --format="- %s (%h)" -20 \
               | grep -v "chore(release):" || true)
@@ -368,37 +336,36 @@ jobs:
 
           ### Downloads
 
-          | Platform | File |
+          | Platform | Installer |
           |---|---|
-          | macOS (Universal) | \`SecureAssess_${VERSION}_universal.dmg\` |
+          | macOS (Apple Silicon + Intel) | \`SecureAssess_${VERSION}_universal.dmg\` |
           | Linux x86_64 | \`SecureAssess_${VERSION}_amd64.AppImage\` |
           | Linux ARM64 | \`SecureAssess_${VERSION}_aarch64.AppImage\` |
           | Windows x64 | \`SecureAssess_${VERSION}_x64_en-US.msi\` |
 
           ### Installation
 
-          **macOS:** Open the .dmg, drag SecureAssess to Applications.
+          **macOS:** Open the .dmg and drag SecureAssess to Applications.
           **Linux:** \`chmod +x SecureAssess*.AppImage && ./SecureAssess*.AppImage\`
-          **Windows:** Run the .msi installer.
+          **Windows:** Run the .msi installer (or .exe from the nsis bundle).
 
           ### Changes
+
           $COMMITS
 
           ---
-          Built from commit \`$(git rev-parse --short HEAD)\` · $(date -u +"%Y-%m-%d %H:%M UTC")
+          Built from \`$(git rev-parse --short HEAD)\` · $(date -u +"%Y-%m-%d %H:%M UTC")
           EOF
-
-          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name:   ${{ needs.version.outputs.new_tag }}
-          name:       "SecureAssess ${{ needs.version.outputs.new_tag }}"
-          body_path:  release_notes.md
-          draft:      false
-          prerelease: false
-          make_latest: true         # always marks as latest release
+          tag_name:    ${{ needs.version.outputs.new_tag }}
+          name:        "SecureAssess ${{ needs.version.outputs.new_tag }}"
+          body_path:   release_notes.md
+          draft:       false
+          prerelease:  false
+          make_latest: true
           files: |
             dist/release/**/*.dmg
             dist/release/**/*.AppImage
@@ -408,11 +375,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update latest tag
+      - name: Move latest tag
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Force-move the 'latest' tag to current commit
           git tag -f latest
           git push origin latest --force
-          echo "latest tag updated to ${{ needs.version.outputs.new_tag }}"

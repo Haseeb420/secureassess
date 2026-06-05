@@ -24,6 +24,9 @@ use tauri::{Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load .env into the process environment so Rust code can read VITE_* vars.
+    // This is a no-op if the file doesn't exist (production bundles won't have one).
+    let _ = dotenvy::dotenv();
     let assessment_flag = Arc::new(AtomicBool::new(false));
     let flag_for_watchdog = Arc::clone(&assessment_flag);
 

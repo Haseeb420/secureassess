@@ -46,7 +46,12 @@ async fn run_in_dir(req: &ExecutionRequest, work_dir: &Path) -> ExecutionResult 
         "python" => LangConfig {
             filename: "solution.py",
             compile: None,
-            run: vec!["python3".into(), format!("{dir}/solution.py")],
+            // On Windows: use the Python Launcher (py.exe) installed by the official
+            // Python installer. On Unix: python3 is the standard command.
+            run: vec![
+                if cfg!(target_os = "windows") { "py" } else { "python3" }.into(),
+                format!("{dir}/solution.py"),
+            ],
         },
         "javascript" => LangConfig {
             filename: "solution.js",

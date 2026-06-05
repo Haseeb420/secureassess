@@ -83,26 +83,51 @@ async def ingest(item: SyncItem):
         ).execute()
 
     elif item.payload_type == "snapshot":
-        supabase.table("code_snapshots").upsert(
-            {
-                "id": payload_data.get("id"),
-                "session_id": payload_data.get("session_id"),
-                "question_id": payload_data.get("question_id"),
-                "language": payload_data.get("language"),
-                "code": payload_data.get("code"),
-                "saved_at": payload_data.get("saved_at"),
-            }
-        ).execute()
+        session_id = payload_data.get("session_id")
+        if session_id:
+            _ensure_session(supabase, session_id)
+        try:
+            supabase.table("code_snapshots").upsert(
+                {
+                    "id": payload_data.get("id"),
+                    "session_id": session_id,
+                    "question_id": payload_data.get("question_id"),
+                    "language": payload_data.get("language"),
+                    "code": payload_data.get("code"),
+                    "saved_at": payload_data.get("saved_at"),
+                }
+            ).execute()
+        except APIError as exc:
+            err = exc.args[0] if exc.args else {}
+            if isinstance(err, dict) and err.get("code") == "23503":
+                # Session not on server yet; sync queue will retry
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "session_not_found", "session_id": session_id},
+                )
+            raise
 
     elif item.payload_type == "security_event":
-        supabase.table("security_events").upsert(
-            {
-                "id": payload_data.get("id"),
-                "session_id": payload_data.get("session_id"),
-                "type": payload_data.get("event_type"),
-                "metadata": payload_data.get("metadata", {}),
-                "created_at": payload_data.get("occurred_at"),
-            }
-        ).execute()
+        session_id = payload_data.get("session_id")
+        if session_id:
+            _ensure_session(supabase, session_id)
+        try:
+            supabase.table("security_events").upsert(
+                {
+                    "id": payload_data.get("id"),
+                    "session_id": session_id,
+                    "type": payload_data.get("event_type"),
+                    "metadata": payload_data.get("metadata", {}),
+                    "created_at": payload_data.get("occurred_at"),
+                }
+            ).execute()
+        except APIError as exc:
+            err = exc.args[0] if exc.args else {}
+            if isinstance(err, dict) and err.get("code") == "23503":
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "session_not_found", "session_id": session_id},
+                )
+            raise
 
     return {"status": "ok"}

@@ -8,6 +8,14 @@ const ALLOWED_ORIGINS = new Set([
 const NGROK_RE = /^https:\/\/[a-z0-9-]+\.ngrok(-free)?\.(app|dev|io)$/
 
 function corsHeaders(origin: string): Record<string, string> {
+  if (!origin) {
+    // Tauri production builds may omit Origin; approve unconditionally without credentials.
+    return {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    }
+  }
   const ok = ALLOWED_ORIGINS.has(origin) || NGROK_RE.test(origin)
   if (!ok) return {}
   return {

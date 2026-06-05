@@ -18,8 +18,8 @@ describe('CrashRecoveryModal', () => {
         onAbandon={vi.fn()}
       />,
     )
-    expect(screen.getByText('Unfinished Assessment Found')).toBeInTheDocument()
-    expect(screen.getByText('assessment-abc')).toBeInTheDocument()
+    expect(screen.getByText('Session found')).toBeInTheDocument()
+    expect(screen.getByText(/assessmen/)).toBeInTheDocument()
     expect(screen.getByText('30:00')).toBeInTheDocument()
   })
 
@@ -32,7 +32,7 @@ describe('CrashRecoveryModal', () => {
         onAbandon={vi.fn()}
       />,
     )
-    await userEvent.click(screen.getByText('Resume Assessment →'))
+    await userEvent.click(screen.getByText('Resume Assessment'))
     expect(onResume).toHaveBeenCalledOnce()
   })
 

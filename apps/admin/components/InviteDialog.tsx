@@ -58,7 +58,7 @@ export function InviteDialog({ assessmentId, assessmentTitle, onClose }: Props) 
           <div className="space-y-4">
             <p className="text-sm text-brand-navy/70">
               Invite created. Share this token with the candidate — they paste it into the
-              desktop app under <strong className="text-brand-navy">"Login with Invite Token"</strong>.
+              desktop app under <strong className="text-brand-navy">&ldquo;Login with Invite Token&rdquo;</strong>.
             </p>
             <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
               <p className="mb-1.5 text-xs font-medium text-brand-navy/50">Invite Token</p>

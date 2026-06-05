@@ -16,6 +16,7 @@ import { cn } from '@secureassess/ui'
 import { useAuth } from '../features/auth/useAuth'
 import { useAssessmentStore } from '../store/assessmentStore'
 import { validateToken } from '../lib/apiClient'
+import { loginWithAssessmentToken } from '../features/auth/authService'
 import { getAssessmentStatus } from '../lib/schedule'
 
 type Tab = 'email' | 'token'
@@ -218,7 +219,7 @@ const TOKEN_ERROR_MESSAGES: Record<string, string> = {
 export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const { setToken, setLandingData, setCandidateData } = useAssessmentStore()
+  const { setToken, setLandingData, setCandidateData, setAuthToken } = useAssessmentStore()
   const [activeTab, setActiveTab] = useState<Tab>('email')
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -260,6 +261,10 @@ export function LoginPage() {
         return
       }
 
+      // Obtain a Supabase JWT so authenticated endpoints (e.g. POST /sessions) work
+      const authResult = await loginWithAssessmentToken(values.token)
+      setAuthToken(authResult.accessToken)
+
       const scheduleInfo = getAssessmentStatus(result.assessment)
       const landingData: LandingPageData = {
         token: result.token,
@@ -273,7 +278,7 @@ export function LoginPage() {
       setToken(result.token)
       setLandingData(landingData)
       setCandidateData({
-        id: result.token.id,
+        id: authResult.candidate.id,
         email: result.token.candidateEmail,
         name: result.token.candidateName,
         organizationId: result.token.organizationId ?? '',

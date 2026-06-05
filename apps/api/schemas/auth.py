@@ -16,6 +16,10 @@ class InviteLoginRequest(BaseModel):
     token: str
 
 
+class TokenLoginRequest(BaseModel):
+    token_value: str
+
+
 class LoginResponse(BaseModel):
     access_token: str
     refresh_token: str

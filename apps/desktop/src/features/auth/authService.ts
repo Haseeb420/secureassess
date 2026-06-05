@@ -38,6 +38,15 @@ export async function loginWithInviteToken(token: string): Promise<AuthResult> {
   return handleAuthResponse(res)
 }
 
+export async function loginWithAssessmentToken(tokenValue: string): Promise<AuthResult> {
+  const res = await fetch(`${API_BASE}/auth/candidate/login-with-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token_value: tokenValue }),
+  })
+  return handleAuthResponse(res)
+}
+
 export async function logout(): Promise<void> {
   await supabase.auth.signOut()
   useAssessmentStore.getState().clearAuth()

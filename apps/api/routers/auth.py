@@ -14,6 +14,7 @@ from schemas.auth import (
     MeResponse,
     RefreshRequest,
     CandidateInfo,
+    TokenLoginRequest,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -101,6 +102,55 @@ async def verify_invite(body: InviteLoginRequest):
 
     now_iso = datetime.now(timezone.utc).isoformat()
     supabase.table("assessment_invites").update({"used_at": now_iso}).eq("token", body.token).execute()
+
+    return _build_login_response(auth_response.session)
+
+
+@router.post("/candidate/login-with-token", response_model=LoginResponse)
+async def login_with_assessment_token(body: TokenLoginRequest):
+    supabase = get_supabase()
+    result = (
+        supabase.table("tokens")
+        .select("id, candidate_email, candidate_name, assessment_id, is_revoked, expiry_at")
+        .eq("token_value", body.token_value)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Token not found")
+
+    token = result.data[0]
+
+    if token.get("is_revoked"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token has been revoked")
+
+    expiry_str = token.get("expiry_at", "")
+    if expiry_str:
+        expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+        if datetime.now(tz=timezone.utc) > expiry:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token has expired")
+
+    email = token["candidate_email"]
+    name = token.get("candidate_name") or email.split("@")[0]
+    password = hashlib.sha256(body.token_value.encode()).hexdigest()
+
+    auth = get_auth_client()
+    try:
+        auth_response = auth.auth.sign_in_with_password({"email": email, "password": password})
+    except AuthApiError:
+        get_supabase().auth.admin.create_user({
+            "email": email,
+            "password": password,
+            "email_confirm": True,
+            "user_metadata": {
+                "name": name,
+                "role": "candidate",
+                "assessment_id": token["assessment_id"],
+            },
+        })
+        auth_response = auth.auth.sign_in_with_password({"email": email, "password": password})
+
+    if not auth_response.session:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create session")
 
     return _build_login_response(auth_response.session)
 

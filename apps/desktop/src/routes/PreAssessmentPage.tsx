@@ -176,15 +176,38 @@ export function PreAssessmentPage() {
     enterKioskMode().then(() => setKioskReady(true)).catch(() => setKioskReady(true))
   }, [])
 
-  // Fetch real assessment + questions once auth is ready
+  // Populate assessment + questions from landingData (set during token validation).
+  // Falls back to a network fetch only when landingData is absent (dev/debug).
   useEffect(() => {
     if (!authToken) return
+
+    if (landingData?.assessment) {
+      const a = landingData.assessment
+      setAssessmentData(a.id, a.title, a.durationMins)
+      setQuestions(
+        a.questions.map((aq) => ({
+          id:            aq.question.id,
+          title:         aq.question.title,
+          description:   aq.question.description,
+          type:          aq.question.type,
+          difficulty:    aq.question.difficulty,
+          weightage:     aq.weightage,
+          orderIndex:    aq.orderIndex,
+          timeLimitMs:   aq.question.timeLimitMs,
+          memoryLimitMb: aq.question.memoryLimitMb,
+          options:       aq.question.options?.map((o) => ({ id: o.id, text: o.text })),
+          sampleTests:   aq.question.sampleTests,
+        })),
+      )
+      setAssessmentTitle(a.title)
+      return
+    }
+
     setIsFetching(true)
     setFetchError(null)
     fetchAssessmentWithQuestions()
       .then(({ assessment, questions }) => {
         setAssessmentData(assessment.id, assessment.title, assessment.duration_minutes)
-        // Map Question[] → QuestionForCandidate[] by supplying required attempt fields with defaults.
         setQuestions(questions.map((q, i) => ({
           ...q,
           weightage: 0,
@@ -196,7 +219,7 @@ export function PreAssessmentPage() {
         setFetchError(err instanceof Error ? err.message : 'Failed to load assessment')
       })
       .finally(() => setIsFetching(false))
-  }, [authToken, setAssessmentData, setQuestions])
+  }, [authToken, landingData, setAssessmentData, setQuestions])
 
   const runValidations = useCallback(async () => {
     setIsChecking(true)

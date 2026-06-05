@@ -2,7 +2,6 @@ import os
 import re
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -36,12 +35,13 @@ class DynamicCORSMiddleware(BaseHTTPMiddleware):
             or origin in _EXTRA_ORIGINS
             or bool(_NGROK_PATTERN.match(origin))
         )
-        if request.method == "OPTIONS" and allowed:
+        if request.method == "OPTIONS":
+            # Always approve preflight; auth is JWT-based and Tauri builds may omit Origin.
             return Response(
                 status_code=200,
                 headers={
-                    "Access-Control-Allow-Origin": origin,
-                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Origin": origin or "*",
+                    "Access-Control-Allow-Credentials": "true" if origin else "false",
                     "Access-Control-Allow-Methods": "*",
                     "Access-Control-Allow-Headers": "*",
                 },
@@ -53,7 +53,18 @@ class DynamicCORSMiddleware(BaseHTTPMiddleware):
         return response
 
 
-app.add_middleware(DynamicCORSMiddleware)
+class StripApiPrefix(BaseHTTPMiddleware):
+    _PREFIX = "/api/backend"
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        path = request.scope["path"]
+        if path.startswith(self._PREFIX):
+            request.scope["path"] = path[len(self._PREFIX):] or "/"
+        return await call_next(request)
+
+
+app.add_middleware(StripApiPrefix)           # inner: rewrite path before routing
+app.add_middleware(DynamicCORSMiddleware)    # outer: handle CORS/OPTIONS first
 
 app.include_router(auth.router)
 app.include_router(assessments.router)

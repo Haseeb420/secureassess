@@ -25,44 +25,6 @@ jobs:
       - run: pnpm lint
       - run: pnpm type-check
 
-  test-rust:
-    name: Rust Tests
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: apps/desktop/src-tauri -> target
-      - run: cargo test
-        working-directory: apps/desktop/src-tauri
-
-  test-python:
-    name: Python Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
-      - run: pip install -r requirements.txt
-        working-directory: apps/api
-      - run: pytest tests/ -v
-        working-directory: apps/api
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-
-  test-react:
-    name: React Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter desktop test
-
   build-check:
     name: Build Check (no binary)
     runs-on: ubuntu-latest

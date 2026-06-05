@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter desktop test run
+      - run: pnpm --filter desktop test
 
   build-check:
     name: Build Check (no binary)

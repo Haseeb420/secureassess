@@ -10,18 +10,12 @@
       }
     ],
     "security": {
-      "csp": null,
-      "devtools": false
+      "csp": null
     }
   },
   "bundle": {
     "macOS": {
       "minimumSystemVersion": "12.0"
-    },
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
     }
   }
 }

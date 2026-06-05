@@ -128,7 +128,7 @@ jobs:
           fi
 
       - name: Commit version bump
-        if: steps.bump.outputs.skip == 'false'
+        if: steps.bump.outputs.skip == 'false' && github.ref_name == 'main'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -137,7 +137,7 @@ jobs:
           git push origin HEAD
 
       - name: Create and push tag
-        if: steps.bump.outputs.skip == 'false'
+        if: steps.bump.outputs.skip == 'false' && github.ref_name == 'main'
         run: |
           git tag "${{ steps.bump.outputs.new_tag }}"
           git push origin "${{ steps.bump.outputs.new_tag }}"
@@ -146,7 +146,7 @@ jobs:
   build:
     name: Build — ${{ matrix.label }}
     needs: version
-    if: needs.version.outputs.skip == 'false'
+    if: needs.version.outputs.skip != 'true'
     permissions:
       contents: read
 

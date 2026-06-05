@@ -139,8 +139,13 @@ jobs:
       - name: Create and push tag
         if: steps.bump.outputs.skip == 'false' && github.ref_name == 'main'
         run: |
-          git tag "${{ steps.bump.outputs.new_tag }}"
-          git push origin "${{ steps.bump.outputs.new_tag }}"
+          NEW_TAG="${{ steps.bump.outputs.new_tag }}"
+          if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEW_TAG already exists — skipping tag creation"
+          else
+            git tag "$NEW_TAG"
+            git push origin "$NEW_TAG"
+          fi
 
   # ─── JOB 2: Build all platforms (parallel) ──────────────────────
   build:

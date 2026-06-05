@@ -44,6 +44,41 @@ struct NSRect {
 
 pub struct AssessmentActiveFlag(pub Arc<AtomicBool>);
 
+// ── Windows ───────────────────────────────────────────────────────────────────
+
+#[cfg(target_os = "windows")]
+pub(crate) unsafe fn apply_kiosk_frame_windows(hwnd: isize) {
+    use windows_sys::Win32::Graphics::Gdi::{
+        GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetWindowLongW, SetWindowLongW, SetWindowPos, GWL_STYLE, HWND_TOPMOST,
+        SWP_FRAMECHANGED, SWP_SHOWWINDOW, WS_OVERLAPPEDWINDOW,
+    };
+
+    // Remove the WS_OVERLAPPEDWINDOW style — without this Windows refuses to
+    // let the window cover the taskbar regardless of size or z-order.
+    let style = GetWindowLongW(hwnd, GWL_STYLE);
+    SetWindowLongW(hwnd, GWL_STYLE, style & !(WS_OVERLAPPEDWINDOW as i32));
+
+    // Get the full monitor rect (rcMonitor, not rcWork) so we cover the taskbar.
+    let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    let mut mi = std::mem::zeroed::<MONITORINFO>();
+    mi.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+    GetMonitorInfoW(monitor, &mut mi);
+    let r = mi.rcMonitor;
+
+    SetWindowPos(
+        hwnd,
+        HWND_TOPMOST,
+        r.left,
+        r.top,
+        r.right - r.left,
+        r.bottom - r.top,
+        SWP_FRAMECHANGED | SWP_SHOWWINDOW,
+    );
+}
+
 #[cfg(target_os = "macos")]
 fn set_presentation_options(options: u64) {
     use objc::runtime::Object;
@@ -116,6 +151,17 @@ pub fn enter_kiosk_mode(
             .map_err(|e| e.to_string())?;
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        // hwnd() returns windows::Win32::Foundation::HWND — a #[repr(transparent)]
+        // newtype around isize — so .0 gives us the raw handle value.
+        let hwnd: isize = window.hwnd().map_err(|e| e.to_string())?.0;
+        unsafe { apply_kiosk_frame_windows(hwnd) };
+
+        // Install the low-level keyboard hook to block Alt+Tab, Win key, etc.
+        crate::security::keyboard_hook::install_keyboard_hook();
+    }
+
     flag.0.store(true, Ordering::Relaxed);
     tracing::info!("Kiosk mode activated");
     Ok(())
@@ -127,6 +173,19 @@ pub fn exit_kiosk_mode(
     flag: State<AssessmentActiveFlag>,
 ) -> Result<(), String> {
     flag.0.store(false, Ordering::Relaxed);
+
+    #[cfg(target_os = "windows")]
+    {
+        crate::security::keyboard_hook::uninstall_keyboard_hook();
+
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            SetWindowPos, HWND_NOTOPMOST, SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE,
+        };
+        let hwnd: isize = window.hwnd().map_err(|e| e.to_string())?.0;
+        unsafe {
+            SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
+        }
+    }
 
     #[cfg(target_os = "macos")]
     {

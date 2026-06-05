@@ -60,6 +60,27 @@ pub fn start_fullscreen_watchdog<R: Runtime>(
             }
         }
 
+        // Windows: re-assert topmost + fullscreen every tick.
+        // A UAC prompt or elevated window can steal the topmost position;
+        // reasserting it here keeps coverage continuous.
+        #[cfg(target_os = "windows")]
+        {
+            use crate::security::kiosk::apply_kiosk_frame_windows;
+            use windows_sys::Win32::UI::WindowsAndMessaging::{
+                GetWindowLongW, GWL_EXSTYLE, WS_EX_TOPMOST,
+            };
+
+            if let Ok(hwnd) = window.hwnd() {
+                let hwnd_val: isize = hwnd.0;
+                let ex_style = unsafe { GetWindowLongW(hwnd_val, GWL_EXSTYLE) };
+                if ex_style as u32 & WS_EX_TOPMOST == 0 {
+                    tracing::warn!("Window lost topmost during assessment — restoring");
+                    unsafe { apply_kiosk_frame_windows(hwnd_val) };
+                    let _ = app_handle.emit("security:fullscreen-restored", ());
+                }
+            }
+        }
+
         // Belt-and-suspenders: unminimize if the window ended up minimized.
         // set_minimizable(false) should prevent this but we guard anyway.
         if window.is_minimized().unwrap_or(false) {

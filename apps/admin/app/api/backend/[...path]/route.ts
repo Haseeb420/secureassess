@@ -3,7 +3,8 @@ const API_BASE = process.env.API_BASE_URL ?? "http://localhost:8000"
 const ALLOWED_ORIGINS = new Set([
   "http://localhost:3000",
   "http://localhost:5173",
-  "tauri://localhost",
+  "tauri://localhost",      // macOS / Linux Tauri production builds
+  "http://tauri.localhost", // Windows Tauri production builds
 ])
 const NGROK_RE = /^https:\/\/[a-z0-9-]+\.ngrok(-free)?\.(app|dev|io)$/
 

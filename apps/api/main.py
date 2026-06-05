@@ -16,7 +16,8 @@ app = FastAPI(title="SecureAssess API", version="0.1.0")
 _STATIC_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
-    "tauri://localhost",
+    "tauri://localhost",       # macOS / Linux Tauri production builds
+    "http://tauri.localhost",  # Windows Tauri production builds
 ]
 
 # Accept any ngrok tunnel URL (admin URL is dynamic, so exact match is impossible)

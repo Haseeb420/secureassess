@@ -71,7 +71,7 @@ pub fn start_fullscreen_watchdog<R: Runtime>(
             };
 
             if let Ok(hwnd) = window.hwnd() {
-                let hwnd_val: isize = hwnd.0;
+                let hwnd_val = hwnd as isize;
                 let ex_style = unsafe { GetWindowLongW(hwnd_val, GWL_EXSTYLE) };
                 if ex_style as u32 & WS_EX_TOPMOST == 0 {
                     tracing::warn!("Window lost topmost during assessment — restoring");

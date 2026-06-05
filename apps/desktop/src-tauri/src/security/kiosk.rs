@@ -153,9 +153,8 @@ pub fn enter_kiosk_mode(
 
     #[cfg(target_os = "windows")]
     {
-        // hwnd() returns windows::Win32::Foundation::HWND — a #[repr(transparent)]
-        // newtype around isize — so .0 gives us the raw handle value.
-        let hwnd: isize = window.hwnd().map_err(|e| e.to_string())?.0;
+        // hwnd() returns *mut c_void (same convention as ns_window() on macOS).
+        let hwnd = window.hwnd().map_err(|e| e.to_string())? as isize;
         unsafe { apply_kiosk_frame_windows(hwnd) };
 
         // Install the low-level keyboard hook to block Alt+Tab, Win key, etc.
@@ -181,7 +180,7 @@ pub fn exit_kiosk_mode(
         use windows_sys::Win32::UI::WindowsAndMessaging::{
             SetWindowPos, HWND_NOTOPMOST, SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE,
         };
-        let hwnd: isize = window.hwnd().map_err(|e| e.to_string())?.0;
+        let hwnd = window.hwnd().map_err(|e| e.to_string())? as isize;
         unsafe {
             SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
         }

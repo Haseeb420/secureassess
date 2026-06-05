@@ -247,19 +247,27 @@ jobs:
       - name: Install Linux ARM64 deps
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
+          sudo dpkg --add-architecture arm64
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs) main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
             gcc-aarch64-linux-gnu \
-            libwebkit2gtk-4.1-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
+            libwebkit2gtk-4.1-dev:arm64 \
+            libssl-dev:arm64 \
+            libayatana-appindicator3-dev:arm64 \
+            librsvg2-dev:arm64 \
             patchelf \
-            libgtk-3-dev \
-            libglib2.0-dev
+            libgtk-3-dev:arm64 \
+            libglib2.0-dev:arm64 \
+            libsoup-3.0-dev:arm64
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
           echo "PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu"                       >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig"                >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1"                                             >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include/aarch64-linux-gnu"                  >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu"                          >> $GITHUB_ENV
 
       # ── macOS: register both targets for lipo universal build ─────
       - name: Add macOS universal targets
@@ -271,22 +279,26 @@ jobs:
       # ── Build ─────────────────────────────────────────────────────
       - name: Build Tauri app
         env:
-          # App config — all from GitHub Secrets
-          VITE_API_BASE_URL:       ${{ secrets.VITE_API_BASE_URL }}
-          VITE_SUPABASE_URL:       ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY:  ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_BETTER_AUTH_URL:    ${{ secrets.VITE_BETTER_AUTH_URL }}
-          # macOS signing (optional — skip for test builds)
-          APPLE_CERTIFICATE:       ${{ secrets.APPLE_CERTIFICATE }}
+          VITE_API_BASE_URL:      ${{ secrets.VITE_API_BASE_URL }}
+          VITE_SUPABASE_URL:      ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_BETTER_AUTH_URL:   ${{ secrets.VITE_BETTER_AUTH_URL }}
+          # macOS signing — only active when APPLE_CERTIFICATE secret is set
+          APPLE_CERTIFICATE:      ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY:  ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID:                ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD:          ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID:           ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID:               ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD:         ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID:          ${{ secrets.APPLE_TEAM_ID }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           cd apps/desktop
+          # Skip macOS code signing when no certificate is provided
+          if [ "${{ matrix.platform }}" = "macos-latest" ] && [ -z "${{ secrets.APPLE_CERTIFICATE }}" ]; then
+            unset APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY
+            unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
+          fi
           pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
       # ── Collect artifacts ─────────────────────────────────────────

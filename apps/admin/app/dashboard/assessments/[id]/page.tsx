@@ -183,7 +183,7 @@ function InviteDrawer({
 
   const usageMode = watch('usageMode')
 
-  const mockOptions = allAssessments.filter((a) => a.id !== assessmentId)
+  const mockOptions = allAssessments.filter((a) => a.id !== assessmentId && a.is_mock)
 
   const create = useMutation({
     mutationFn: (data: InviteFormValues) =>
@@ -954,6 +954,7 @@ function QuestionsTab({
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAqEntries(
       initialAssessmentQuestions.map((aq, i) => ({
         question_id: aq.question.id,
@@ -961,7 +962,9 @@ function QuestionsTab({
         order_index: i,
       })),
     )
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDirty(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialAssessmentQuestions.map((aq) => aq.question.id).join(',')])
 
   const { data: allQuestions = [], isLoading } = useQuery({

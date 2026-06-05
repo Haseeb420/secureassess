@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // eslint-plugin-react@7.x calls context.getFilename() which was removed in ESLint 10.
+  // Providing an explicit version bypasses that runtime detection path entirely.
+  { settings: { react: { version: "19.0" } } },
 ]);
 
 export default eslintConfig;

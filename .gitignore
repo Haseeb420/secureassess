@@ -56,3 +56,14 @@ coverage/
 # Misc
 *.tsbuildinfo
 docs.zip
+
+# ngrok
+.ngrok-urls
+ngrok.yml.local
+apps/**/.env.ngrok
+
+# Build outputs
+dist/installers/
+
+# tmux
+.tmux.conf.local

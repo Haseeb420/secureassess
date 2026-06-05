@@ -374,7 +374,7 @@ function AnswerDetail({
                 {opt.text}
               </span>
               {isSelected && !isCorrect && (
-                <span className="ml-auto text-xs font-medium text-red-500">Candidate's answer</span>
+                <span className="ml-auto text-xs font-medium text-red-500">Candidate&apos;s answer</span>
               )}
               {isCorrect && (
                 <span className="ml-auto text-xs font-medium text-green-600">Correct answer</span>

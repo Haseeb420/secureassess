@@ -31,6 +31,9 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "http://localhost:5173",
     "tauri://localhost",
+    "*.ngrok-free.app",
+    "*.ngrok-free.dev",
+    "*.ngrok.io",
     process.env.NEXT_PUBLIC_APP_URL ?? "",
   ].filter(Boolean),
 

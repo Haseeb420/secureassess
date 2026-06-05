@@ -11,7 +11,7 @@ def test_login_missing_fields_returns_422(client):
 
 def test_me_without_token_returns_401(client):
     response = client.get("/auth/me")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_me_with_invalid_token_returns_401(client):

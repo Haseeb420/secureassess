@@ -40,6 +40,7 @@ export default function EditQuestionPage() {
 
   useEffect(() => {
     if (data && !initialized) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(data.title)
       setDescription(data.description)
       setType(data.type as CreateQuestionBody['type'])

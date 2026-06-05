@@ -1,5 +1,10 @@
-from fastapi import FastAPI
+import os
+import re
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from core.logging import configure_logging, get_logger
 from routers import assessments, attempts, auth, mock_attempts, questions, reports, sessions, sync, tokens
@@ -9,17 +14,46 @@ logger = get_logger()
 
 app = FastAPI(title="SecureAssess API", version="0.1.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",   # admin dashboard
-        "http://localhost:5173",   # desktop Vite dev server
-        "tauri://localhost",       # Tauri production
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_STATIC_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "tauri://localhost",
+]
+
+# Accept any ngrok tunnel URL (admin URL is dynamic, so exact match is impossible)
+_NGROK_PATTERN = re.compile(r"https://[a-z0-9-]+\.ngrok(-free)?\.(app|dev|io)$")
+
+# Additional origins can be injected via env var (space or comma separated)
+_extra = os.getenv("CORS_EXTRA_ORIGINS", "")
+_EXTRA_ORIGINS = [o.strip() for o in re.split(r"[\s,]+", _extra) if o.strip()]
+
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next) -> Response:
+        origin = request.headers.get("origin", "")
+        allowed = (
+            origin in _STATIC_ORIGINS
+            or origin in _EXTRA_ORIGINS
+            or bool(_NGROK_PATTERN.match(origin))
+        )
+        if request.method == "OPTIONS" and allowed:
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                },
+            )
+        response = await call_next(request)
+        if allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+
+
+app.add_middleware(DynamicCORSMiddleware)
 
 app.include_router(auth.router)
 app.include_router(assessments.router)

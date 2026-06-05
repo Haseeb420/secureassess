@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/release-workflow
     paths-ignore:
       - 'docs/**'
       - '*.md'

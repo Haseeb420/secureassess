@@ -13,9 +13,9 @@ if [ -z "$NGROK_STATIC_DOMAIN" ]; then
 fi
 
 echo ""
-echo "Starting ngrok tunnels..."
-echo "  API  → https://${NGROK_STATIC_DOMAIN}"
-echo "  Admin → dynamic URL (check ngrok dashboard or terminal output)"
+echo "Starting ngrok tunnel..."
+echo "  https://${NGROK_STATIC_DOMAIN}  →  localhost:3000 (Next.js)"
+echo "  Admin dashboard and desktop API both served through this URL"
 echo ""
 
 # Resolve ngrok's default config (contains the authtoken)
@@ -34,4 +34,4 @@ trap "rm -f $TMPCONF" EXIT
 sed "s|\$NGROK_STATIC_DOMAIN|${NGROK_STATIC_DOMAIN}|g" ngrok.yml > "$TMPCONF"
 
 # Pass both configs: default (authtoken) + project (tunnel definitions)
-ngrok start --config "$DEFAULT_CONFIG" --config "$TMPCONF" api admin
+ngrok start --config "$DEFAULT_CONFIG" --config "$TMPCONF" desktop

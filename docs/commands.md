@@ -44,6 +44,91 @@ make dev
 
 ---
 
+## Remote Development (ngrok + desktop testing)
+
+Use this workflow when you need a built `.dmg` / `.exe` to talk to your local API, or when testing on a separate device.
+
+### Port Map
+
+```
+FastAPI   :8000  ←  local dev, Rust sync worker
+Next.js   :3000  ←  admin dashboard + API proxy for desktop app
+ngrok     :443   →  :3000  (the static domain used in desktop .env)
+```
+
+All desktop API traffic flows:
+
+```
+Desktop app  →  https://<static-domain>/api/backend/*
+             →  ngrok  →  Next.js :3000
+             →  /api/backend/[...path] proxy  →  FastAPI :8000
+```
+
+### One-command startup (no tmux)
+
+```bash
+make serve
+```
+
+Starts FastAPI (:8000), Next.js admin (:3000), and ngrok together.  
+Press `Ctrl+C` to stop everything.
+
+**Requirements before running:**
+1. `NGROK_STATIC_DOMAIN` set in `apps/api/.env`
+2. `VITE_API_BASE_URL=https://<your-domain>/api/backend` set in `apps/desktop/.env`
+3. ngrok authenticated: `ngrok config add-authtoken <token>`
+
+### tmux variant (separate panes)
+
+```bash
+make dev-ngrok   # requires: brew install tmux
+```
+
+Opens three tmux windows (`api`, `admin`, `ngrok`) — easier to read individual service logs.
+
+### ngrok only (services already running)
+
+```bash
+make ngrok          # start ngrok tunnel using ngrok.yml
+make ngrok-urls     # show live tunnel URL
+make ngrok-inspect  # open http://localhost:4040 inspector
+```
+
+### First-time ngrok setup
+
+```bash
+# 1. Install ngrok
+brew install ngrok/ngrok/ngrok
+
+# 2. Authenticate (once per machine)
+ngrok config add-authtoken YOUR_TOKEN_HERE
+# Get token at: https://dashboard.ngrok.com/authtokens
+
+# 3. Get your free static domain (once)
+# Go to: https://dashboard.ngrok.com/domains → New Domain
+# Example output: unkind-freeware-unmoved.ngrok-free.dev
+
+# 4. Add to apps/api/.env
+echo "NGROK_STATIC_DOMAIN=unkind-freeware-unmoved.ngrok-free.dev" >> apps/api/.env
+
+# 5. Add to apps/desktop/.env
+echo "VITE_API_BASE_URL=https://unkind-freeware-unmoved.ngrok-free.dev/api/backend" >> apps/desktop/.env
+```
+
+### Building the desktop app for remote testing
+
+```bash
+# Build macOS .dmg (reads VITE_API_BASE_URL from apps/desktop/.env at build time)
+make build-mac
+
+# Build with a prompted URL (if you want to override without editing .env)
+make build-mac-url
+```
+
+The built app has the ngrok URL baked in — the same static domain works every time ngrok restarts.
+
+---
+
 ## Building
 
 ### All Apps

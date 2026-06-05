@@ -12,6 +12,7 @@
         api-start api-dev api-migrate \
         clean clean-rust clean-node \
         setup-rust setup-python check-deps \
+        serve \
         version version-next-patch version-next-minor version-next-major \
         release-patch release-minor release-major \
         release-status release-watch release-logs \
@@ -68,13 +69,16 @@ help:
 	@printf "  $(CYAN)make lint-desktop$(RESET)         Lint desktop frontend\n"
 	@printf "  $(CYAN)make lint-api$(RESET)             Lint API (ruff + black check)\n"
 	@printf "  $(CYAN)make type-check$(RESET)           Type-check all TypeScript apps\n"
-	@printf "\n$(BOLD)ngrok — Remote Tunnels$(RESET)\n"
-	@printf "  $(CYAN)make ngrok$(RESET)                Start API + admin ngrok tunnels (static domain for API)\n"
-	@printf "  $(CYAN)make ngrok-api$(RESET)            Start ngrok tunnel for API only (port 8000)\n"
-	@printf "  $(CYAN)make ngrok-admin$(RESET)          Start ngrok tunnel for admin only (port 3000)\n"
-	@printf "  $(CYAN)make ngrok-urls$(RESET)           Print live tunnel URLs from running ngrok session\n"
+	@printf "\n$(BOLD)Remote Dev (ngrok + desktop testing)$(RESET)\n"
+	@printf "  $(CYAN)make serve$(RESET)                Start API + admin + ngrok together (no tmux needed) ★\n"
+	@printf "  $(CYAN)make dev-ngrok$(RESET)            Same as serve but in tmux panes (requires tmux)\n"
+	@printf "  $(CYAN)make ngrok$(RESET)                ngrok only — API + admin already running\n"
+	@printf "  $(CYAN)make ngrok-urls$(RESET)           Print live tunnel URLs from running ngrok\n"
 	@printf "  $(CYAN)make ngrok-inspect$(RESET)        Open ngrok web inspector (localhost:4040)\n"
-	@printf "  $(CYAN)make dev-ngrok$(RESET)            Start api + admin + ngrok together in tmux\n"
+	@printf "\n$(BOLD)Port map$(RESET)\n"
+	@printf "  FastAPI  :8000    ← direct dev / Rust sync worker\n"
+	@printf "  Next.js  :3000    ← admin dashboard + desktop proxy\n"
+	@printf "  ngrok    :443     → :3000  (static domain used by desktop .env)\n"
 	@printf "\n$(BOLD)Device Testing — Build & Share$(RESET)\n"
 	@printf "  $(CYAN)make build-mac$(RESET)            Build macOS installer (uses NGROK_STATIC_DOMAIN from .env)\n"
 	@printf "  $(CYAN)make build-mac-url$(RESET)        Build macOS installer with a prompted API URL\n"
@@ -328,8 +332,12 @@ ngrok-inspect: ## Open ngrok inspection dashboard in browser
 
 # ─── DEV WITH NGROK ───────────────────────────────────────────────
 
-dev-ngrok: ## Start api + admin + ngrok together (no desktop — build separately)
-	@command -v tmux >/dev/null 2>&1 || { echo "tmux required: brew install tmux"; exit 1; }
+serve: ## Start API + admin + ngrok together, no tmux required (recommended for desktop testing)
+	$(call log,Starting API + admin + ngrok — Ctrl+C stops all)
+	@bash scripts/dev-stack.sh
+
+dev-ngrok: ## Start api + admin + ngrok in tmux (three panes, tmux required)
+	@command -v tmux >/dev/null 2>&1 || { echo "tmux required: brew install tmux  (or use: make serve)"; exit 1; }
 	@tmux new-session -d -s secureassess-ngrok -n api   'bash scripts/start-api.sh; read'
 	@tmux new-window -t secureassess-ngrok -n admin  'bash scripts/start-admin.sh; read'
 	@tmux new-window -t secureassess-ngrok -n ngrok  'bash scripts/start-ngrok.sh; read'

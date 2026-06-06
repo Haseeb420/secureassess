@@ -6,12 +6,26 @@ interface LanguageSelectorProps {
 }
 
 const LANGUAGE_LABELS: Array<{ value: Language; label: string; color: string }> = [
-  { value: 'cpp',        label: 'C++',        color: '#00599C' },
   { value: 'python',     label: 'Python',     color: '#3572A5' },
   { value: 'javascript', label: 'JavaScript', color: '#F7DF1E' },
   { value: 'typescript', label: 'TypeScript', color: '#3178C6' },
   { value: 'java',       label: 'Java',       color: '#B07219' },
+  { value: 'cpp',        label: 'C++',        color: '#00599C' },
+  { value: 'c',          label: 'C',          color: '#555555' },
+  { value: 'csharp',     label: 'C#',         color: '#239120' },
   { value: 'go',         label: 'Go',         color: '#00ADD8' },
+  { value: 'rust',       label: 'Rust',       color: '#DEA584' },
+  { value: 'ruby',       label: 'Ruby',       color: '#CC342D' },
+  { value: 'kotlin',     label: 'Kotlin',     color: '#7F52FF' },
+  { value: 'swift',      label: 'Swift',      color: '#FA7343' },
+  { value: 'php',        label: 'PHP',        color: '#777BB4' },
+  { value: 'scala',      label: 'Scala',      color: '#DC322F' },
+  { value: 'r',          label: 'R',          color: '#198CE7' },
+  { value: 'bash',       label: 'Bash',       color: '#4EAA25' },
+  { value: 'haskell',    label: 'Haskell',    color: '#5D4F85' },
+  { value: 'lua',        label: 'Lua',        color: '#000080' },
+  { value: 'perl',       label: 'Perl',       color: '#39457E' },
+  { value: 'elixir',     label: 'Elixir',     color: '#6E4A7E' },
 ]
 
 export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {

@@ -28,15 +28,29 @@ impl Judge0Client {
     }
 }
 
-// Judge0 language IDs (CE edition)
+// Judge0 CE 1.13.1 language IDs — verified against live /languages endpoint.
 fn language_id(lang: &str) -> Option<u32> {
     match lang {
-        "python" => Some(71),     // Python 3.8
-        "javascript" => Some(63), // Node.js 12
-        "typescript" => Some(74), // TypeScript 3.7
-        "java" => Some(62),       // Java 13
-        "cpp" => Some(54),        // C++ 17
-        "go" => Some(60),         // Go 1.13
+        "python"     => Some(71), // Python 3.8.1
+        "javascript" => Some(63), // Node.js 12.14.0
+        "typescript" => Some(74), // TypeScript 3.7.4
+        "java"       => Some(62), // Java OpenJDK 13.0.1
+        "cpp"        => Some(54), // C++ GCC 9.2.0
+        "c"          => Some(50), // C GCC 9.2.0
+        "csharp"     => Some(51), // C# Mono 6.6.0.161
+        "go"         => Some(60), // Go 1.13.5
+        "rust"       => Some(73), // Rust 1.40.0
+        "ruby"       => Some(72), // Ruby 2.7.0
+        "kotlin"     => Some(78), // Kotlin 1.3.70
+        "swift"      => Some(83), // Swift 5.2.3
+        "php"        => Some(68), // PHP 7.4.1
+        "r"          => Some(80), // R 4.0.0
+        "scala"      => Some(81), // Scala 2.13.2
+        "bash"       => Some(46), // Bash 5.0.0
+        "haskell"    => Some(61), // Haskell GHC 8.8.1
+        "lua"        => Some(64), // Lua 5.3.5
+        "perl"       => Some(85), // Perl 5.28.1
+        "elixir"     => Some(57), // Elixir 1.9.4
         _ => None,
     }
 }

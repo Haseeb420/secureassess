@@ -14,12 +14,26 @@ interface CodeEditorProps {
 }
 
 const MONACO_LANGUAGE: Record<Language, string> = {
-  cpp:        'cpp',
   python:     'python',
   javascript: 'javascript',
   typescript: 'typescript',
   java:       'java',
+  cpp:        'cpp',
+  c:          'c',
+  csharp:     'csharp',
   go:         'go',
+  rust:       'rust',
+  ruby:       'ruby',
+  kotlin:     'kotlin',
+  swift:      'swift',
+  php:        'php',
+  r:          'r',
+  scala:      'scala',
+  bash:       'shell',
+  haskell:    'haskell',
+  lua:        'lua',
+  perl:       'perl',
+  elixir:     'elixir',
 }
 
 const defineTheme: BeforeMount = (monaco) => {

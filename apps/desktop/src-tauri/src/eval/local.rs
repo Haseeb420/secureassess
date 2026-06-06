@@ -64,29 +64,106 @@ async fn run_in_dir(req: &ExecutionRequest, work_dir: &Path) -> ExecutionResult 
             run: vec!["npx".into(), "ts-node".into(), format!("{dir}/solution.ts")],
         },
         "java" => LangConfig {
-            filename: "Solution.java",
-            compile: Some(vec!["javac".into(), format!("{dir}/Solution.java")]),
-            run: vec![
-                "java".into(),
-                "-cp".into(),
-                dir.into_owned(),
-                "Solution".into(),
-            ],
+            // Template convention: public class must be named Main.
+            filename: "Main.java",
+            compile: Some(vec!["javac".into(), format!("{dir}/Main.java")]),
+            run: vec!["java".into(), "-cp".into(), dir.into_owned(), "Main".into()],
         },
         "cpp" => LangConfig {
             filename: "solution.cpp",
             compile: Some(vec![
-                "g++".into(),
-                "-o".into(),
-                format!("{dir}/solution_bin"),
+                "g++".into(), "-std=c++17".into(),
+                "-o".into(), format!("{dir}/solution_bin"),
                 format!("{dir}/solution.cpp"),
             ]),
             run: vec![format!("{dir}/solution_bin")],
+        },
+        "c" => LangConfig {
+            filename: "solution.c",
+            compile: Some(vec![
+                "gcc".into(),
+                "-o".into(), format!("{dir}/solution_bin"),
+                format!("{dir}/solution.c"),
+            ]),
+            run: vec![format!("{dir}/solution_bin")],
+        },
+        "csharp" => LangConfig {
+            filename: "solution.cs",
+            compile: Some(vec!["mcs".into(), format!("{dir}/solution.cs"), format!("-out:{dir}/solution.exe")]),
+            run: vec!["mono".into(), format!("{dir}/solution.exe")],
         },
         "go" => LangConfig {
             filename: "solution.go",
             compile: None,
             run: vec!["go".into(), "run".into(), format!("{dir}/solution.go")],
+        },
+        "rust" => LangConfig {
+            filename: "solution.rs",
+            compile: Some(vec![
+                "rustc".into(),
+                "-o".into(), format!("{dir}/solution_bin"),
+                format!("{dir}/solution.rs"),
+            ]),
+            run: vec![format!("{dir}/solution_bin")],
+        },
+        "ruby" => LangConfig {
+            filename: "solution.rb",
+            compile: None,
+            run: vec!["ruby".into(), format!("{dir}/solution.rb")],
+        },
+        "kotlin" => LangConfig {
+            filename: "solution.kt",
+            compile: Some(vec![
+                "kotlinc".into(), format!("{dir}/solution.kt"),
+                "-include-runtime".into(),
+                "-d".into(), format!("{dir}/solution.jar"),
+            ]),
+            run: vec!["java".into(), "-jar".into(), format!("{dir}/solution.jar")],
+        },
+        "swift" => LangConfig {
+            filename: "solution.swift",
+            compile: None,
+            run: vec!["swift".into(), format!("{dir}/solution.swift")],
+        },
+        "php" => LangConfig {
+            filename: "solution.php",
+            compile: None,
+            run: vec!["php".into(), format!("{dir}/solution.php")],
+        },
+        "r" => LangConfig {
+            filename: "solution.r",
+            compile: None,
+            run: vec!["Rscript".into(), format!("{dir}/solution.r")],
+        },
+        "scala" => LangConfig {
+            filename: "solution.scala",
+            compile: None,
+            run: vec!["scala".into(), format!("{dir}/solution.scala")],
+        },
+        "bash" => LangConfig {
+            filename: "solution.sh",
+            compile: None,
+            run: vec!["bash".into(), format!("{dir}/solution.sh")],
+        },
+        "haskell" => LangConfig {
+            filename: "solution.hs",
+            compile: None,
+            run: vec!["runghc".into(), format!("{dir}/solution.hs")],
+        },
+        "lua" => LangConfig {
+            filename: "solution.lua",
+            compile: None,
+            run: vec!["lua".into(), format!("{dir}/solution.lua")],
+        },
+        "perl" => LangConfig {
+            filename: "solution.pl",
+            compile: None,
+            run: vec!["perl".into(), format!("{dir}/solution.pl")],
+        },
+        "elixir" => LangConfig {
+            filename: "solution.exs",
+            compile: None,
+            run: vec!["elixir".into(), format!("{dir}/solution.exs")],
         },
         lang => {
             return ExecutionResult {

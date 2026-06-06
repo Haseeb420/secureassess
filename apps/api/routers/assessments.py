@@ -49,6 +49,10 @@ class AssessmentPatch(BaseModel):
     timezone: Optional[str] = None
 
 
+class BulkAssessmentIds(BaseModel):
+    assessment_ids: list[str]
+
+
 @router.get("")
 async def list_assessments(_admin: dict = Depends(get_current_admin)):
     supabase = get_supabase()
@@ -164,6 +168,46 @@ async def get_my_assessment(candidate: dict = Depends(get_current_candidate)):
             detail=f"Assessment {assessment_id} not found in database. Create it from the admin panel first.",
         )
     return result.data[0]
+
+
+@router.post("/bulk-archive")
+async def bulk_archive_assessments(
+    body: BulkAssessmentIds,
+    _admin: dict = Depends(get_current_admin),
+):
+    if not body.assessment_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No assessment IDs provided")
+    supabase = get_supabase()
+    supabase.table("assessments").update({"status": "archived"}).in_("id", body.assessment_ids).execute()
+    return {"archived": len(body.assessment_ids)}
+
+
+@router.post("/bulk-delete")
+async def bulk_delete_assessments(
+    body: BulkAssessmentIds,
+    _admin: dict = Depends(get_current_admin),
+):
+    if not body.assessment_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No assessment IDs provided")
+    supabase = get_supabase()
+    ids = body.assessment_ids
+
+    token_res = supabase.table("tokens").select("id").in_("assessment_id", ids).execute()
+    token_ids = [t["id"] for t in (token_res.data or [])]
+    if token_ids:
+        supabase.table("token_usage_log").delete().in_("token_id", token_ids).execute()
+
+    attempt_res = supabase.table("assessment_attempts").select("id").in_("assessment_id", ids).execute()
+    attempt_ids = [a["id"] for a in (attempt_res.data or [])]
+    if attempt_ids:
+        supabase.table("question_answers").delete().in_("attempt_id", attempt_ids).execute()
+
+    supabase.table("assessment_attempts").delete().in_("assessment_id", ids).execute()
+    supabase.table("assessment_sessions").delete().in_("assessment_id", ids).execute()
+    supabase.table("tokens").delete().in_("assessment_id", ids).execute()
+    supabase.table("assessment_questions").delete().in_("assessment_id", ids).execute()
+    supabase.table("assessments").delete().in_("id", ids).execute()
+    return {"deleted": len(ids)}
 
 
 @router.get("/{assessment_id}")

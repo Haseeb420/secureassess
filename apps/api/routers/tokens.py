@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from core.dependencies import get_current_admin
 from core.supabase import get_supabase
 from schemas.tokens import (
+    BulkTokenIdsRequest,
     PatchTokenRequest,
     ValidateTokenRequest,
     ValidateTokenResponse,
@@ -141,6 +142,32 @@ async def revoke_token(
     result = supabase.table("tokens").update({"is_revoked": True}).eq("id", token_id).execute()
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Token not found")
+
+
+@router.post("/bulk-revoke")
+async def bulk_revoke_tokens(
+    body: BulkTokenIdsRequest,
+    _admin: dict = Depends(get_current_admin),
+):
+    if not body.token_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No token IDs provided")
+    supabase = get_supabase()
+    supabase.table("tokens").update({"is_revoked": True}).in_("id", body.token_ids).execute()
+    return {"revoked": len(body.token_ids)}
+
+
+@router.post("/bulk-delete")
+async def bulk_delete_tokens(
+    body: BulkTokenIdsRequest,
+    _admin: dict = Depends(get_current_admin),
+):
+    if not body.token_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No token IDs provided")
+    supabase = get_supabase()
+    # Null out token_id on any attempts that reference these tokens so attempt data is preserved.
+    supabase.table("assessment_attempts").update({"token_id": None}).in_("token_id", body.token_ids).execute()
+    supabase.table("tokens").delete().in_("id", body.token_ids).execute()
+    return {"deleted": len(body.token_ids)}
 
 
 # ── Public endpoint ───────────────────────────────────────────────────────────

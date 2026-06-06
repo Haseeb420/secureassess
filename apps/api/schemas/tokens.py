@@ -21,6 +21,10 @@ class PatchTokenRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class BulkTokenIdsRequest(BaseModel):
+    token_ids: list[str]
+
+
 class ValidateTokenRequest(BaseModel):
     token_value: str
 

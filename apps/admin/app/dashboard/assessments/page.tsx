@@ -3,13 +3,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format } from 'date-fns'
 import {
   Search, Archive, BarChart2, ClipboardList,
-  Users, Plus, X, Clock,
+  Users, Plus, X, Clock, Trash2,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { ConfirmDialog } from '@secureassess/ui'
 import { PageHeader } from '../../../components/PageHeader'
 import { InviteDialog } from '../../../components/InviteDialog'
@@ -45,6 +46,7 @@ const rowVariants = {
 function SkeletonRow() {
   return (
     <div className="flex items-center gap-4 px-6 py-4 border-b border-brand-border last:border-0 animate-pulse">
+      <div className="h-3.5 w-3.5 bg-brand-border/60 rounded shrink-0" />
       <div className="flex-1 min-w-0 space-y-2">
         <div className="h-4 bg-brand-border rounded w-52" />
         <div className="flex items-center gap-2">
@@ -70,10 +72,13 @@ export default function AssessmentsPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('active')
   const [typeFilter, setTypeFilter] = useState<FilterType>('all')
   const [archiveTarget, setArchiveTarget] = useState<Assessment | null>(null)
   const [inviteAssessment, setInviteAssessment] = useState<Assessment | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkArchiveDialog, setShowBulkArchiveDialog] = useState(false)
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['assessments'],
@@ -87,6 +92,33 @@ export default function AssessmentsPage() {
       setArchiveTarget(null)
     },
   })
+
+  const bulkArchive = useMutation({
+    mutationFn: (ids: string[]) => assessmentsApi.bulkArchive(ids),
+    onSuccess: (_data, ids) => {
+      qc.invalidateQueries({ queryKey: ['assessments'] })
+      toast.success(`${ids.length} ${ids.length === 1 ? 'assessment' : 'assessments'} archived`)
+      setSelectedIds(new Set())
+      setShowBulkArchiveDialog(false)
+    },
+    onError: () => toast.error('Failed to archive assessments'),
+  })
+
+  const bulkDelete = useMutation({
+    mutationFn: (ids: string[]) => assessmentsApi.bulkDelete(ids),
+    onSuccess: (_data, ids) => {
+      qc.invalidateQueries({ queryKey: ['assessments'] })
+      toast.success(`${ids.length} ${ids.length === 1 ? 'assessment' : 'assessments'} deleted`)
+      setSelectedIds(new Set())
+      setShowBulkDeleteDialog(false)
+    },
+    onError: () => toast.error('Failed to delete assessments'),
+  })
+
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [search, statusFilter, typeFilter])
 
   const counts = useMemo(() => ({
     all:      data.length,
@@ -103,6 +135,8 @@ export default function AssessmentsPage() {
       /* assessments */              !a.is_mock
     return matchSearch && matchStatus && matchType
   })
+
+  const allFilteredSelected = filtered.length > 0 && selectedIds.size === filtered.length
 
   return (
     <div className="min-h-full">
@@ -171,7 +205,7 @@ export default function AssessmentsPage() {
           ))}
         </div>
 
-        {/* Search + filter */}
+        {/* Search + status filter */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-48 max-w-sm">
             <Search
@@ -220,11 +254,70 @@ export default function AssessmentsPage() {
           </div>
         </div>
 
+        {/* Bulk action bar */}
+        <AnimatePresence>
+          {selectedIds.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center gap-2 rounded-xl border border-brand-navy/10 bg-brand-navy/[0.04] px-4 py-2.5"
+              role="toolbar"
+              aria-label="Bulk assessment actions"
+            >
+              <span className="flex-1 text-xs font-semibold text-brand-navy">
+                {selectedIds.size} {selectedIds.size === 1 ? 'assessment' : 'assessments'} selected
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowBulkArchiveDialog(true)}
+                disabled={bulkArchive.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+              >
+                <Archive size={12} aria-hidden="true" />
+                Archive Selected
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteDialog(true)}
+                disabled={bulkDelete.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={12} aria-hidden="true" />
+                Delete Selected
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="rounded-lg border border-brand-border bg-white px-3 py-1.5 text-xs text-brand-navy/60 hover:text-brand-navy transition-colors"
+              >
+                Clear
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Main list card */}
         <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
           {/* Column header */}
           {!isLoading && filtered.length > 0 && (
             <div className="flex items-center gap-4 border-b border-brand-border bg-brand-surface/70 px-6 py-2.5">
+              <div className="w-4 flex items-center shrink-0">
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={() => {
+                    if (allFilteredSelected) {
+                      setSelectedIds(new Set())
+                    } else {
+                      setSelectedIds(new Set(filtered.map((a) => a.id)))
+                    }
+                  }}
+                  aria-label="Select all assessments"
+                  className="h-3.5 w-3.5 rounded border-brand-border accent-brand-orange cursor-pointer"
+                />
+              </div>
               <span className="flex-1 min-w-0 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Assessment</span>
               <span className="w-32 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Candidates</span>
               <span className="w-20 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Status</span>
@@ -247,10 +340,10 @@ export default function AssessmentsPage() {
                 {search
                   ? `No assessments match "${search}". Try a different search term.`
                   : statusFilter !== 'all'
-                  ? `No ${statusFilter} assessments found.`
+                  ? `No ${statusFilter} assessments. ${statusFilter === 'active' ? 'Create one to get started.' : ''}`
                   : 'Create your first assessment to start evaluating candidates.'}
               </p>
-              {!search && statusFilter === 'all' && (
+              {(!search && (statusFilter === 'all' || (statusFilter === 'active' && data.length === 0))) && (
                 <Link
                   href="/dashboard/assessments/new"
                   className="mt-5 inline-flex items-center gap-2 rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-light transition-colors"
@@ -266,6 +359,15 @@ export default function AssessmentsPage() {
                 <AssessmentRow
                   key={assessment.id}
                   assessment={assessment}
+                  isSelected={selectedIds.has(assessment.id)}
+                  onToggleSelect={() => {
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(assessment.id)) next.delete(assessment.id)
+                      else next.add(assessment.id)
+                      return next
+                    })
+                  }}
                   onView={() => router.push(`/dashboard/assessments/${assessment.id}`)}
                   onInvite={() => setInviteAssessment(assessment)}
                   onArchive={() => setArchiveTarget(assessment)}
@@ -276,6 +378,7 @@ export default function AssessmentsPage() {
         </div>
       </div>
 
+      {/* Single archive confirm */}
       <ConfirmDialog
         open={!!archiveTarget}
         title="Archive this assessment?"
@@ -285,6 +388,30 @@ export default function AssessmentsPage() {
         variant="danger"
         onConfirm={() => archiveTarget && archive.mutate(archiveTarget.id)}
         onCancel={() => setArchiveTarget(null)}
+      />
+
+      {/* Bulk archive confirm */}
+      <ConfirmDialog
+        open={showBulkArchiveDialog}
+        title={`Archive ${selectedIds.size} ${selectedIds.size === 1 ? 'assessment' : 'assessments'}?`}
+        description="These assessments will be archived. Active candidate sessions won't be affected, but no new sessions can be started."
+        confirmLabel={`Archive ${selectedIds.size} ${selectedIds.size === 1 ? 'Assessment' : 'Assessments'}`}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => bulkArchive.mutate([...selectedIds])}
+        onCancel={() => setShowBulkArchiveDialog(false)}
+      />
+
+      {/* Bulk delete confirm */}
+      <ConfirmDialog
+        open={showBulkDeleteDialog}
+        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? 'assessment' : 'assessments'}?`}
+        description="All candidate submissions, answers, invites, and assessment data will be permanently deleted. This cannot be undone."
+        confirmLabel={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? 'Assessment' : 'Assessments'}`}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => bulkDelete.mutate([...selectedIds])}
+        onCancel={() => setShowBulkDeleteDialog(false)}
       />
 
       {inviteAssessment && (
@@ -299,9 +426,11 @@ export default function AssessmentsPage() {
 }
 
 function AssessmentRow({
-  assessment, onView, onInvite, onArchive,
+  assessment, isSelected, onToggleSelect, onView, onInvite, onArchive,
 }: {
   assessment: Assessment
+  isSelected: boolean
+  onToggleSelect: () => void
   onView: () => void
   onInvite: () => void
   onArchive: () => void
@@ -315,8 +444,19 @@ function AssessmentRow({
     <motion.div
       variants={rowVariants}
       onClick={onView}
-      className="group flex items-center gap-4 border-b border-brand-border px-6 py-4 last:border-0 hover:bg-brand-surface/60 cursor-pointer transition-colors"
+      className={`group flex items-center gap-4 border-b border-brand-border px-6 py-4 last:border-0 cursor-pointer transition-colors ${isSelected ? 'bg-brand-orange/[0.03]' : 'hover:bg-brand-surface/60'}`}
     >
+      {/* Checkbox */}
+      <div className="w-4 shrink-0 flex items-center" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          aria-label={`Select ${assessment.title}`}
+          className="h-3.5 w-3.5 rounded border-brand-border accent-brand-orange cursor-pointer"
+        />
+      </div>
+
       {/* Title + meta */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -385,7 +525,7 @@ function AssessmentRow({
           label="Archive"
           onClick={onArchive}
           disabled={assessment.status === 'archived'}
-          className="hover:text-red-500 hover:bg-red-50"
+          className="hover:text-amber-600 hover:bg-amber-50"
         >
           <Archive size={14} />
         </IconBtn>

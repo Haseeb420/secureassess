@@ -152,6 +152,10 @@ export const assessmentsApi = {
   listInvites: (id: string) => apiFetch<Invite[]>(`/assessments/${id}/invites`),
   createInvite: (id: string, body: CreateInviteBody) =>
     apiFetch<Invite>(`/assessments/${id}/invites`, { method: 'POST', body: JSON.stringify(body) }),
+  bulkArchive: (ids: string[]) =>
+    apiFetch<{ archived: number }>('/assessments/bulk-archive', { method: 'POST', body: JSON.stringify({ assessment_ids: ids }) }),
+  bulkDelete: (ids: string[]) =>
+    apiFetch<{ deleted: number }>('/assessments/bulk-delete', { method: 'POST', body: JSON.stringify({ assessment_ids: ids }) }),
 }
 
 // ── Questions ─────────────────────────────────────────────────────────────────

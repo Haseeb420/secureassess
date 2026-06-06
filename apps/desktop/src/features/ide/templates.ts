@@ -35,30 +35,31 @@ if __name__ == "__main__":
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout,
   terminal: false,
 });
 
 const lines = [];
 rl.on('line', (line) => lines.push(line));
 rl.on('close', () => {
-  const name = lines[0] ?? 'World';
+  const name = lines[0] !== undefined ? lines[0] : 'World';
   console.log(\`Hello, \${name}!\`);
 });
 `,
 
-  typescript: `import * as readline from 'readline';
+  typescript: `declare function require(module: string): any;
+declare const process: any;
+
+const readline = require('readline');
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout,
   terminal: false,
 });
 
 const lines: string[] = [];
 rl.on('line', (line: string) => lines.push(line));
 rl.on('close', () => {
-  const name: string = lines[0] ?? 'World';
+  const name: string = lines[0] !== undefined ? lines[0] : 'World';
   console.log(\`Hello, \${name}!\`);
 });
 `,

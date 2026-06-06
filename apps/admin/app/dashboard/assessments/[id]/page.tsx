@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import {
   Clock, Shield, Code, Users, ArrowLeft, UserPlus,
   Check, Copy, BarChart2, AlertCircle, FileCode2, Search, X, Plus,
-  GripVertical, Trash2, Loader2, CheckCircle2,
+  GripVertical, Trash2, Loader2, CheckCircle2, ShieldOff,
 } from 'lucide-react'
 import { ConfirmDialog } from '@secureassess/ui'
 import {
@@ -497,10 +497,16 @@ function InviteStatCard({ label, value }: { label: string; value: number }) {
 
 function InviteRow({
   invite,
+  isSelected,
+  onToggleSelect,
   onRevoke,
+  onDelete,
 }: {
   invite: Invite
+  isSelected: boolean
+  onToggleSelect: () => void
   onRevoke: (i: Invite) => void
+  onDelete: (i: Invite) => void
 }) {
   const st = getInviteStatus(invite)
   const cfg = INVITE_STATUS_CONFIG[st]
@@ -510,8 +516,20 @@ function InviteRow({
   return (
     <motion.div
       variants={{ hidden: { opacity: 0, x: -4 }, show: { opacity: 1, x: 0, transition: { duration: 0.15 } } }}
-      className="group flex items-center gap-4 border-b border-brand-border px-5 py-3.5 last:border-0 hover:bg-brand-surface/40 transition-colors"
+      className={`group flex items-center gap-4 border-b border-brand-border px-5 py-3.5 last:border-0 transition-colors ${isSelected ? 'bg-brand-orange/[0.03]' : 'hover:bg-brand-surface/40'}`}
     >
+      {/* Checkbox */}
+      <div className="w-4 shrink-0 flex items-center">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Select ${invite.candidate_name}`}
+          className="h-3.5 w-3.5 rounded border-brand-border accent-brand-orange cursor-pointer"
+        />
+      </div>
+
       {/* Candidate */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-brand-navy truncate">{invite.candidate_name}</p>
@@ -560,7 +578,7 @@ function InviteRow({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+      <div className="w-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
         <CopyBtn text={invite.token_value} label="token value" />
         <button
           type="button"
@@ -568,9 +586,18 @@ function InviteRow({
           disabled={invite.is_revoked}
           aria-label="Revoke invite"
           title="Revoke invite"
-          className="rounded p-1.5 text-brand-navy/40 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+          className="rounded p-1.5 text-brand-navy/40 hover:bg-amber-50 hover:text-amber-600 transition-colors disabled:opacity-30 disabled:pointer-events-none"
         >
-          <X size={13} />
+          <ShieldOff size={13} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(invite)}
+          aria-label="Delete invite"
+          title="Delete invite"
+          className="rounded p-1.5 text-brand-navy/40 hover:bg-red-50 hover:text-red-500 transition-colors"
+        >
+          <Trash2 size={13} />
         </button>
       </div>
     </motion.div>
@@ -585,6 +612,10 @@ export default function AssessmentDetailPage() {
   const qc = useQueryClient()
   const [showInviteDrawer, setShowInviteDrawer] = useState(false)
   const [revokeTarget, setRevokeTarget] = useState<Invite | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Invite | null>(null)
+  const [selectedInviteIds, setSelectedInviteIds] = useState<Set<string>>(new Set())
+  const [showBulkRevokeDialog, setShowBulkRevokeDialog] = useState(false)
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
   const [activeTab, setActiveTab] = useState<'candidates' | 'questions' | 'invites'>('candidates')
 
   const { data, isLoading } = useQuery({
@@ -619,6 +650,33 @@ export default function AssessmentDetailPage() {
     },
     onError: () => toast.error('Failed to revoke invite'),
   })
+
+  const bulkRevoke = useMutation({
+    mutationFn: (ids: string[]) => tokensApi.bulkRevoke(ids),
+    onSuccess: (_data, ids) => {
+      qc.invalidateQueries({ queryKey: ['invites', id] })
+      toast.success(`${ids.length} ${ids.length === 1 ? 'invite' : 'invites'} revoked`)
+      setSelectedInviteIds(new Set())
+      setShowBulkRevokeDialog(false)
+    },
+    onError: () => toast.error('Failed to revoke invites'),
+  })
+
+  const bulkDelete = useMutation({
+    mutationFn: (ids: string[]) => tokensApi.bulkDelete(ids),
+    onSuccess: (_data, ids) => {
+      qc.invalidateQueries({ queryKey: ['invites', id] })
+      toast.success(`${ids.length} ${ids.length === 1 ? 'invite' : 'invites'} deleted`)
+      setDeleteTarget(null)
+      setSelectedInviteIds(new Set())
+      setShowBulkDeleteDialog(false)
+    },
+    onError: () => toast.error('Failed to delete invites'),
+  })
+
+  useEffect(() => {
+    setSelectedInviteIds(new Set())
+  }, [activeTab])
 
   if (isLoading) return <PageSkeleton />
 
@@ -805,12 +863,57 @@ export default function AssessmentDetailPage() {
                 <InviteStatCard label="Completed"       value={inviteStats.done} />
               </div>
 
+              {/* Bulk action bar */}
+              <AnimatePresence>
+                {selectedInviteIds.size > 0 && !invitesLoading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex items-center gap-2 rounded-xl border border-brand-navy/10 bg-brand-navy/[0.04] px-4 py-2.5"
+                    role="toolbar"
+                    aria-label="Bulk invite actions"
+                  >
+                    <span className="flex-1 text-xs font-semibold text-brand-navy">
+                      {selectedInviteIds.size} {selectedInviteIds.size === 1 ? 'invite' : 'invites'} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkRevokeDialog(true)}
+                      disabled={bulkRevoke.isPending}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                    >
+                      <ShieldOff size={12} aria-hidden="true" />
+                      Revoke Selected
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkDeleteDialog(true)}
+                      disabled={bulkDelete.isPending}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 size={12} aria-hidden="true" />
+                      Delete Selected
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInviteIds(new Set())}
+                      className="rounded-lg border border-brand-border bg-white px-3 py-1.5 text-xs text-brand-navy/60 hover:text-brand-navy transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Table */}
               <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
                 {invitesLoading ? (
                   <div className="animate-pulse">
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-brand-border last:border-0">
+                        <div className="h-3.5 w-3.5 bg-brand-border/60 rounded" />
                         <div className="flex-1 space-y-1.5">
                           <div className="h-3.5 w-40 bg-brand-border rounded" />
                           <div className="h-3 w-24 bg-brand-border/60 rounded" />
@@ -841,16 +944,45 @@ export default function AssessmentDetailPage() {
                 ) : (
                   <>
                     <div className="flex items-center gap-4 border-b border-brand-border bg-brand-surface/70 px-5 py-2.5">
+                      <div className="w-4 flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={invites.length > 0 && selectedInviteIds.size === invites.length}
+                          onChange={() => {
+                            if (selectedInviteIds.size === invites.length) {
+                              setSelectedInviteIds(new Set())
+                            } else {
+                              setSelectedInviteIds(new Set(invites.map((i) => i.id)))
+                            }
+                          }}
+                          aria-label="Select all invites"
+                          className="h-3.5 w-3.5 rounded border-brand-border accent-brand-orange cursor-pointer"
+                        />
+                      </div>
                       <span className="flex-1 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Candidate</span>
                       <span className="w-36 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Token</span>
                       <span className="w-24 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Usage</span>
                       <span className="w-28 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Expires</span>
                       <span className="w-28 text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Status</span>
-                      <span className="w-16" />
+                      <span className="w-20" />
                     </div>
                     <motion.div variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }} initial="hidden" animate="show">
                       {invites.map((invite) => (
-                        <InviteRow key={invite.id} invite={invite} onRevoke={setRevokeTarget} />
+                        <InviteRow
+                          key={invite.id}
+                          invite={invite}
+                          isSelected={selectedInviteIds.has(invite.id)}
+                          onToggleSelect={() => {
+                            setSelectedInviteIds((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(invite.id)) next.delete(invite.id)
+                              else next.add(invite.id)
+                              return next
+                            })
+                          }}
+                          onRevoke={setRevokeTarget}
+                          onDelete={setDeleteTarget}
+                        />
                       ))}
                     </motion.div>
                   </>
@@ -870,7 +1002,7 @@ export default function AssessmentDetailPage() {
         allAssessments={allAssessments}
       />
 
-      {/* Revoke confirm */}
+      {/* Revoke single confirm */}
       <ConfirmDialog
         open={!!revokeTarget}
         title="Revoke this invite?"
@@ -880,6 +1012,42 @@ export default function AssessmentDetailPage() {
         variant="danger"
         onConfirm={() => revokeTarget && revoke.mutate(revokeTarget.id)}
         onCancel={() => setRevokeTarget(null)}
+      />
+
+      {/* Delete single confirm */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete this invite?"
+        description={`The invite for ${deleteTarget?.candidate_name ?? 'this candidate'} will be permanently removed. Any submissions made using this token are preserved and remain viewable in Results.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => deleteTarget && bulkDelete.mutate([deleteTarget.id])}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Bulk revoke confirm */}
+      <ConfirmDialog
+        open={showBulkRevokeDialog}
+        title={`Revoke ${selectedInviteIds.size} ${selectedInviteIds.size === 1 ? 'invite' : 'invites'}?`}
+        description="These candidates will no longer be able to use their tokens to access the assessment. Completed submissions are not affected."
+        confirmLabel={`Revoke ${selectedInviteIds.size} ${selectedInviteIds.size === 1 ? 'Invite' : 'Invites'}`}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => bulkRevoke.mutate([...selectedInviteIds])}
+        onCancel={() => setShowBulkRevokeDialog(false)}
+      />
+
+      {/* Bulk delete confirm */}
+      <ConfirmDialog
+        open={showBulkDeleteDialog}
+        title={`Delete ${selectedInviteIds.size} ${selectedInviteIds.size === 1 ? 'invite' : 'invites'}?`}
+        description="The invite records will be permanently removed. All submissions made using these tokens are preserved and remain viewable in Results. This cannot be undone."
+        confirmLabel={`Delete ${selectedInviteIds.size} ${selectedInviteIds.size === 1 ? 'Invite' : 'Invites'}`}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => bulkDelete.mutate([...selectedInviteIds])}
+        onCancel={() => setShowBulkDeleteDialog(false)}
       />
     </motion.div>
   )

@@ -348,6 +348,10 @@ export const tokensApi = {
     apiFetch<Token>(`/tokens/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   revoke: (id: string) =>
     apiFetch<void>(`/tokens/${id}`, { method: 'DELETE' }),
+  bulkRevoke: (ids: string[]) =>
+    apiFetch<{ revoked: number }>('/tokens/bulk-revoke', { method: 'POST', body: JSON.stringify({ token_ids: ids }) }),
+  bulkDelete: (ids: string[]) =>
+    apiFetch<{ deleted: number }>('/tokens/bulk-delete', { method: 'POST', body: JSON.stringify({ token_ids: ids }) }),
 }
 
 // ── Attempts ──────────────────────────────────────────────────────────────────

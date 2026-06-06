@@ -337,7 +337,7 @@ serve: ## Start API + admin + ngrok together, no tmux required (recommended for 
 	@bash scripts/dev-stack.sh
 
 dev-ngrok: ## Start api + admin + ngrok in tmux (three panes, tmux required)
-	@command -v tmux >/dev/null 2>&1 || { echo "tmux required: brew install tmux  (or use: make serve)"; exit 1; }
+	@command -v tmux >/dev/null 2>&1 || { echo "tmux required — install with: brew install tmux (macOS) or sudo apt install tmux (Linux)  |  or use: make serve"; exit 1; }
 	@tmux new-session -d -s secureassess-ngrok -n api   'bash scripts/start-api.sh; read'
 	@tmux new-window -t secureassess-ngrok -n admin  'bash scripts/start-admin.sh; read'
 	@tmux new-window -t secureassess-ngrok -n ngrok  'bash scripts/start-ngrok.sh; read'

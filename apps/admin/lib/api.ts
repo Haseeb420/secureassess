@@ -379,6 +379,9 @@ export interface AttemptListItem {
   token_id?: string
   usage_limit?: number
   has_pending_review: boolean
+  questions_answered?: number
+  total_questions?: number
+  duration_minutes?: number
 }
 
 export interface AttemptDetail extends AttemptListItem {

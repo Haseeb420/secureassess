@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { Badge, Skeleton } from '@secureassess/ui'
@@ -258,10 +258,25 @@ export default function AttemptDetailPage() {
 
 function AnswerSummary({ answer }: { answer: AnswerDetail }) {
   if (answer.question_type === 'coding') {
-    const passed = answer.test_results?.filter((t) => t.passed).length ?? 0
-    const total = answer.test_results?.length ?? 0
+    const testResults = answer.test_results ?? []
+    const passed = testResults.filter((t) => t.passed).length
+    const failed = testResults.length - passed
     const lang = answer.language ?? 'code'
-    return <>{lang} · {passed}/{total} tests passed</>
+    if (testResults.length === 0) return <>{lang} · no test results</>
+    return (
+      <span className="flex items-center gap-2">
+        <span className="text-brand-navy/50">{lang}</span>
+        <span className="flex items-center gap-1 text-green-600">
+          <CheckCircle2 size={11} aria-hidden="true" />{passed}
+        </span>
+        {failed > 0 && (
+          <span className="flex items-center gap-1 text-red-500">
+            <XCircle size={11} aria-hidden="true" />{failed}
+          </span>
+        )}
+        <span className="text-brand-navy/40">/ {testResults.length}</span>
+      </span>
+    )
   }
   if (answer.question_type === 'mcq') {
     return <>{answer.selected_option ?? '—'}</>
@@ -286,8 +301,34 @@ function AnswerDetail({
   )
 
   if (answer.question_type === 'coding') {
+    const testResults = answer.test_results ?? []
+    const passed = testResults.filter((t) => t.passed).length
+    const failed = testResults.length - passed
+
     return (
       <div className="px-5 py-4 space-y-4">
+        {/* Test summary pills */}
+        {testResults.length > 0 && (
+          <div className="flex items-center gap-3">
+            <span className="font-dm-sans text-xs font-semibold uppercase tracking-wider text-brand-navy/50 mr-1">
+              Test Results
+            </span>
+            <span className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">
+              <CheckCircle2 size={12} aria-hidden="true" />
+              {passed} passed
+            </span>
+            {failed > 0 && (
+              <span className="flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 ring-1 ring-red-200">
+                <XCircle size={12} aria-hidden="true" />
+                {failed} failed
+              </span>
+            )}
+            <span className="font-dm-mono text-xs text-brand-navy/40">
+              {testResults.length} total
+            </span>
+          </div>
+        )}
+
         <div>
           <p className="mb-2 font-dm-sans text-xs font-semibold uppercase tracking-wider text-brand-navy/50">
             Source code submitted
@@ -297,36 +338,47 @@ function AnswerDetail({
           </pre>
         </div>
 
-        {answer.test_results && answer.test_results.length > 0 && (
+        {testResults.length > 0 && (
           <div className="overflow-hidden rounded-xl border border-brand-border">
+            <div className="border-b border-brand-border bg-[#262637] px-3 py-2 flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#CDD6F4]/60 uppercase tracking-wider">Test Cases</span>
+            </div>
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-brand-border bg-[#262637] text-[#CDD6F4]/60">
-                  {['Input', 'Expected', 'Actual', 'Result', 'Time'].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left font-semibold">{h}</th>
+                <tr className="border-b border-brand-border bg-brand-surface">
+                  {['#', 'Input', 'Expected', 'Actual', 'Time', 'Result'].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left font-semibold text-brand-navy/50 uppercase tracking-wider text-[10px]">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {answer.test_results.map((tc, i) => (
+                {testResults.map((tc, i) => (
                   <tr
                     key={i}
                     className={`border-b border-brand-border last:border-0 ${
-                      tc.passed ? 'border-l-2 border-l-green-400' : 'border-l-2 border-l-red-400'
+                      tc.passed ? 'bg-green-50/40' : 'bg-red-50/40'
                     }`}
                   >
-                    <td className="px-3 py-2 font-dm-mono text-brand-navy/70">{tc.input ?? '—'}</td>
-                    <td className="px-3 py-2 font-dm-mono text-brand-navy/70">{tc.expected_output ?? '—'}</td>
-                    <td className="px-3 py-2 font-dm-mono text-brand-navy/70">{tc.actual_output ?? '—'}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`font-semibold ${tc.passed ? 'text-green-600' : 'text-red-500'}`}
-                      >
-                        {tc.passed ? 'Pass' : 'Fail'}
-                      </span>
+                    <td className="px-3 py-2.5 font-dm-mono text-brand-navy/40 w-8">{i + 1}</td>
+                    <td className="px-3 py-2.5 font-dm-mono text-brand-navy/70 max-w-[120px] truncate">
+                      {tc.input != null ? tc.input : <span className="text-brand-navy/30">—</span>}
                     </td>
-                    <td className="px-3 py-2 font-dm-mono text-brand-navy/50">
+                    <td className="px-3 py-2.5 font-dm-mono text-brand-navy/70 max-w-[120px] truncate">
+                      {tc.expected_output != null ? tc.expected_output : <span className="text-brand-navy/30">—</span>}
+                    </td>
+                    <td className={`px-3 py-2.5 font-dm-mono max-w-[120px] truncate ${tc.passed ? 'text-green-700' : 'text-red-600'}`}>
+                      {tc.actual_output != null ? tc.actual_output : <span className="text-brand-navy/30">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 font-dm-mono text-brand-navy/50 whitespace-nowrap">
                       {tc.time_ms != null ? `${tc.time_ms}ms` : '—'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={`inline-flex items-center gap-1 font-semibold ${tc.passed ? 'text-green-600' : 'text-red-500'}`}>
+                        {tc.passed
+                          ? <><CheckCircle2 size={12} aria-hidden="true" /> Pass</>
+                          : <><XCircle size={12} aria-hidden="true" /> Fail</>
+                        }
+                      </span>
                     </td>
                   </tr>
                 ))}

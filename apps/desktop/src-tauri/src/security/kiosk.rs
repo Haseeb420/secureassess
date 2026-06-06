@@ -161,6 +161,14 @@ pub fn enter_kiosk_mode(
         crate::security::keyboard_hook::install_keyboard_hook();
     }
 
+    #[cfg(target_os = "linux")]
+    {
+        // Cover the full display and pin on top. Native GTK fullscreen is the
+        // most reliable way to cover the panel/taskbar on both X11 and Wayland.
+        window.set_fullscreen(true).map_err(|e| e.to_string())?;
+        window.set_always_on_top(true).map_err(|e| e.to_string())?;
+    }
+
     flag.0.store(true, Ordering::Relaxed);
     tracing::info!("Kiosk mode activated");
     Ok(())
@@ -211,6 +219,12 @@ pub fn exit_kiosk_mode(
     window.set_minimizable(true).map_err(|e| e.to_string())?;
     window.set_resizable(true).map_err(|e| e.to_string())?;
     window.set_decorations(true).map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "linux")]
+    {
+        window.set_always_on_top(false).map_err(|e| e.to_string())?;
+        window.set_fullscreen(false).map_err(|e| e.to_string())?;
+    }
 
     // Restore to a normal windowed size and center on screen
     window

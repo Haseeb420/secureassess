@@ -8,9 +8,11 @@ import {
   Clock,
   Loader2,
   LogOut,
+  Power,
   Tag,
   XCircle,
 } from 'lucide-react'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { toast } from 'sonner'
 import { cn } from '@secureassess/ui'
 import type { Assessment, AssessmentStatus } from '@secureassess/shared-types'
@@ -81,6 +83,8 @@ export function LandingPage() {
     navigate('/login', { replace: true })
   }
 
+  const handleQuitApp = () => getCurrentWindow().close()
+
   const handleBeginAssessment = () => {
     setAssessmentData(assessment.id, assessment.title, assessment.durationMins)
     // Questions will be populated from /attempts/start once the assessment begins.
@@ -136,7 +140,7 @@ export function LandingPage() {
   }[assessmentStatus] ?? 'bg-brand-border'
 
   return (
-    <div className="flex h-screen flex-col overflow-y-auto bg-brand-surface">
+    <div className="flex h-screen flex-col overflow-hidden bg-brand-surface">
 
       {/* ── Top bar ── */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-white/[0.08] bg-brand-navy px-6">
@@ -174,11 +178,20 @@ export function LandingPage() {
           >
             <LogOut size={15} />
           </button>
+          <button
+            type="button"
+            onClick={handleQuitApp}
+            aria-label="Quit application"
+            title="Quit SecureAssess"
+            className="flex items-center justify-center rounded-lg p-1.5 text-white/40 transition-colors hover:bg-red-500/20 hover:text-red-400"
+          >
+            <Power size={15} />
+          </button>
         </div>
       </div>
 
       {/* ── Main content ── */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl px-6 py-8">
 
           {/* Welcome header */}

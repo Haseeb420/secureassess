@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Eye, EyeOff, Mail, Save, ShieldCheck, Wifi } from 'lucide-react'
+import { Eye, EyeOff, Mail, Power, Save, ShieldCheck, Wifi } from 'lucide-react'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { toast } from 'sonner'
 import {
   loginSchema,
@@ -292,7 +293,18 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="relative flex h-screen overflow-hidden">
+
+      {/* ── Quit button ── */}
+      <button
+        type="button"
+        onClick={() => getCurrentWindow().close()}
+        aria-label="Quit application"
+        title="Quit SecureAssess"
+        className="absolute right-4 top-4 z-10 flex items-center justify-center rounded-lg p-1.5 text-brand-navy/25 transition-colors hover:bg-red-50 hover:text-red-400"
+      >
+        <Power size={15} />
+      </button>
 
       {/* ── LEFT COLUMN (42%) ── */}
       <div className="hidden w-[42%] flex-col bg-brand-navy md:flex">

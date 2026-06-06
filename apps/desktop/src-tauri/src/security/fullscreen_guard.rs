@@ -81,6 +81,19 @@ pub fn start_fullscreen_watchdog<R: Runtime>(
             }
         }
 
+        // Linux: re-assert fullscreen + always-on-top each tick.
+        // GTK compositors (X11 and Wayland) can lose both when a system dialog
+        // or notification temporarily takes focus.
+        #[cfg(target_os = "linux")]
+        {
+            if !window.is_fullscreen().unwrap_or(true) {
+                tracing::warn!("Window exited fullscreen during assessment — restoring");
+                let _ = window.set_fullscreen(true);
+                let _ = window.set_always_on_top(true);
+                let _ = app_handle.emit("security:fullscreen-restored", ());
+            }
+        }
+
         // Belt-and-suspenders: unminimize if the window ended up minimized.
         // set_minimizable(false) should prevent this but we guard anyway.
         if window.is_minimized().unwrap_or(false) {

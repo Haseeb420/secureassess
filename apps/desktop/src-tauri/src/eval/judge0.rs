@@ -13,10 +13,12 @@ pub struct Judge0Client {
 
 impl Judge0Client {
     pub fn new() -> Self {
-        // Accept both JUDGE0_URL (server env) and VITE_JUDGE0_URL (desktop .env convention).
+        // Priority: runtime env (dotenvy in dev) → compile-time baked value (CI secret).
         let base_url = std::env::var("JUDGE0_URL")
             .or_else(|_| std::env::var("VITE_JUDGE0_URL"))
-            .unwrap_or_default()
+            .unwrap_or_else(|_| {
+                option_env!("VITE_JUDGE0_URL").unwrap_or("").to_string()
+            })
             .trim_end_matches('/')
             .to_string();
         Self {

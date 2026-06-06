@@ -12,11 +12,16 @@ pub trait EvaluationBackend: Send + Sync {
 }
 
 pub fn get_backend() -> Box<dyn EvaluationBackend> {
-    // Accept both EXECUTION_BACKEND (server convention) and VITE_EXECUTION_BACKEND
-    // (desktop .env convention, loaded by dotenvy at startup).
+    // Priority: runtime env (dotenvy loads .env in dev) → compile-time baked value
+    // (option_env! reads the env var during `cargo build`, so CI secrets are embedded
+    // into the binary and survive in production where no .env file exists).
     let backend = std::env::var("EXECUTION_BACKEND")
         .or_else(|_| std::env::var("VITE_EXECUTION_BACKEND"))
-        .unwrap_or_default();
+        .unwrap_or_else(|_| {
+            option_env!("VITE_EXECUTION_BACKEND")
+                .unwrap_or("local")
+                .to_string()
+        });
     match backend.as_str() {
         "judge0" => Box::new(judge0::Judge0Client::new()),
         _ => Box::new(local::LocalExecutor),

@@ -5,10 +5,12 @@ import Link from 'next/link'
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
-import { Eye, BarChart2, AlertCircle, FileSpreadsheet, FileText, ChevronUp, ChevronDown } from 'lucide-react'
+import { Eye, BarChart2, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { EmptyState, Badge, Skeleton } from '@secureassess/ui'
 import { PageHeader } from '../../../components/PageHeader'
+import { ExportButtons } from '../../../components/ExportButtons'
+import { downloadCSV, downloadExcel, downloadPDF } from '../../../lib/export'
 import { attemptsApi, assessmentsApi, type AttemptListItem } from '../../../lib/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -46,12 +48,9 @@ function sortAttempts(list: AttemptListItem[], key: SortKey | '', dir: SortDir):
   return [...list].sort((a, b) => {
     const av = a[key as keyof AttemptListItem]
     const bv = b[key as keyof AttemptListItem]
-
-    // Nulls always sink to the bottom regardless of direction
     if (av == null && bv == null) return 0
     if (av == null) return 1
     if (bv == null) return -1
-
     if (typeof av === 'string' && typeof bv === 'string') {
       const cmp = av.localeCompare(bv, undefined, { sensitivity: 'base' })
       return dir === 'asc' ? cmp : -cmp
@@ -63,56 +62,26 @@ function sortAttempts(list: AttemptListItem[], key: SortKey | '', dir: SortDir):
   })
 }
 
-// ── Export helpers ────────────────────────────────────────────────────────────
+// ── Export builders ───────────────────────────────────────────────────────────
 
-function exportToCSV(attempts: AttemptListItem[]) {
-  const BOM = '﻿'
-  const headers = [
-    'Candidate Name', 'Candidate Email', 'Assessment', 'Score (%)',
-    'Questions Answered', 'Total Questions', 'Status', 'Duration', 'Started At', 'Completed At',
-  ]
-  const rows = attempts.map((a) => [
+const EXPORT_HEADERS = [
+  'Candidate Name', 'Candidate Email', 'Assessment', 'Score (%)',
+  'Questions Answered', 'Total Questions', 'Status', 'Duration', 'Started At', 'Completed At',
+]
+
+function toExportRows(attempts: AttemptListItem[]) {
+  return attempts.map((a) => [
     a.candidate_name,
     a.candidate_email,
     a.assessment_title ?? '',
-    a.final_score != null ? a.final_score.toFixed(1) : '',
-    a.questions_answered != null ? String(a.questions_answered) : '',
-    a.total_questions != null ? String(a.total_questions) : '',
-    a.status,
+    a.final_score != null ? parseFloat(a.final_score.toFixed(1)) : '',
+    a.questions_answered ?? '',
+    a.total_questions ?? '',
+    STATUS_CONFIG[a.status]?.label ?? a.status,
     a.total_time_secs != null ? formatDuration(a.total_time_secs) : '',
     a.started_at,
     a.completed_at ?? '',
-  ])
-  const csv = BOM + [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    .join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `results-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-async function exportToExcel(attempts: AttemptListItem[]) {
-  const { utils, writeFile } = await import('xlsx')
-  const rows = attempts.map((a) => ({
-    'Candidate Name': a.candidate_name,
-    'Candidate Email': a.candidate_email,
-    'Assessment': a.assessment_title ?? '',
-    'Score (%)': a.final_score != null ? parseFloat(a.final_score.toFixed(1)) : '',
-    'Questions Answered': a.questions_answered ?? '',
-    'Total Questions': a.total_questions ?? '',
-    'Status': STATUS_CONFIG[a.status]?.label ?? a.status,
-    'Duration': a.total_time_secs != null ? formatDuration(a.total_time_secs) : '',
-    'Started At': a.started_at,
-    'Completed At': a.completed_at ?? '',
-  }))
-  const ws = utils.json_to_sheet(rows)
-  const wb = utils.book_new()
-  utils.book_append_sheet(wb, ws, 'Results')
-  writeFile(wb, `results-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  ] as (string | number)[])
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -136,22 +105,15 @@ function SkeletonRow() {
 }
 
 function SortHeader({
-  label,
-  sortKey,
-  currentSort,
-  currentDir,
-  onSort,
-  className = '',
+  label, sortKey, currentSort, currentDir, onSort,
 }: {
   label: string
   sortKey: SortKey
   currentSort: SortKey | ''
   currentDir: SortDir
-  onSort: (key: SortKey) => void
-  className?: string
+  onSort: (k: SortKey) => void
 }) {
   const active = currentSort === sortKey
-
   return (
     <button
       type="button"
@@ -159,20 +121,12 @@ function SortHeader({
       aria-label={`Sort by ${label}`}
       className={`group flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
         active ? 'text-brand-orange' : 'text-brand-navy/50 hover:text-brand-navy/80'
-      } ${className}`}
+      }`}
     >
       {label}
       <span className="flex flex-col gap-[1px] ml-0.5">
-        <ChevronUp
-          size={9}
-          aria-hidden="true"
-          className={`transition-opacity ${active && currentDir === 'asc' ? 'opacity-100 text-brand-orange' : 'opacity-20 group-hover:opacity-40'}`}
-        />
-        <ChevronDown
-          size={9}
-          aria-hidden="true"
-          className={`transition-opacity ${active && currentDir === 'desc' ? 'opacity-100 text-brand-orange' : 'opacity-20 group-hover:opacity-40'}`}
-        />
+        <ChevronUp   size={9} aria-hidden="true" className={`transition-opacity ${active && currentDir === 'asc'  ? 'opacity-100 text-brand-orange' : 'opacity-20 group-hover:opacity-40'}`} />
+        <ChevronDown size={9} aria-hidden="true" className={`transition-opacity ${active && currentDir === 'desc' ? 'opacity-100 text-brand-orange' : 'opacity-20 group-hover:opacity-40'}`} />
       </span>
     </button>
   )
@@ -180,19 +134,14 @@ function SortHeader({
 
 function TimeRemaining({ startedAt, durationMinutes }: { startedAt: string; durationMinutes: number }) {
   const [remaining, setRemaining] = useState<number | null>(null)
-
   useEffect(() => {
-    function calc() {
-      return durationMinutes * 60 - Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
-    }
+    const calc = () => durationMinutes * 60 - Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
     setRemaining(calc())
     const id = setInterval(() => setRemaining(calc()), 1000)
     return () => clearInterval(id)
   }, [startedAt, durationMinutes])
-
   if (remaining === null) return <span className="font-dm-mono text-xs text-brand-navy/40">—</span>
   if (remaining <= 0) return <span className="font-dm-mono text-xs font-semibold text-red-500">Expired</span>
-
   return (
     <span className={`font-dm-mono text-xs font-semibold ${remaining < 300 ? 'text-red-500' : 'text-brand-orange'}`}>
       {formatDuration(remaining)} left
@@ -201,11 +150,10 @@ function TimeRemaining({ startedAt, durationMinutes }: { startedAt: string; dura
 }
 
 function AttemptRow({ attempt, cols }: { attempt: AttemptListItem; cols: string }) {
-  const statusCfg = STATUS_CONFIG[attempt.status] ?? { label: attempt.status, variant: 'neutral' as const }
-  const isPending = attempt.has_pending_review
-  const isInProgress = attempt.status === 'in_progress'
-
-  const questionsDisplay = attempt.total_questions != null
+  const statusCfg  = STATUS_CONFIG[attempt.status] ?? { label: attempt.status, variant: 'neutral' as const }
+  const isPending  = attempt.has_pending_review
+  const isInProg   = attempt.status === 'in_progress'
+  const qDisplay   = attempt.total_questions != null
     ? `${attempt.questions_answered ?? 0}/${attempt.total_questions}`
     : '—'
 
@@ -214,16 +162,13 @@ function AttemptRow({ attempt, cols }: { attempt: AttemptListItem; cols: string 
       variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.15 } } }}
       className={`grid ${cols} items-center gap-4 border-b border-brand-border px-5 py-3.5 last:border-0 hover:bg-brand-surface/50 transition-colors`}
     >
-      {/* Candidate */}
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-brand-navy">{attempt.candidate_name}</p>
         <p className="truncate text-xs text-brand-navy/50">{attempt.candidate_email}</p>
       </div>
 
-      {/* Assessment */}
       <p className="truncate text-sm text-brand-navy/80">{attempt.assessment_title ?? '—'}</p>
 
-      {/* Score */}
       <div>
         {attempt.final_score != null ? (
           <span className={`font-dm-mono text-sm font-semibold ${scoreColor(attempt.final_score)}`}>
@@ -231,19 +176,17 @@ function AttemptRow({ attempt, cols }: { attempt: AttemptListItem; cols: string 
           </span>
         ) : isPending ? (
           <span className="flex items-center gap-1 font-dm-mono text-xs text-amber-600">
-            <AlertCircle size={12} aria-hidden="true" />
-            Pending
+            <AlertCircle size={12} aria-hidden="true" /> Pending
           </span>
         ) : (
           <span className="font-dm-mono text-xs text-brand-navy/30">—</span>
         )}
       </div>
 
-      {/* Questions answered */}
       <div>
-        <span className="font-dm-mono text-xs text-brand-navy/70">{questionsDisplay}</span>
-        {isInProgress && attempt.total_questions != null && (
-          <div className="mt-1 h-1 w-full rounded-full bg-brand-border overflow-hidden">
+        <span className="font-dm-mono text-xs text-brand-navy/70">{qDisplay}</span>
+        {isInProg && attempt.total_questions != null && (
+          <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-brand-border">
             <div
               className="h-full rounded-full bg-brand-orange transition-all"
               style={{ width: `${Math.min(100, ((attempt.questions_answered ?? 0) / attempt.total_questions) * 100)}%` }}
@@ -252,7 +195,6 @@ function AttemptRow({ attempt, cols }: { attempt: AttemptListItem; cols: string 
         )}
       </div>
 
-      {/* Status */}
       <div className="flex items-center gap-1.5">
         <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
         {isPending && (
@@ -262,20 +204,16 @@ function AttemptRow({ attempt, cols }: { attempt: AttemptListItem; cols: string 
         )}
       </div>
 
-      {/* Duration / Time remaining */}
       <div>
-        {isInProgress && attempt.duration_minutes != null ? (
+        {isInProg && attempt.duration_minutes != null ? (
           <TimeRemaining startedAt={attempt.started_at} durationMinutes={attempt.duration_minutes} />
         ) : attempt.total_time_secs != null ? (
-          <span className="font-dm-mono text-xs text-brand-navy/60">
-            {formatDuration(attempt.total_time_secs)}
-          </span>
+          <span className="font-dm-mono text-xs text-brand-navy/60">{formatDuration(attempt.total_time_secs)}</span>
         ) : (
           <span className="font-dm-mono text-xs text-brand-navy/30">—</span>
         )}
       </div>
 
-      {/* Completed / Started */}
       <div>
         {attempt.completed_at ? (
           <span className="text-xs text-brand-navy/50">
@@ -290,7 +228,6 @@ function AttemptRow({ attempt, cols }: { attempt: AttemptListItem; cols: string 
         )}
       </div>
 
-      {/* Action */}
       <Link
         href={`/dashboard/results/${attempt.id}`}
         aria-label="View results"
@@ -303,57 +240,45 @@ function AttemptRow({ attempt, cols }: { attempt: AttemptListItem; cols: string 
   )
 }
 
-// ── Main content (needs Suspense for useSearchParams) ─────────────────────────
+// ── Main content ──────────────────────────────────────────────────────────────
 
 function ResultsContent() {
   const searchParams = useSearchParams()
-  const pathname = usePathname()
-  const router = useRouter()
+  const pathname     = usePathname()
+  const router       = useRouter()
 
-  // Filters
   const assessmentFilter = searchParams.get('assessment') ?? ''
   const statusFilter     = searchParams.get('status')     ?? ''
   const dateFrom         = searchParams.get('from')        ?? ''
   const dateTo           = searchParams.get('to')          ?? ''
-
-  // Sort
-  const sortKey = (searchParams.get('sort') ?? '') as SortKey | ''
-  const sortDir = (searchParams.get('dir') ?? 'asc') as SortDir
+  const sortKey          = (searchParams.get('sort')       ?? '') as SortKey | ''
+  const sortDir          = (searchParams.get('dir')        ?? 'asc') as SortDir
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
-    if (value) params.set(key, value)
-    else params.delete(key)
+    if (value) params.set(key, value); else params.delete(key)
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
   function handleSort(key: SortKey) {
     const params = new URLSearchParams(searchParams.toString())
     if (sortKey === key) {
-      // Same column: toggle direction, or clear if already desc
-      if (sortDir === 'asc') {
-        params.set('sort', key)
-        params.set('dir', 'desc')
-      } else {
-        params.delete('sort')
-        params.delete('dir')
-      }
+      if (sortDir === 'asc') { params.set('sort', key); params.set('dir', 'desc') }
+      else { params.delete('sort'); params.delete('dir') }
     } else {
-      params.set('sort', key)
-      params.set('dir', 'asc')
+      params.set('sort', key); params.set('dir', 'asc')
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
   const { data: attempts = [], isLoading } = useQuery({
     queryKey: ['attempts', assessmentFilter, statusFilter, dateFrom, dateTo],
-    queryFn: () =>
-      attemptsApi.list({
-        ...(assessmentFilter && { assessment_id: assessmentFilter }),
-        ...(statusFilter      && { status:        statusFilter }),
-        ...(dateFrom          && { date_from:      dateFrom }),
-        ...(dateTo            && { date_to:        dateTo }),
-      }),
+    queryFn: () => attemptsApi.list({
+      ...(assessmentFilter && { assessment_id: assessmentFilter }),
+      ...(statusFilter      && { status:        statusFilter }),
+      ...(dateFrom          && { date_from:      dateFrom }),
+      ...(dateTo            && { date_to:        dateTo }),
+    }),
   })
 
   const { data: assessments = [] } = useQuery({
@@ -364,17 +289,28 @@ function ResultsContent() {
   const sorted = useMemo(() => sortAttempts(attempts, sortKey, sortDir), [attempts, sortKey, sortDir])
 
   const stats = useMemo(() => {
-    const total       = attempts.length
-    const completed   = attempts.filter((a) => a.status === 'completed').length
-    const scores      = attempts.filter((a) => a.final_score != null).map((a) => a.final_score as number)
-    const avgScore    = scores.length > 0 ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length) : null
+    const total         = attempts.length
+    const completed     = attempts.filter((a) => a.status === 'completed').length
+    const scores        = attempts.filter((a) => a.final_score != null).map((a) => a.final_score as number)
+    const avgScore      = scores.length > 0 ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length) : null
     const pendingReview = attempts.filter((a) => a.has_pending_review).length
     return { total, completed, avgScore, pendingReview }
   }, [attempts])
 
-  const COLS = 'grid-cols-[1fr_1.1fr_75px_90px_130px_90px_100px_36px]'
-
+  const COLS    = 'grid-cols-[1fr_1.1fr_75px_90px_130px_90px_100px_36px]'
   const sortProps = { currentSort: sortKey, currentDir: sortDir, onSort: handleSort }
+  const slug    = new Date().toISOString().slice(0, 10)
+
+  // Build filter description for PDF metadata
+  const filterParts: string[] = []
+  if (assessmentFilter) {
+    const name = assessments.find((a) => a.id === assessmentFilter)?.title
+    if (name) filterParts.push(`Assessment: ${name}`)
+  }
+  if (statusFilter) filterParts.push(`Status: ${STATUS_CONFIG[statusFilter]?.label ?? statusFilter}`)
+  if (dateFrom)     filterParts.push(`From: ${dateFrom}`)
+  if (dateTo)       filterParts.push(`To: ${dateTo}`)
+  const filterMeta = filterParts.join(' · ')
 
   return (
     <div className="min-h-full">
@@ -389,38 +325,23 @@ function ResultsContent() {
             { label: 'Avg Score',      value: stats.avgScore !== null ? `${stats.avgScore}%` : '—' },
             { label: 'Pending Review', value: String(stats.pendingReview), warn: stats.pendingReview > 0 },
           ].map(({ label, value, warn }) => (
-            <div
-              key={label}
-              className={`rounded-xl border p-4 shadow-sm ${warn ? 'border-amber-200 bg-amber-50' : 'border-brand-border bg-white'}`}
-            >
-              <p className={`text-xs font-medium uppercase tracking-wider ${warn ? 'text-amber-600' : 'text-brand-navy/50'}`}>
-                {label}
-              </p>
-              <p className={`mt-1 font-syne text-2xl font-bold ${warn ? 'text-amber-700' : 'text-brand-navy'}`}>
-                {value}
-              </p>
+            <div key={label} className={`rounded-xl border p-4 shadow-sm ${warn ? 'border-amber-200 bg-amber-50' : 'border-brand-border bg-white'}`}>
+              <p className={`text-xs font-medium uppercase tracking-wider ${warn ? 'text-amber-600' : 'text-brand-navy/50'}`}>{label}</p>
+              <p className={`mt-1 font-syne text-2xl font-bold ${warn ? 'text-amber-700' : 'text-brand-navy'}`}>{value}</p>
             </div>
           ))}
         </div>
 
-        {/* Filter bar + export */}
+        {/* Filter + export bar */}
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={assessmentFilter}
-            onChange={(e) => updateParam('assessment', e.target.value)}
-            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15"
-          >
+          <select value={assessmentFilter} onChange={(e) => updateParam('assessment', e.target.value)}
+            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15">
             <option value="">All Assessments</option>
-            {assessments.map((a) => (
-              <option key={a.id} value={a.id}>{a.title}</option>
-            ))}
+            {assessments.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
           </select>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => updateParam('status', e.target.value)}
-            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15"
-          >
+          <select value={statusFilter} onChange={(e) => updateParam('status', e.target.value)}
+            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15">
             <option value="">All Status</option>
             <option value="completed">Completed</option>
             <option value="in_progress">In Progress</option>
@@ -428,63 +349,46 @@ function ResultsContent() {
             <option value="timed_out">Timed Out</option>
           </select>
 
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => updateParam('from', e.target.value)}
+          <input type="date" value={dateFrom} onChange={(e) => updateParam('from', e.target.value)}
             aria-label="From date"
-            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15"
-          />
+            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15" />
 
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => updateParam('to', e.target.value)}
+          <input type="date" value={dateTo} onChange={(e) => updateParam('to', e.target.value)}
             aria-label="To date"
-            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15"
-          />
+            className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-navy focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/15" />
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             <span className="font-dm-mono text-xs text-brand-navy/50">
               {sorted.length} result{sorted.length !== 1 ? 's' : ''}
             </span>
-            <button
-              type="button"
+            <ExportButtons
               disabled={sorted.length === 0}
-              onClick={() => exportToCSV(sorted)}
-              title="Export CSV"
-              className="flex items-center gap-1.5 rounded-lg border border-brand-border bg-white px-3 py-2 text-xs font-medium text-brand-navy hover:border-brand-orange hover:text-brand-orange transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <FileText size={13} aria-hidden="true" />
-              CSV
-            </button>
-            <button
-              type="button"
-              disabled={sorted.length === 0}
-              onClick={() => exportToExcel(sorted)}
-              title="Export Excel"
-              className="flex items-center gap-1.5 rounded-lg border border-brand-border bg-white px-3 py-2 text-xs font-medium text-brand-navy hover:border-brand-orange hover:text-brand-orange transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <FileSpreadsheet size={13} aria-hidden="true" />
-              Excel
-            </button>
+              onCSV={()   => downloadCSV(`results-${slug}`,   EXPORT_HEADERS, toExportRows(sorted))}
+              onExcel={()  => downloadExcel(`results-${slug}`, EXPORT_HEADERS, toExportRows(sorted))}
+              onPDF={()   => downloadPDF(
+                `results-${slug}`,
+                'Candidate Results',
+                filterMeta,
+                EXPORT_HEADERS,
+                toExportRows(sorted),
+                true, // landscape — many columns
+              )}
+            />
           </div>
         </div>
 
         {/* Table */}
         <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
-          {/* Sortable column headers */}
           {!isLoading && attempts.length > 0 && (
             <div className="border-b border-brand-border bg-brand-surface px-5 py-3">
               <div className={`grid ${COLS} items-center gap-4`}>
-                <SortHeader label="Candidate"  sortKey="candidate_name"   {...sortProps} />
-                <SortHeader label="Assessment" sortKey="assessment_title" {...sortProps} />
-                <SortHeader label="Score"      sortKey="final_score"      {...sortProps} />
+                <SortHeader label="Candidate"  sortKey="candidate_name"    {...sortProps} />
+                <SortHeader label="Assessment" sortKey="assessment_title"  {...sortProps} />
+                <SortHeader label="Score"      sortKey="final_score"       {...sortProps} />
                 <SortHeader label="Questions"  sortKey="questions_answered" {...sortProps} />
-                <SortHeader label="Status"     sortKey="status"           {...sortProps} />
-                <SortHeader label="Duration"   sortKey="total_time_secs"  {...sortProps} />
-                <SortHeader label="Completed"  sortKey="completed_at"     {...sortProps} />
-                {/* Non-sortable action column */}
+                <SortHeader label="Status"     sortKey="status"            {...sortProps} />
+                <SortHeader label="Duration"   sortKey="total_time_secs"   {...sortProps} />
+                <SortHeader label="Completed"  sortKey="completed_at"      {...sortProps} />
                 <span />
               </div>
             </div>
@@ -493,11 +397,7 @@ function ResultsContent() {
           {isLoading ? (
             <div>{Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}</div>
           ) : sorted.length === 0 ? (
-            <EmptyState
-              icon={BarChart2}
-              title="No results found"
-              description="No attempts match your current filters."
-            />
+            <EmptyState icon={BarChart2} title="No results found" description="No attempts match your current filters." />
           ) : (
             <motion.div
               key={`${sortKey}-${sortDir}`}
@@ -512,24 +412,13 @@ function ResultsContent() {
           )}
         </div>
 
-        {/* Active sort indicator */}
         {sortKey && (
           <p className="px-1 font-dm-mono text-xs text-brand-navy/40">
-            Sorted by{' '}
-            <span className="text-brand-orange">
-              {sortKey.replace(/_/g, ' ')}
-            </span>{' '}
+            Sorted by <span className="text-brand-orange">{sortKey.replace(/_/g, ' ')}</span>{' '}
             ({sortDir === 'asc' ? 'ascending' : 'descending'}) —{' '}
-            <button
-              type="button"
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString())
-                params.delete('sort')
-                params.delete('dir')
-                router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-              }}
-              className="underline hover:text-brand-navy/60 transition-colors"
-            >
+            <button type="button"
+              onClick={() => { const p = new URLSearchParams(searchParams.toString()); p.delete('sort'); p.delete('dir'); router.replace(`${pathname}?${p.toString()}`, { scroll: false }) }}
+              className="underline hover:text-brand-navy/60 transition-colors">
               clear sort
             </button>
           </p>
@@ -538,8 +427,6 @@ function ResultsContent() {
     </div>
   )
 }
-
-// ── Page (Suspense boundary for useSearchParams) ──────────────────────────────
 
 export default function ResultsPage() {
   return (

@@ -16,7 +16,7 @@ export interface SyncState {
 
 export function useSyncStatus(): SyncState {
   const [state, setState] = useState<SyncState>({
-    isOnline: false,
+    isOnline: true, // assume online until sync worker reports otherwise (avoids false-positive banner on startup)
     pendingCount: 0,
     lastSyncAt: null,
   })

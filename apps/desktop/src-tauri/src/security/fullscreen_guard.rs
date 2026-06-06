@@ -81,16 +81,30 @@ pub fn start_fullscreen_watchdog<R: Runtime>(
             }
         }
 
-        // Linux: re-assert fullscreen + always-on-top each tick.
-        // GTK compositors (X11 and Wayland) can lose both when a system dialog
-        // or notification temporarily takes focus.
+        // Linux: re-assert position/size and always-on-top if the compositor
+        // moves or resizes the window (e.g. a system notification, VT switch).
         #[cfg(target_os = "linux")]
         {
-            if !window.is_fullscreen().unwrap_or(true) {
-                tracing::warn!("Window exited fullscreen during assessment — restoring");
-                let _ = window.set_fullscreen(true);
-                let _ = window.set_always_on_top(true);
-                let _ = app_handle.emit("security:fullscreen-restored", ());
+            if let Ok(Some(monitor)) = window.current_monitor() {
+                let msize = monitor.size();
+                let mpos  = monitor.position();
+                let drifted = window.outer_position()
+                    .map(|p| p.x != mpos.x || p.y != mpos.y)
+                    .unwrap_or(false)
+                    || window.outer_size()
+                    .map(|s| s.width != msize.width || s.height != msize.height)
+                    .unwrap_or(false);
+                if drifted {
+                    tracing::warn!("Window frame changed during assessment — restoring");
+                    let _ = window.set_always_on_top(true);
+                    let _ = window.set_position(tauri::Position::Physical(
+                        tauri::PhysicalPosition { x: mpos.x, y: mpos.y },
+                    ));
+                    let _ = window.set_size(tauri::Size::Physical(
+                        tauri::PhysicalSize { width: msize.width, height: msize.height },
+                    ));
+                    let _ = app_handle.emit("security:fullscreen-restored", ());
+                }
             }
         }
 

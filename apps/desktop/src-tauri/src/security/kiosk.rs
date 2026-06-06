@@ -163,10 +163,23 @@ pub fn enter_kiosk_mode(
 
     #[cfg(target_os = "linux")]
     {
-        // Cover the full display and pin on top. Native GTK fullscreen is the
-        // most reliable way to cover the panel/taskbar on both X11 and Wayland.
-        window.set_fullscreen(true).map_err(|e| e.to_string())?;
+        // Pin on top first so the window doesn't lose focus while we resize it.
         window.set_always_on_top(true).map_err(|e| e.to_string())?;
+        // Cover the full monitor by setting position and size directly.
+        // GTK set_fullscreen on a borderless window is unreliable on Cinnamon /
+        // GNOME Shell — the compositor can clip or offset the result. Directly
+        // moving the window to the monitor origin at monitor resolution bypasses
+        // the WM's interpretation of "fullscreen" and reliably covers the panel.
+        if let Ok(Some(monitor)) = window.current_monitor() {
+            let msize = monitor.size();
+            let mpos  = monitor.position();
+            let _ = window.set_position(tauri::Position::Physical(
+                tauri::PhysicalPosition { x: mpos.x, y: mpos.y },
+            ));
+            let _ = window.set_size(tauri::Size::Physical(
+                tauri::PhysicalSize { width: msize.width, height: msize.height },
+            ));
+        }
     }
 
     flag.0.store(true, Ordering::Relaxed);
@@ -223,7 +236,7 @@ pub fn exit_kiosk_mode(
     #[cfg(target_os = "linux")]
     {
         window.set_always_on_top(false).map_err(|e| e.to_string())?;
-        window.set_fullscreen(false).map_err(|e| e.to_string())?;
+        // Size/position reset is handled by the generic set_size + center() below.
     }
 
     // Restore to a normal windowed size and center on screen

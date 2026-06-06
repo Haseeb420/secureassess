@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import * as Select from '@radix-ui/react-select'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { ChevronDown, Loader2, PlayCircle, RotateCcw } from 'lucide-react'
+import { ChevronDown, HelpCircle, Loader2, PlayCircle, RotateCcw } from 'lucide-react'
 import { cn, ConfirmDialog } from '@secureassess/ui'
 import type { Language } from './templates'
+import { IdeGuideModal } from './IdeGuideModal'
 
 interface EditorToolbarProps {
   language: Language
@@ -38,6 +39,7 @@ export function EditorToolbar({
   onFontSizeChange,
 }: EditorToolbarProps) {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [passFlash, setPassFlash] = useState(false)
   const prevRunningRef = useRef(false)
 
@@ -156,48 +158,26 @@ export function EditorToolbar({
               </Tooltip.Root>
             )}
 
-            {/* Help / shortcuts */}
+            {/* Guide / help */}
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <button
                   type="button"
-                  aria-label="Keyboard shortcuts"
-                  className="flex h-6 w-6 items-center justify-center rounded font-dm-mono text-xs text-[#CDD6F4]/30 transition-colors hover:text-[#CDD6F4]/70"
+                  onClick={() => setGuideOpen(true)}
+                  aria-label="Open assessment guide"
+                  className="flex h-6 w-6 items-center justify-center rounded text-[#CDD6F4]/30 transition-colors hover:text-[#CDD6F4]/70"
                 >
-                  ?
+                  <HelpCircle size={14} aria-hidden="true" />
                 </button>
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Content
-                  className="rounded-xl border border-[#383850] bg-[#1E1E2E] p-3 shadow-xl"
+                  className="rounded-lg border border-[#383850] bg-[#1E1E2E] px-2.5 py-1.5 shadow-xl"
                   sideOffset={6}
                   side="bottom"
                   align="end"
                 >
-                  <div className="space-y-1.5 font-dm-mono text-xs leading-6 text-[#CDD6F4]/60">
-                    <div className="flex items-center justify-between gap-6">
-                      <span>Run tests</span>
-                      <div className="flex items-center gap-1">
-                        <kbd className="rounded bg-[#383850] px-1.5 py-0.5 text-[10px] text-[#CDD6F4]">⌘</kbd>
-                        <kbd className="rounded bg-[#383850] px-1.5 py-0.5 text-[10px] text-[#CDD6F4]">↵</kbd>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-6">
-                      <span>Submit</span>
-                      <div className="flex items-center gap-1">
-                        <kbd className="rounded bg-[#383850] px-1.5 py-0.5 text-[10px] text-[#CDD6F4]">⌘</kbd>
-                        <kbd className="rounded bg-[#383850] px-1.5 py-0.5 text-[10px] text-[#CDD6F4]">⇧</kbd>
-                        <kbd className="rounded bg-[#383850] px-1.5 py-0.5 text-[10px] text-[#CDD6F4]">↵</kbd>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-6">
-                      <span>Save</span>
-                      <div className="flex items-center gap-1">
-                        <kbd className="rounded bg-[#383850] px-1.5 py-0.5 text-[10px] text-[#CDD6F4]">⌘</kbd>
-                        <kbd className="rounded bg-[#383850] px-1.5 py-0.5 text-[10px] text-[#CDD6F4]">S</kbd>
-                      </div>
-                    </div>
-                  </div>
+                  <span className="font-dm-mono text-xs text-[#CDD6F4]/60">I/O guide & shortcuts</span>
                   <Tooltip.Arrow className="fill-[#383850]" />
                 </Tooltip.Content>
               </Tooltip.Portal>
@@ -242,6 +222,8 @@ export function EditorToolbar({
         onConfirm={() => { setResetConfirmOpen(false); onResetCode?.() }}
         onCancel={() => setResetConfirmOpen(false)}
       />
+
+      <IdeGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </>
   )
 }

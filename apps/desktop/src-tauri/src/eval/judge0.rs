@@ -128,13 +128,37 @@ impl EvaluationBackend for Judge0Client {
             }
         };
 
-        let result: Judge0Response = match response.json().await {
+        let http_status = response.status();
+        let body_text = match response.text().await {
+            Ok(t) => t,
+            Err(e) => {
+                return ExecutionResult {
+                    status: ExecutionStatus::RuntimeError,
+                    stdout: String::new(),
+                    stderr: format!("Failed to read Judge0 response: {e}"),
+                    execution_time_ms: 0,
+                    compile_error: None,
+                };
+            }
+        };
+
+        if !http_status.is_success() {
+            return ExecutionResult {
+                status: ExecutionStatus::RuntimeError,
+                stdout: String::new(),
+                stderr: format!("Judge0 HTTP {}: {}", http_status.as_u16(), body_text.trim()),
+                execution_time_ms: 0,
+                compile_error: None,
+            };
+        }
+
+        let result: Judge0Response = match serde_json::from_str(&body_text) {
             Ok(r) => r,
             Err(e) => {
                 return ExecutionResult {
                     status: ExecutionStatus::RuntimeError,
                     stdout: String::new(),
-                    stderr: format!("Judge0 response parse error: {e}"),
+                    stderr: format!("Judge0 parse error: {e}\nBody: {body_text}"),
                     execution_time_ms: 0,
                     compile_error: None,
                 };

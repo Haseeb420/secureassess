@@ -1,9 +1,95 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from core.dependencies import get_current_admin
 from core.supabase import get_supabase
 
 router = APIRouter(prefix="/reports", tags=["reports"])
+
+
+@router.get("/assessments")
+async def get_assessments_report(
+    pass_threshold: float = Query(50.0, ge=0, le=100),
+    _admin: dict = Depends(get_current_admin),
+):
+    supabase = get_supabase()
+
+    assessments = (
+        supabase.table("assessments")
+        .select("id, title, created_at, duration_minutes, status, is_mock")
+        .order("created_at", desc=True)
+        .execute()
+    ).data or []
+
+    if not assessments:
+        return []
+
+    # Only real assessments (not mock practice rounds)
+    assessments = [a for a in assessments if not a.get("is_mock")]
+    if not assessments:
+        return []
+
+    a_ids = [a["id"] for a in assessments]
+
+    attempts = (
+        supabase.table("assessment_attempts")
+        .select("assessment_id, status, final_score")
+        .in_("assessment_id", a_ids)
+        .execute()
+    ).data or []
+
+    stats: dict[str, dict] = {}
+    for a in assessments:
+        stats[a["id"]] = {
+            "assessment_id": a["id"],
+            "assessment_title": a["title"],
+            "assessment_status": a.get("status", "active"),
+            "created_at": a.get("created_at"),
+            "total_appeared": 0,
+            "total_completed": 0,
+            "passed": 0,
+            "failed": 0,
+            "in_progress": 0,
+            "abandoned": 0,
+            "scores": [],
+        }
+
+    for attempt in attempts:
+        aid = attempt["assessment_id"]
+        if aid not in stats:
+            continue
+        s = stats[aid]
+        s["total_appeared"] += 1
+
+        att_status = attempt.get("status", "")
+        score = attempt.get("final_score")
+
+        if att_status == "completed":
+            s["total_completed"] += 1
+            if score is not None:
+                s["scores"].append(score)
+                if score >= pass_threshold:
+                    s["passed"] += 1
+                else:
+                    s["failed"] += 1
+            else:
+                s["failed"] += 1
+        elif att_status == "in_progress":
+            s["in_progress"] += 1
+        else:
+            s["abandoned"] += 1
+
+    result = []
+    for s in stats.values():
+        scores = s.pop("scores")
+        avg_score = round(sum(scores) / len(scores), 1) if scores else None
+        pass_rate = (
+            round(s["passed"] / s["total_completed"] * 100, 1)
+            if s["total_completed"] > 0
+            else None
+        )
+        result.append({**s, "avg_score": avg_score, "pass_rate": pass_rate})
+
+    return result
 
 
 @router.get("/{session_id}")

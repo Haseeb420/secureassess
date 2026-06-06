@@ -273,8 +273,25 @@ export interface ViolationSummary {
   first_occurrence: string
 }
 
+export interface AssessmentSummary {
+  assessment_id: string
+  assessment_title: string
+  assessment_status: string
+  created_at: string
+  total_appeared: number
+  total_completed: number
+  passed: number
+  failed: number
+  in_progress: number
+  abandoned: number
+  avg_score: number | null
+  pass_rate: number | null
+}
+
 export const reportsApi = {
   get: (sessionId: string) => apiFetch<Report>(`/reports/${sessionId}`),
+  assessmentSummary: (passThreshold = 50) =>
+    apiFetch<AssessmentSummary[]>(`/reports/assessments?pass_threshold=${passThreshold}`),
 }
 
 // ── Tokens ────────────────────────────────────────────────────────────────────

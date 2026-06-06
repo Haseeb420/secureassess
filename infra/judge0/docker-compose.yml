@@ -1,7 +1,12 @@
 services:
   server:
-    image: judge0/judge0:1.13.1
-    platform: linux/amd64
+    # On Apple Silicon (ARM64): builds Dockerfile.arm64 — native arm64 image
+    # that avoids the Rosetta 2 mmap/isolate incompatibility in linux/amd64.
+    # On x86_64 Linux (CI / Intel Mac): uses the pre-built official image.
+    build:
+      context: .
+      dockerfile: Dockerfile.arm64
+    image: secureassess-judge0:arm64
     container_name: judge0-server
     ports:
       - "2358:2358"
@@ -10,6 +15,8 @@ services:
     environment:
       - JUDGE0_CONFIG_FILE=/judge0.conf
     privileged: true
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
     cpus: 0.5
     depends_on:
@@ -19,8 +26,10 @@ services:
       - judge0
 
   workers:
-    image: judge0/judge0:1.13.1
-    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.arm64
+    image: secureassess-judge0:arm64
     container_name: judge0-workers
     command: ["./scripts/workers"]
     volumes:
@@ -28,6 +37,8 @@ services:
     environment:
       - JUDGE0_CONFIG_FILE=/judge0.conf
     privileged: true
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
     cpus: 1.5
     depends_on:

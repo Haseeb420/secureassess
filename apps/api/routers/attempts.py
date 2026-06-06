@@ -415,10 +415,11 @@ async def list_attempts(
     if not attempts:
         return []
 
-    # Bulk-fetch assessment titles
+    # Bulk-fetch assessment titles and duration
     a_ids = list({a["assessment_id"] for a in attempts})
-    a_result = supabase.table("assessments").select("id, title").in_("id", a_ids).execute()
+    a_result = supabase.table("assessments").select("id, title, duration_minutes").in_("id", a_ids).execute()
     assessment_map = {row["id"]: row["title"] for row in (a_result.data or [])}
+    assessment_details: dict[str, dict] = {row["id"]: row for row in (a_result.data or [])}
 
     # Bulk-fetch token usage limits
     token_ids = list({a["token_id"] for a in attempts if a.get("token_id")})
@@ -440,13 +441,42 @@ async def list_attempts(
     )
     pending_set = {row["attempt_id"] for row in (pending_result.data or [])}
 
+    # Bulk-fetch question_answers counts per attempt
+    qa_result = (
+        supabase.table("question_answers")
+        .select("attempt_id")
+        .in_("attempt_id", attempt_ids)
+        .execute()
+    )
+    answers_per_attempt: dict[str, int] = {}
+    for row in (qa_result.data or []):
+        aid = row["attempt_id"]
+        answers_per_attempt[aid] = answers_per_attempt.get(aid, 0) + 1
+
+
+    aq_count_result = (
+        supabase.table("assessment_questions")
+        .select("assessment_id")
+        .in_("assessment_id", a_ids)
+        .execute()
+    )
+    questions_per_assessment: dict[str, int] = {}
+    for row in (aq_count_result.data or []):
+        aid = row["assessment_id"]
+        questions_per_assessment[aid] = questions_per_assessment.get(aid, 0) + 1
+
     enriched = []
     for a in attempts:
+        asmt_id = a["assessment_id"]
+        asmt_detail = assessment_details.get(asmt_id, {})
         enriched.append({
             **a,
-            "assessment_title": assessment_map.get(a["assessment_id"]),
+            "assessment_title": assessment_map.get(asmt_id),
             "usage_limit": token_map.get(a.get("token_id", "")) if a.get("token_id") else None,
             "has_pending_review": a["id"] in pending_set and a.get("status") == "completed",
+            "questions_answered": answers_per_attempt.get(a["id"], 0),
+            "total_questions": questions_per_assessment.get(asmt_id, 0),
+            "duration_minutes": asmt_detail.get("duration_minutes"),
         })
 
     return enriched

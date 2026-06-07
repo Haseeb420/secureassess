@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
+
   // Keep server-only packages out of the client bundle.
   // better-auth pulls in pg, kysely and Bun/D1 dialects that cannot run in the browser.
   serverExternalPackages: [
@@ -14,6 +16,10 @@ const nextConfig: NextConfig = {
   // Allow ngrok tunnels to reach the HMR websocket during dev.
   // Admin ngrok URL is dynamic so we allow all ngrok-free subdomains.
   allowedDevOrigins: ["*.ngrok-free.app", "*.ngrok-free.dev", "*.ngrok.io"],
+
+  env: {
+    NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '0.0.0',
+  },
 
   async rewrites() {
     // Desktop builds compiled with VITE_API_BASE_URL set to the bare ngrok URL

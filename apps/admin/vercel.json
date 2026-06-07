@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd ../.. && pnpm build --filter admin",
+  "outputDirectory": ".next",
+  "installCommand": "cd ../.. && pnpm install",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/api/health",
+      "destination": "/api/health"
+    }
+  ]
+}

@@ -237,7 +237,7 @@ function LiveSessionsView({
   onSelect: (id: string) => void
 }) {
   const totalViolations = [...activeSessions, ...pastSessions].reduce((n, s) => n + s.violation_count, 0)
-  const completedCount  = pastSessions.filter(s => s.status === 'completed' || s.status === 'submitted').length
+  const completedCount  = pastSessions.filter(s => s.status === 'completed').length
   const terminatedCount = pastSessions.filter(s => s.status === 'terminated').length
 
   return (
@@ -440,7 +440,7 @@ function ByAssessmentView({
 
 function AssessmentGroupCard({ group, onClick }: { group: AssessmentGroup; onClick: () => void }) {
   const live       = group.sessions.filter(isLive).length
-  const completed  = group.sessions.filter(s => s.status === 'completed' || s.status === 'submitted').length
+  const completed  = group.sessions.filter(s => s.status === 'completed').length
   const terminated = group.sessions.filter(s => s.status === 'terminated').length
   const total      = group.sessions.length
   const violations = group.sessions.reduce((n, s) => n + s.violation_count, 0)
@@ -507,7 +507,7 @@ function AssessmentDrillDown({
   onSelectSession: (id: string) => void
 }) {
   const live       = group.sessions.filter(isLive).length
-  const completed  = group.sessions.filter(s => s.status === 'completed' || s.status === 'submitted').length
+  const completed  = group.sessions.filter(s => s.status === 'completed').length
   const violations = group.sessions.reduce((n, s) => n + s.violation_count, 0)
 
   const sorted = useMemo(

@@ -5,7 +5,7 @@ Seed the "Wamolabs-Interview Drive-6pm" assessment into Supabase.
 Questions:
   1. Reverse a Number (no string conversion)  — 33%
   2. Parenthesis Match                        — 34%
-  3. Most Consecutive Digit in a String       — 33%
+  3. Most Repeated Consecutive Character      — 33%
 
 Usage:
     python scripts/seed_wamolabs_assessment.py
@@ -667,21 +667,21 @@ Q2_CASES = [
 
 
 # ---------------------------------------------------------------------------
-# Question 3 — Most Consecutive Digit in a String
+# Question 3 — Most Repeated Consecutive Character
 # ---------------------------------------------------------------------------
 
-Q3_TITLE = "Most Consecutive Digit in a String"
+Q3_TITLE = "Most Repeated Consecutive Character"
 
 Q3_DESCRIPTION = """\
 ## Problem Statement
 
-Given a string `s` (which may contain letters, digits, spaces, and other characters),
-find the **digit** (`0`–`9`) that appears in the **longest unbroken consecutive run**
-of identical characters anywhere in the string.
+Given a non-empty string `s`, find the character that appears in the **longest
+unbroken consecutive run** of identical characters anywhere in the string.
 
-- If two or more digits are tied for the longest run, return the one with the
-  **smallest numeric value** (e.g. `'2'` beats `'5'` on a tie).
-- If the string contains **no digits at all**, return `-1`.
+- If two or more characters are tied for the longest run, return the one with
+  the **smallest ASCII value** (i.e. the one that comes first alphabetically /
+  numerically — `'a'` beats `'b'`, `'A'` beats `'a'`, etc.).
+- Every character in the string is counted, including digits, spaces, and symbols.
 
 ---
 
@@ -692,25 +692,25 @@ of identical characters anywhere in the string.
 ```
 
 One line containing the string `s`.
-Output a single digit `0`–`9`, or `-1` if no digits are present.
+Output a **single character** — the one with the longest consecutive run.
 
 ---
 
 ## Examples
 
-| Input                   | Output | Explanation                                   |
-|-------------------------|--------|-----------------------------------------------|
-| `aaa111bbb2222cc33`     | `2`    | `2` has a run of 4 — longest overall          |
-| `112233`                | `1`    | `1`, `2`, `3` all have run of 2 → `1` is smallest |
-| `hello`                 | `-1`   | no digits in the string                       |
-| `abc999xyz11`           | `9`    | `9` run of 3 > `1` run of 2                  |
-| `a1b2c3d4`              | `1`    | all single digits → smallest is `1`           |
+| Input              | Output | Explanation                                              |
+|--------------------|--------|----------------------------------------------------------|
+| `abbaabbbaaaaac`   | `a`    | `aaaa` is a run of 4 — the longest                      |
+| `aabbcc`           | `a`    | `aa`, `bb`, `cc` all tie at 2 → `a` has smallest ASCII  |
+| `zzzbbbaaaa`       | `a`    | `aaaa` run of 4 beats `zzz` and `bbb` (run of 3 each)   |
+| `aabbbcc`          | `b`    | `bbb` run of 3 — only character with a run > 2           |
+| `abc`              | `a`    | all single characters → `a` has smallest ASCII           |
 
 ---
 
 ## Constraints
 
-- `0 ≤ len(s) ≤ 100 000`
+- `1 ≤ len(s) ≤ 100 000`
 - `s` contains printable ASCII characters.
 
 """ + INPUT_GUIDE_STRING
@@ -718,19 +718,19 @@ Output a single digit `0`–`9`, or `-1` if no digits are present.
 # (input, expected_output, is_hidden)
 Q3_CASES = [
     # visible samples (3)
-    ("aaa111bbb2222cc33", "2",  False),  # 2222 is the longest run
-    ("112233",            "1",  False),  # 3-way tie → smallest
-    ("hello",             "-1", False),  # no digits
+    ("abbaabbbaaaaac", "a", False),  # aaaa = run of 4
+    ("aabbcc",         "a", False),  # all run 2 → 'a' smallest
+    ("zzzbbbaaaa",     "a", False),  # aaaa=4 beats zzz/bbb=3
     # hidden tests (9)
-    ("abc999xyz11",       "9",  True),   # 999 > 11
-    ("000",               "0",  True),   # only 0s
-    ("1234567890",        "0",  True),   # all single → 0 is smallest
-    ("99999",             "9",  True),   # all same digit
-    ("a1b2c3d4",          "1",  True),   # single digits → 1 is smallest non-zero... wait 1<2<3<4
-    ("test123321",        "3",  True),   # 33 → run of 2; only run > 1
-    ("555444333",         "3",  True),   # all run of 3 → 3 is smallest
-    ("abc0001xyz",        "0",  True),   # 000 → run of 3
-    ("7777222",           "7",  True),   # 7 run 4 > 2 run 3
+    ("a",              "a", True),   # single char
+    ("abc",            "a", True),   # all single → 'a' smallest
+    ("aabbbcc",        "b", True),   # bbb = run of 3
+    ("xxxxxyyy",       "x", True),   # xxxxx=5 > yyy=3
+    ("mmmnnnppp",      "m", True),   # all run 3 → 'm' smallest
+    ("aaabbbccc",      "a", True),   # all run 3 → 'a' smallest
+    ("zzzzzaaa",       "z", True),   # zzzzz=5 > aaa=3
+    ("aabbbaaa",       "a", True),   # 'a' max run=3, 'b' run=3 → 'a' smallest
+    ("xxyyyzz",        "y", True),   # yyy=3 > xx=2, zz=2
 ]
 
 
@@ -776,7 +776,7 @@ def main() -> None:
     questions_meta = [
         (Q1_TITLE, Q1_DESCRIPTION, "easy",   Q1_CASES, ["math", "arithmetic"]),
         (Q2_TITLE, Q2_DESCRIPTION, "medium", Q2_CASES, ["strings", "stack"]),
-        (Q3_TITLE, Q3_DESCRIPTION, "medium", Q3_CASES, ["strings", "sliding-window"]),
+        (Q3_TITLE, Q3_DESCRIPTION, "medium", Q3_CASES, ["strings", "two-pointers"]),
     ]
 
     for title, description, difficulty, cases, tags in questions_meta:
@@ -856,7 +856,7 @@ def main() -> None:
     rows = [
         ("Reverse a Number",                 "easy",   "33%", Q1_CASES),
         ("Parenthesis Match",                "medium", "34%", Q2_CASES),
-        ("Most Consecutive Digit in String", "medium", "33%", Q3_CASES),
+        ("Most Repeated Consecutive Character", "medium", "33%", Q3_CASES),
     ]
     for i, (qid, (title, diff, weight, cases)) in enumerate(
         zip(question_ids, rows), start=1

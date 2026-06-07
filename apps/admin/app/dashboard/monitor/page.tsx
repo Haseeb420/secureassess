@@ -5,9 +5,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@supabase/supabase-js'
 import {
   Monitor, ChevronDown, ChevronUp, ArrowLeft,
-  AlertTriangle, Activity, Users,
+  AlertTriangle, Activity, Users, RefreshCw,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { sessionsApi, assessmentsApi, type Session, type SessionDetail, type Assessment } from '../../../lib/api'
 import { PageHeader } from '../../../components/PageHeader'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -68,6 +69,19 @@ export default function MonitorPage() {
     queryKey: ['sessions'],
     queryFn: () => sessionsApi.list(),
     refetchInterval: 30_000,
+  })
+
+  const reconcile = useMutation({
+    mutationFn: () => sessionsApi.reconcile(),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['sessions'] })
+      if (data.reconciled > 0) {
+        toast.success(`Synced ${data.reconciled} session${data.reconciled !== 1 ? 's' : ''} to completed`)
+      } else {
+        toast.success('All sessions are up to date')
+      }
+    },
+    onError: () => toast.error('Failed to sync session statuses'),
   })
 
   const { data: assessments = [] } = useQuery({
@@ -144,26 +158,39 @@ export default function MonitorPage() {
           subtitle={`${activeSessions.length} live · ${sessions.length} total sessions`}
         />
 
-        {/* View toggle */}
-        <div className="flex gap-1 px-8 pt-5 pb-1">
-          {([
-            { id: 'live' as ViewMode,          label: 'Live Sessions',  Icon: Activity },
-            { id: 'by-assessment' as ViewMode, label: 'By Assessment',  Icon: Users },
-          ]).map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => changeView(id)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                view === id
-                  ? 'bg-brand-navy text-white'
-                  : 'text-brand-navy/60 hover:text-brand-navy hover:bg-brand-surface'
-              }`}
-            >
-              <Icon size={14} aria-hidden="true" />
-              {label}
-            </button>
-          ))}
+        {/* View toggle + sync */}
+        <div className="flex items-center justify-between px-8 pt-5 pb-1">
+          <div className="flex gap-1">
+            {([
+              { id: 'live' as ViewMode,          label: 'Live Sessions',  Icon: Activity },
+              { id: 'by-assessment' as ViewMode, label: 'By Assessment',  Icon: Users },
+            ]).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => changeView(id)}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  view === id
+                    ? 'bg-brand-navy text-white'
+                    : 'text-brand-navy/60 hover:text-brand-navy hover:bg-brand-surface'
+                }`}
+              >
+                <Icon size={14} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => reconcile.mutate()}
+            disabled={reconcile.isPending}
+            title="Sync session statuses — marks completed sessions that the desktop app didn't update"
+            className="flex items-center gap-1.5 rounded-lg border border-brand-border bg-white px-3 py-1.5 text-xs font-medium text-brand-navy/60 shadow-sm transition-colors hover:text-brand-navy hover:border-brand-navy/30 disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={reconcile.isPending ? 'animate-spin' : ''} aria-hidden="true" />
+            {reconcile.isPending ? 'Syncing…' : 'Sync Status'}
+          </button>
         </div>
 
         {view === 'live' ? (

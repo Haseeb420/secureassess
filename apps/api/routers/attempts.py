@@ -21,6 +21,19 @@ from services import scoring
 router = APIRouter(prefix="/attempts", tags=["attempts"])
 
 
+def _sync_session_progress(supabase, assessment_id: str, candidate_email: str, questions_done: int) -> None:
+    res = (
+        supabase.table("assessment_sessions")
+        .select("id")
+        .eq("assessment_id", assessment_id)
+        .eq("candidate_email", candidate_email)
+        .limit(1)
+        .execute()
+    )
+    if res.data:
+        supabase.table("assessment_sessions").update({"questions_done": questions_done}).eq("id", res.data[0]["id"]).execute()
+
+
 def _assessment_schedule_status(assessment: dict) -> str:
     now = datetime.now(tz=timezone.utc)
     atype = assessment.get("assessment_type") or assessment.get("type", "open")
@@ -318,6 +331,9 @@ async def submit_answer(attempt_id: str, body: SubmitAnswerRequest):
     )
     submitted = submitted_count.count or 0
 
+    # 7. Keep session progress in sync so the live monitor shows real progress
+    _sync_session_progress(supabase, attempt["assessment_id"], attempt.get("candidate_email", ""), submitted)
+
     return SubmitAnswerResponse(
         question_id=body.question_id,
         accepted=True,
@@ -379,6 +395,22 @@ async def complete_attempt(attempt_id: str):
         "final_score": final_score,
         "total_time_secs": total_time_secs,
     }).eq("id", attempt_id).execute()
+
+    # Mark the associated session as completed so the live monitor reflects reality
+    session_res = (
+        supabase.table("assessment_sessions")
+        .select("id")
+        .eq("assessment_id", attempt["assessment_id"])
+        .eq("candidate_email", attempt.get("candidate_email", ""))
+        .limit(1)
+        .execute()
+    )
+    if session_res.data:
+        supabase.table("assessment_sessions").update({
+            "status": "completed",
+            "final_score": final_score,
+            "questions_done": total,
+        }).eq("id", session_res.data[0]["id"]).execute()
 
     return CompleteAttemptResponse(final_score=final_score, total_time_secs=total_time_secs)
 

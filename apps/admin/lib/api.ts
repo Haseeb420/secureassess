@@ -248,6 +248,8 @@ export const sessionsApi = {
   get: (id: string) => apiFetch<SessionDetail>(`/sessions/${id}`),
   terminate: (id: string) =>
     apiFetch<{ ok: boolean }>(`/sessions/${id}/terminate`, { method: 'POST' }),
+  reconcile: () =>
+    apiFetch<{ reconciled: number; total_checked: number }>('/sessions/reconcile', { method: 'POST' }),
 }
 
 // ── Reports ───────────────────────────────────────────────────────────────────

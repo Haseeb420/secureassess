@@ -64,6 +64,60 @@ async def list_sessions(
     return result.data or []
 
 
+@router.post("/reconcile")
+async def reconcile_sessions(_admin: dict = Depends(get_current_admin)):
+    """Scan all active/idle sessions and mark them completed where a completed attempt exists.
+    Fixes stale sessions that were never updated because the desktop app crashed or didn't call /complete.
+    """
+    supabase = get_supabase()
+
+    stale = (
+        supabase.table("assessment_sessions")
+        .select("id, assessment_id, candidate_email")
+        .in_("status", ["active", "idle"])
+        .execute()
+    )
+    sessions = stale.data or []
+
+    updated = 0
+    for s in sessions:
+        completed = (
+            supabase.table("assessment_attempts")
+            .select("id, final_score")
+            .eq("assessment_id", s["assessment_id"])
+            .eq("candidate_email", s.get("candidate_email", ""))
+            .eq("status", "completed")
+            .limit(1)
+            .execute()
+        )
+        if completed.data:
+            a = completed.data[0]
+            supabase.table("assessment_sessions").update({
+                "status": "completed",
+                "final_score": a.get("final_score"),
+            }).eq("id", s["id"]).execute()
+            updated += 1
+
+    return {"reconciled": updated, "total_checked": len(sessions)}
+
+
+@router.patch("/{session_id}")
+async def patch_session(
+    session_id: str,
+    body: dict,
+    _admin: dict = Depends(get_current_admin),
+):
+    allowed = {"status", "questions_done", "violation_count"}
+    updates = {k: v for k, v in body.items() if k in allowed}
+    if not updates:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid fields to update")
+    supabase = get_supabase()
+    result = supabase.table("assessment_sessions").update(updates).eq("id", session_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return result.data[0]
+
+
 @router.get("/{session_id}")
 async def get_session(
     session_id: str,

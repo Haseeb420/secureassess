@@ -35,6 +35,27 @@ endef
 help:
 	@printf "\n$(BOLD)SecureAssess — Available Commands$(RESET)\n"
 	@printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+	@printf "\n$(BOLD)Deploy — Fly.io (FastAPI)$(RESET)\n"
+	@printf "  $(CYAN)make fly-setup$(RESET)            First-time Fly.io app creation (run once)\n"
+	@printf "  $(CYAN)make fly-secrets$(RESET)          Push all env vars from apps/api/.env to Fly.io\n"
+	@printf "  $(CYAN)make fly-deploy$(RESET)           Deploy FastAPI to Fly.io\n"
+	@printf "  $(CYAN)make fly-status$(RESET)           Show Fly.io app status\n"
+	@printf "  $(CYAN)make fly-logs$(RESET)             Tail live logs from Fly.io\n"
+	@printf "  $(CYAN)make fly-health$(RESET)           Check /health on the live API\n"
+	@printf "  $(CYAN)make fly-ssh$(RESET)              SSH into the running machine\n"
+	@printf "  $(CYAN)make fly-scale-down$(RESET)       Scale to 0 machines (saves credits)\n"
+	@printf "  $(CYAN)make fly-scale-up$(RESET)         Scale back to 1 machine\n"
+	@printf "\n$(BOLD)Deploy — Vercel (Next.js Admin)$(RESET)\n"
+	@printf "  $(CYAN)make vercel-setup$(RESET)         Link admin app to Vercel project (run once)\n"
+	@printf "  $(CYAN)make vercel-env$(RESET)           Push .env.local vars to Vercel\n"
+	@printf "  $(CYAN)make vercel-deploy$(RESET)        Deploy admin dashboard to Vercel production\n"
+	@printf "  $(CYAN)make vercel-preview$(RESET)       Deploy a preview build\n"
+	@printf "  $(CYAN)make vercel-logs$(RESET)          Show latest Vercel deployment logs\n"
+	@printf "\n$(BOLD)Deploy — Combined$(RESET)\n"
+	@printf "  $(CYAN)make deploy$(RESET)               Deploy both API (Fly.io) and admin (Vercel)\n"
+	@printf "  $(CYAN)make deploy-trigger$(RESET)       Trigger deploy via GitHub Actions (no release)\n"
+	@printf "  $(CYAN)make deploy-status$(RESET)        Show recent deploy workflow runs\n"
+	@printf "  $(CYAN)make production-health$(RESET)    Check health of all production services\n"
 	@printf "\n$(BOLD)Setup$(RESET)\n"
 	@printf "  $(CYAN)make install$(RESET)              Install all dependencies (pnpm + Python)\n"
 	@printf "  $(CYAN)make setup-rust$(RESET)           Install required Rust targets for cross-compilation\n"
@@ -291,7 +312,13 @@ clean-rust:
         format \
         clean-all clean-sessions \
         release-draft \
-        ip ports env-check
+        ip ports env-check \
+        fly-login fly-setup fly-secrets fly-secrets-set fly-secrets-list \
+        fly-deploy fly-status fly-logs fly-logs-error fly-ssh fly-health \
+        fly-open fly-scale-down fly-scale-up fly-destroy \
+        vercel-login vercel-setup vercel-env vercel-env-set vercel-env-list \
+        vercel-deploy vercel-preview vercel-logs vercel-open \
+        deploy deploy-api deploy-admin deploy-trigger deploy-status production-health
 
 # ─── SETUP ────────────────────────────────────────────────────────
 
@@ -505,3 +532,151 @@ release-delete-old: ## Delete releases older than 10, keeping the 10 most recent
 	@gh release list --limit 100 --json tagName -q '.[10:][].tagName' | \
 		xargs -I{} gh release delete {} --yes --cleanup-tag 2>/dev/null || true
 	@echo "Done."
+
+# ─── FLY.IO (FastAPI) ─────────────────────────────────────────────
+
+fly-login: ## Log into Fly.io
+	flyctl auth login
+
+fly-setup: ## First-time Fly.io app creation (run once)
+	@command -v flyctl >/dev/null 2>&1 || { echo "Install: brew install flyctl"; exit 1; }
+	@cd apps/api && flyctl launch \
+		--name secureassess-api \
+		--region sin \
+		--no-deploy \
+		--copy-config
+	@echo ""
+	@echo "App created. Now set secrets with: make fly-secrets"
+
+fly-secrets: ## Set all required environment variables on Fly.io
+	@command -v flyctl >/dev/null 2>&1 || { echo "Install: brew install flyctl"; exit 1; }
+	@cd apps/api && \
+	flyctl secrets set \
+		SUPABASE_URL="$$(grep SUPABASE_URL .env | cut -d= -f2)" \
+		SUPABASE_SERVICE_KEY="$$(grep SUPABASE_SERVICE_KEY .env | cut -d= -f2)" \
+		SUPABASE_JWT_SECRET="$$(grep SUPABASE_JWT_SECRET .env | cut -d= -f2)" \
+		BETTER_AUTH_SECRET="$$(grep BETTER_AUTH_SECRET .env | cut -d= -f2)" \
+		BETTER_AUTH_URL="$$(grep BETTER_AUTH_URL .env | cut -d= -f2)" \
+		LOG_LEVEL="INFO" \
+		ENVIRONMENT="production"
+	@echo "Secrets set. Run: make fly-deploy"
+
+fly-secrets-set: ## Set a single secret (usage: make fly-secrets-set KEY=VALUE)
+	@cd apps/api && flyctl secrets set $(KEY)="$(VALUE)"
+
+fly-secrets-list: ## List all secrets set on Fly.io (values hidden)
+	@cd apps/api && flyctl secrets list
+
+fly-deploy: ## Deploy FastAPI to Fly.io
+	@command -v flyctl >/dev/null 2>&1 || { echo "Install: brew install flyctl"; exit 1; }
+	@echo "Deploying FastAPI to Fly.io..."
+	@cd apps/api && flyctl deploy --remote-only --wait-timeout 120
+	@echo ""
+	@echo "API deployed. URL: https://secureassess-api.fly.dev"
+
+fly-status: ## Show Fly.io app status
+	@cd apps/api && flyctl status
+
+fly-logs: ## Tail live logs from Fly.io
+	@cd apps/api && flyctl logs
+
+fly-logs-error: ## Show only error logs from Fly.io
+	@cd apps/api && flyctl logs | grep -i "error\|exception\|traceback"
+
+fly-ssh: ## SSH into the running Fly.io machine
+	@cd apps/api && flyctl ssh console
+
+fly-health: ## Check if the API health endpoint responds
+	@API_URL=$$(cd apps/api && flyctl status --json 2>/dev/null | \
+		python3 -c "import json,sys; d=json.load(sys.stdin); print('https://' + d.get('Hostname',''))" \
+		2>/dev/null || echo "https://secureassess-api.fly.dev"); \
+	echo "Checking $$API_URL/health ..."; \
+	curl -sf "$$API_URL/health" | python3 -m json.tool || echo "Health check failed"
+
+fly-open: ## Open the Fly.io API URL in browser
+	@cd apps/api && flyctl open
+
+fly-scale-down: ## Scale to 0 machines (complete pause — saves credits)
+	@cd apps/api && flyctl scale count 0
+	@echo "API scaled to 0. Resume with: make fly-scale-up"
+
+fly-scale-up: ## Scale back to 1 machine
+	@cd apps/api && flyctl scale count 1
+
+fly-destroy: ## Completely delete the Fly.io app (irreversible)
+	@read -p "Type the app name to confirm: " name; \
+	[ "$$name" = "secureassess-api" ] && \
+		cd apps/api && flyctl apps destroy secureassess-api || \
+		echo "Cancelled."
+
+# ─── VERCEL (Next.js Admin) ───────────────────────────────────────
+
+vercel-login: ## Log into Vercel CLI
+	cd apps/admin && npx vercel login
+
+vercel-setup: ## Link admin app to Vercel project (run once)
+	@cd apps/admin && npx vercel link
+	@echo ""
+	@echo "Linked. Now set env vars with: make vercel-env"
+
+vercel-env: ## Push environment variables to Vercel from .env.local
+	@echo "Adding env vars to Vercel..."
+	@cd apps/admin && \
+	while IFS= read -r line || [ -n "$$line" ]; do \
+		[[ "$$line" =~ ^#.*$$ || -z "$$line" ]] && continue; \
+		KEY=$$(echo "$$line" | cut -d= -f1); \
+		VAL=$$(echo "$$line" | cut -d= -f2-); \
+		echo "  Setting $$KEY..."; \
+		echo "$$VAL" | npx vercel env add "$$KEY" production --yes 2>/dev/null || true; \
+	done < .env.local
+	@echo "Done. Redeploy with: make vercel-deploy"
+
+vercel-env-set: ## Set a single env var on Vercel (usage: make vercel-env-set KEY=X VALUE=Y)
+	@cd apps/admin && echo "$(VALUE)" | npx vercel env add "$(KEY)" production --yes
+
+vercel-env-list: ## List all Vercel env vars (values partially hidden)
+	@cd apps/admin && npx vercel env ls
+
+vercel-deploy: ## Deploy admin dashboard to Vercel production
+	@echo "Deploying admin dashboard to Vercel..."
+	@cd apps/admin && npx vercel --prod
+	@echo "Admin deployed."
+
+vercel-preview: ## Deploy a preview (non-production) build
+	@cd apps/admin && npx vercel
+
+vercel-logs: ## Show latest Vercel deployment logs
+	@cd apps/admin && npx vercel logs --follow
+
+vercel-open: ## Open the Vercel deployment in browser
+	@cd apps/admin && npx vercel open
+
+# ─── DEPLOY ALL ───────────────────────────────────────────────────
+
+deploy: ## Deploy both API (Fly.io) and admin (Vercel)
+	@$(MAKE) fly-deploy
+	@$(MAKE) vercel-deploy
+	@echo ""
+	@echo "All services deployed."
+
+deploy-api: fly-deploy ## Alias for fly-deploy
+
+deploy-admin: vercel-deploy ## Alias for vercel-deploy
+
+deploy-trigger: ## Trigger deploy via GitHub Actions (without a release)
+	@command -v gh >/dev/null 2>&1 || { echo "Install: brew install gh"; exit 1; }
+	@gh workflow run deploy.yml -f target=all
+	@echo "Deploy triggered. Watch: make deploy-status"
+
+deploy-status: ## Show recent deploy workflow runs
+	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
+	@gh run list --workflow=deploy.yml --limit 5
+
+production-health: ## Check health of all production services
+	@echo ""
+	@echo "Checking production services..."
+	@echo ""
+	@echo "API (Fly.io):"
+	@curl -sf https://secureassess-api.fly.dev/health | python3 -m json.tool 2>/dev/null || echo "  UNREACHABLE"
+	@echo ""
+	@echo "Run 'make fly-logs' or 'make vercel-logs' to debug issues."

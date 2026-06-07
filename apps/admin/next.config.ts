@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
-
   // Keep server-only packages out of the client bundle.
   // better-auth pulls in pg, kysely and Bun/D1 dialects that cannot run in the browser.
   serverExternalPackages: [

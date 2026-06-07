@@ -1,0 +1,30 @@
+node_modules
+.turbo
+dist
+.next
+
+# Rust build artifacts
+apps/desktop/src-tauri/target
+
+# Python
+apps/api/__pycache__
+apps/api/.venv
+apps/api/**/*.pyc
+apps/api/**/*.pyo
+
+# Desktop app source (not needed for admin deploy)
+apps/desktop/src
+apps/desktop/src-tauri/src
+apps/desktop/src-tauri/Cargo.lock
+apps/desktop/src-tauri/Cargo.toml
+apps/desktop/src-tauri/build.rs
+apps/desktop/src-tauri/capabilities
+apps/desktop/src-tauri/icons
+apps/desktop/src-tauri/migrations
+
+# Misc
+*.log
+.DS_Store
+scripts
+infra
+docs

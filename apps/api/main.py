@@ -27,6 +27,12 @@ _NGROK_PATTERN = re.compile(r"https://[a-z0-9-]+\.ngrok(-free)?\.(app|dev|io)$")
 _extra = os.getenv("CORS_EXTRA_ORIGINS", "")
 _EXTRA_ORIGINS = [o.strip() for o in re.split(r"[\s,]+", _extra) if o.strip()]
 
+# Vercel admin URL and optional ngrok URL set as Fly.io secrets
+for _env_key in ("ADMIN_URL", "NGROK_URL"):
+    _val = os.getenv(_env_key, "").strip()
+    if _val and _val not in _EXTRA_ORIGINS:
+        _EXTRA_ORIGINS.append(_val)
+
 
 class DynamicCORSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:

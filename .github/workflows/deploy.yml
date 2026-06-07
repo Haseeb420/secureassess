@@ -1,6 +1,12 @@
-name: Deploy Only
+name: Deploy
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/admin/**'
+      - 'apps/api/**'
+      - 'packages/**'      # shared packages affect admin; exclude from release.yml on purpose
   workflow_dispatch:
     inputs:
       target:
@@ -14,9 +20,35 @@ on:
           - admin-only
 
 jobs:
+  # ── Detect which paths changed (push only) ──────────────────────
+  changes:
+    name: Detect changed paths
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      admin: ${{ steps.filter.outputs.admin }}
+      api:   ${{ steps.filter.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            admin:
+              - 'apps/admin/**'
+              - 'packages/**'
+            api:
+              - 'apps/api/**'
+
+  # ── Deploy FastAPI to Fly.io ─────────────────────────────────────
   deploy-api:
-    if: inputs.target == 'all' || inputs.target == 'api-only'
     name: Deploy API to Fly.io
+    needs: [changes]
+    if: >-
+      always() && !cancelled() && (
+        (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'api-only')) ||
+        (github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.api == 'true')
+      )
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -28,21 +60,22 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl deploy --remote-only --wait-timeout 120
 
+  # ── Deploy Next.js Admin to Vercel ───────────────────────────────
   deploy-admin:
-    if: inputs.target == 'all' || inputs.target == 'admin-only'
     name: Deploy Admin to Vercel
+    needs: [changes]
+    if: >-
+      always() && !cancelled() && (
+        (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'admin-only')) ||
+        (github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.admin == 'true')
+      )
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
       - name: Deploy
         env:
-          VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           npm install -g vercel --quiet
-          cd apps/admin
-          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-          vercel build --prod --token=$VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          vercel --prod --archive=tgz --token=$VERCEL_TOKEN --yes

@@ -54,6 +54,11 @@ async function proxy(
   })
 
   const resHeaders = new Headers(upstreamRes.headers)
+  // Node.js fetch automatically decompresses the body, so these headers would
+  // mismatch the actual bytes the browser receives → ERR_CONTENT_DECODING_FAILED
+  resHeaders.delete("content-encoding")
+  resHeaders.delete("content-length")
+  resHeaders.delete("transfer-encoding")
   for (const [k, v] of Object.entries(corsHeaders(origin))) {
     resHeaders.set(k, v)
   }

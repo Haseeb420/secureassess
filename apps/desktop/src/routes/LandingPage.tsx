@@ -86,6 +86,11 @@ export function LandingPage() {
   const handleQuitApp = () => getCurrentWindow().close()
 
   const handleBeginAssessment = () => {
+    // If the main assessment is a mock, route through the mock flow — no kiosk/pre-assessment.
+    if (assessment.isMock) {
+      void handleStartMock(assessment)
+      return
+    }
     setAssessmentData(assessment.id, assessment.title, assessment.durationMins)
     // Questions will be populated from /attempts/start once the assessment begins.
     // Clear any stale questions from a previous session.

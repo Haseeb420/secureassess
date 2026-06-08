@@ -21,6 +21,7 @@ import {
 import { cn } from '@secureassess/ui'
 import {
   enterKioskMode,
+  exitKioskMode,
   validateDisplays,
   checkForbiddenProcesses,
 } from '../features/security/securityService'
@@ -173,8 +174,14 @@ export function PreAssessmentPage() {
   const [isFetching,      setIsFetching]     = useState(false)
 
   useEffect(() => {
+    // Mock assessments must not enter kiosk mode — redirect to landing if misconfigured.
+    if (landingData?.assessment?.isMock) {
+      exitKioskMode().catch(() => {})
+      navigate('/landing', { replace: true })
+      return
+    }
     enterKioskMode().then(() => setKioskReady(true)).catch(() => setKioskReady(true))
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Populate assessment + questions from landingData (set during token validation).
   // Falls back to a network fetch only when landingData is absent (dev/debug).

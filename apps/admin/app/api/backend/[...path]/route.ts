@@ -50,6 +50,7 @@ async function proxy(
     body: ["GET", "HEAD"].includes(request.method) ? null : request.body,
     // @ts-expect-error — duplex is required for streaming request bodies
     duplex: "half",
+    cache: "no-store",
   })
 
   const resHeaders = new Headers(upstreamRes.headers)

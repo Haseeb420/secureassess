@@ -51,9 +51,11 @@ async def start_mock(body: StartMockRequest):
         if now > expiry:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token has expired")
 
-    # Verify mock_id is assigned to this token
+    # Verify mock_id is assigned to this token.
+    # Allow if it's in the explicit mock_ids list (practice rounds) OR if it matches the
+    # token's own assessment_id — a token created directly for a mock assessment.
     mock_ids: list = token.get("mock_ids") or []
-    if body.mock_id not in mock_ids:
+    if body.mock_id not in mock_ids and body.mock_id != token.get("assessment_id"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Practice round not assigned to this token",

@@ -17,7 +17,7 @@
         release-patch release-minor release-major \
         release-status release-watch release-logs \
         releases-list release-open release-delete-old \
-        db-setup db-setup-docker db-start db-stop db-shell db-migrate db-reset db-status
+        db-setup db-setup-docker db-start db-stop db-shell db-migrate db-seed db-reset db-status
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 BOLD  := \033[1m
@@ -64,6 +64,7 @@ help:
 	@printf "  $(CYAN)make db-stop$(RESET)              Stop Docker postgres container (data preserved)\n"
 	@printf "  $(CYAN)make db-status$(RESET)            Show whether the local DB is reachable\n"
 	@printf "  $(CYAN)make db-migrate$(RESET)           Run all SQL migrations against local 'secureassess' DB\n"
+	@printf "  $(CYAN)make db-seed$(RESET)              Insert dev seed data (10 questions · 3 assessments · test cases)\n"
 	@printf "  $(CYAN)make db-shell$(RESET)             Open a psql prompt to the local 'secureassess' DB\n"
 	@printf "  $(CYAN)make db-reset$(RESET)             Drop and recreate 'secureassess' DB, then re-migrate $(RED)(destructive)$(RESET)\n"
 	@printf "\n$(BOLD)Setup$(RESET)\n"
@@ -164,7 +165,8 @@ db-setup: ## Native psql: create role + database (no Docker required)
 		&& printf "$(GREEN)✓ Database '$(DB_NAME)' ready$(RESET)\n"
 	@psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $(DB_NAME) TO $(DB_USER);" 2>/dev/null || true
 	$(MAKE) db-migrate
-	@printf "$(GREEN)Local DB ready. DATABASE_URL=$(DB_URL)$(RESET)\n"
+	@printf "$(GREEN)Local DB ready. Run 'make db-seed' to load test data.$(RESET)\n"
+	@printf "$(GREEN)DATABASE_URL=$(DB_URL)$(RESET)\n"
 
 db-setup-docker: ## Docker: pull postgres:16, create container, run migrations
 	$(call log,Starting local PostgreSQL via Docker)
@@ -181,7 +183,8 @@ db-setup-docker: ## Docker: pull postgres:16, create container, run migrations
 	done
 	@printf "$(GREEN)✓ PostgreSQL container is up$(RESET)\n"
 	$(MAKE) db-migrate
-	@printf "$(GREEN)Local DB ready. DATABASE_URL=$(DB_URL)$(RESET)\n"
+	@printf "$(GREEN)Local DB ready. Run 'make db-seed' to load test data.$(RESET)\n"
+	@printf "$(GREEN)DATABASE_URL=$(DB_URL)$(RESET)\n"
 
 db-start: ## Start existing Docker postgres container
 	$(call log,Starting postgres container)
@@ -207,6 +210,11 @@ db-migrate: ## Run all SQL migrations in apps/api/migrations/ (in order)
 		psql "$(DB_URL)" -f "$$f" || exit 1; \
 	done
 	@printf "$(GREEN)Migrations complete$(RESET)\n"
+
+db-seed: ## Insert dev seed data: 10 questions, test cases, 3 assessments (idempotent)
+	$(call log,Seeding local database with dev data)
+	@psql "$(DB_URL)" -f apps/api/seeds/seed_dev.sql
+	@printf "$(GREEN)Seed complete. Run 'make db-shell' to inspect.$(RESET)\n"
 
 db-shell: ## Open a psql prompt connected to the local 'secureassess' database
 	$(call log,Opening psql shell for '$(DB_NAME)')

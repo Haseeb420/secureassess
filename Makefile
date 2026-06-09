@@ -19,6 +19,9 @@
         releases-list release-open release-delete-old \
         db-setup db-setup-docker db-start db-stop db-shell db-migrate db-seed db-reset db-status
 
+# ─── Tool paths ───────────────────────────────────────────────────────────────
+FLY := $(shell which flyctl 2>/dev/null || which fly 2>/dev/null || echo "$(HOME)/.fly/bin/fly")
+
 # ─── Colors ───────────────────────────────────────────────────────────────────
 BOLD  := \033[1m
 RESET := \033[0m
@@ -37,6 +40,7 @@ help:
 	@printf "\n$(BOLD)SecureAssess — Available Commands$(RESET)\n"
 	@printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 	@printf "\n$(BOLD)Deploy — Fly.io (FastAPI)$(RESET)\n"
+	@printf "  $(CYAN)make fly-install$(RESET)          Install fly CLI (Linux/macOS)\n"
 	@printf "  $(CYAN)make fly-setup$(RESET)            First-time Fly.io app creation (run once)\n"
 	@printf "  $(CYAN)make fly-secrets$(RESET)          Push all env vars from apps/api/.env to Fly.io\n"
 	@printf "  $(CYAN)make fly-deploy$(RESET)           Deploy FastAPI to Fly.io\n"
@@ -56,7 +60,8 @@ help:
 	@printf "  $(CYAN)make deploy$(RESET)               Deploy both API (Fly.io) and admin (Vercel)\n"
 	@printf "  $(CYAN)make deploy-trigger$(RESET)       Trigger deploy via GitHub Actions (no release)\n"
 	@printf "  $(CYAN)make deploy-status$(RESET)        Show recent deploy workflow runs\n"
-	@printf "  $(CYAN)make production-health$(RESET)    Check health of all production services\n"
+	@printf "  $(CYAN)make production-health$(RESET)    Check all production services (API + Admin + Judge0)\n"
+	@printf "  $(CYAN)make secrets-sync$(RESET)         Sync all secrets to GitHub from local .env files\n"
 	@printf "\n$(BOLD)Database — Local Dev$(RESET)\n"
 	@printf "  $(CYAN)make db-setup$(RESET)             First-time native psql setup (creates user + db 'secureassess')\n"
 	@printf "  $(CYAN)make db-setup-docker$(RESET)      First-time Docker setup (pulls postgres:16, starts container)\n"
@@ -101,16 +106,17 @@ help:
 	@printf "  $(CYAN)make lint-desktop$(RESET)         Lint desktop frontend\n"
 	@printf "  $(CYAN)make lint-api$(RESET)             Lint API (ruff + black check)\n"
 	@printf "  $(CYAN)make type-check$(RESET)           Type-check all TypeScript apps\n"
-	@printf "\n$(BOLD)Remote Dev (ngrok + desktop testing)$(RESET)\n"
-	@printf "  $(CYAN)make serve$(RESET)                Start API + admin + ngrok together (no tmux needed) ★\n"
-	@printf "  $(CYAN)make dev-ngrok$(RESET)            Same as serve but in tmux panes (requires tmux)\n"
-	@printf "  $(CYAN)make ngrok$(RESET)                ngrok only — API + admin already running\n"
+	@printf "\n$(BOLD)Judge0 / ngrok (run on ASUS machine)$(RESET)\n"
+	@printf "  $(CYAN)make judge0-tunnel$(RESET)        Start ngrok tunnel for Judge0 (run on ASUS, port 2358)\n"
+	@printf "  $(CYAN)make ngrok$(RESET)                Print Judge0 ngrok start instructions\n"
 	@printf "  $(CYAN)make ngrok-urls$(RESET)           Print live tunnel URLs from running ngrok\n"
 	@printf "  $(CYAN)make ngrok-inspect$(RESET)        Open ngrok web inspector (localhost:4040)\n"
-	@printf "\n$(BOLD)Port map$(RESET)\n"
-	@printf "  FastAPI  :8000    ← direct dev / Rust sync worker\n"
-	@printf "  Next.js  :3000    ← admin dashboard + desktop proxy\n"
-	@printf "  ngrok    :443     → :3000  (static domain used by desktop .env)\n"
+	@printf "\n$(BOLD)Secrets$(RESET)\n"
+	@printf "  $(CYAN)make secrets-sync$(RESET)         Sync all secrets to GitHub from local .env files\n"
+	@printf "\n$(BOLD)Port map (local dev)$(RESET)\n"
+	@printf "  FastAPI  :8000    ← local dev / Rust sync worker\n"
+	@printf "  Next.js  :3000    ← admin dashboard\n"
+	@printf "  Judge0   :2358    ← runs on ASUS, exposed via ngrok static domain\n"
 	@printf "\n$(BOLD)Device Testing — Build & Share$(RESET)\n"
 	@printf "  $(CYAN)make build-mac$(RESET)            Build macOS installer (uses NGROK_STATIC_DOMAIN from .env)\n"
 	@printf "  $(CYAN)make build-mac-url$(RESET)        Build macOS installer with a prompted API URL\n"
@@ -458,7 +464,7 @@ clean-rust:
         clean-all clean-sessions \
         release-draft \
         ip ports env-check \
-        fly-login fly-setup fly-secrets fly-secrets-set fly-secrets-list \
+        fly-install fly-login fly-setup fly-secrets fly-secrets-set fly-secrets-list \
         fly-deploy fly-status fly-logs fly-logs-error fly-ssh fly-health \
         fly-open fly-scale-down fly-scale-up fly-destroy \
         vercel-login vercel-setup vercel-env vercel-env-set vercel-env-list \
@@ -685,12 +691,21 @@ release-delete-old: ## Delete releases older than 10, keeping the 10 most recent
 
 # ─── FLY.IO (FastAPI) ─────────────────────────────────────────────
 
+fly-install: ## Install fly CLI (Linux/macOS)
+	@curl -fsSL https://fly.io/install.sh | sh
+	@echo ""
+	@echo "Add to your shell profile:"
+	@echo '  export FLYCTL_INSTALL="$$HOME/.fly"'
+	@echo '  export PATH="$$FLYCTL_INSTALL/bin:$$PATH"'
+	@echo ""
+	@echo "Then run: make fly-login"
+
 fly-login: ## Log into Fly.io
-	flyctl auth login
+	$(FLY) auth login
 
 fly-setup: ## First-time Fly.io app creation (run once)
-	@command -v flyctl >/dev/null 2>&1 || { echo "Install: brew install flyctl"; exit 1; }
-	@cd apps/api && flyctl launch \
+	@$(FLY) version >/dev/null 2>&1 || { echo "fly CLI not found. Run: make fly-install"; exit 1; }
+	@cd apps/api && $(FLY) launch \
 		--name secureassess-api \
 		--region sin \
 		--no-deploy \
@@ -698,66 +713,65 @@ fly-setup: ## First-time Fly.io app creation (run once)
 	@echo ""
 	@echo "App created. Now set secrets with: make fly-secrets"
 
-fly-secrets: ## Set all required environment variables on Fly.io
-	@command -v flyctl >/dev/null 2>&1 || { echo "Install: brew install flyctl"; exit 1; }
+fly-secrets: ## Set all required environment variables on Fly.io from apps/api/.env
+	@$(FLY) version >/dev/null 2>&1 || { echo "fly CLI not found. Run: make fly-install"; exit 1; }
 	@cd apps/api && \
-	flyctl secrets set \
-		SUPABASE_URL="$$(grep SUPABASE_URL .env | cut -d= -f2)" \
+	$(FLY) secrets set \
+		SUPABASE_URL="$$(grep ^SUPABASE_URL .env | cut -d= -f2)" \
 		SUPABASE_SERVICE_KEY="$$(grep SUPABASE_SERVICE_KEY .env | cut -d= -f2)" \
 		SUPABASE_JWT_SECRET="$$(grep SUPABASE_JWT_SECRET .env | cut -d= -f2)" \
 		BETTER_AUTH_SECRET="$$(grep BETTER_AUTH_SECRET .env | cut -d= -f2)" \
-		BETTER_AUTH_URL="$$(grep BETTER_AUTH_URL .env | cut -d= -f2)" \
+		BETTER_AUTH_URL="$$(grep ^BETTER_AUTH_URL .env | cut -d= -f2)" \
+		ADMIN_URL="$$(grep ^ADMIN_URL .env | cut -d= -f2)" \
+		JUDGE0_URL="$$(grep ^JUDGE0_URL .env | cut -d= -f2)" \
+		EXECUTION_BACKEND="$$(grep ^EXECUTION_BACKEND .env | cut -d= -f2)" \
 		LOG_LEVEL="INFO" \
-		ENVIRONMENT="production" \
-		DATABASE_URL="$$(grep '^# PROD: DATABASE_URL=' .env | sed 's/^# PROD: DATABASE_URL=//')"
+		ENVIRONMENT="production"
 	@echo "Secrets set. Run: make fly-deploy"
 
 fly-secrets-set: ## Set a single secret (usage: make fly-secrets-set KEY=VALUE)
-	@cd apps/api && flyctl secrets set $(KEY)="$(VALUE)"
+	@cd apps/api && $(FLY) secrets set $(KEY)="$(VALUE)"
 
 fly-secrets-list: ## List all secrets set on Fly.io (values hidden)
-	@cd apps/api && flyctl secrets list
+	@cd apps/api && $(FLY) secrets list
 
 fly-deploy: ## Deploy FastAPI to Fly.io
-	@command -v flyctl >/dev/null 2>&1 || { echo "Install: brew install flyctl"; exit 1; }
+	@$(FLY) version >/dev/null 2>&1 || { echo "fly CLI not found. Run: make fly-install"; exit 1; }
 	@echo "Deploying FastAPI to Fly.io..."
-	@cd apps/api && flyctl deploy --remote-only --wait-timeout 120
+	@cd apps/api && $(FLY) deploy --remote-only --wait-timeout 120
 	@echo ""
 	@echo "API deployed. URL: https://secureassess-api.fly.dev"
 
 fly-status: ## Show Fly.io app status
-	@cd apps/api && flyctl status
+	@cd apps/api && $(FLY) status
 
 fly-logs: ## Tail live logs from Fly.io
-	@cd apps/api && flyctl logs
+	@cd apps/api && $(FLY) logs
 
 fly-logs-error: ## Show only error logs from Fly.io
-	@cd apps/api && flyctl logs | grep -i "error\|exception\|traceback"
+	@cd apps/api && $(FLY) logs | grep -i "error\|exception\|traceback"
 
 fly-ssh: ## SSH into the running Fly.io machine
-	@cd apps/api && flyctl ssh console
+	@cd apps/api && $(FLY) ssh console
 
 fly-health: ## Check if the API health endpoint responds
-	@API_URL=$$(cd apps/api && flyctl status --json 2>/dev/null | \
-		python3 -c "import json,sys; d=json.load(sys.stdin); print('https://' + d.get('Hostname',''))" \
-		2>/dev/null || echo "https://secureassess-api.fly.dev"); \
-	echo "Checking $$API_URL/health ..."; \
-	curl -sf "$$API_URL/health" | python3 -m json.tool || echo "Health check failed"
+	@echo "Checking https://secureassess-api.fly.dev/health ..."; \
+	curl -sf https://secureassess-api.fly.dev/health | python3 -m json.tool || echo "Health check failed"
 
 fly-open: ## Open the Fly.io API URL in browser
-	@cd apps/api && flyctl open
+	@cd apps/api && $(FLY) open
 
 fly-scale-down: ## Scale to 0 machines (complete pause — saves credits)
-	@cd apps/api && flyctl scale count 0
+	@cd apps/api && $(FLY) scale count 0
 	@echo "API scaled to 0. Resume with: make fly-scale-up"
 
 fly-scale-up: ## Scale back to 1 machine
-	@cd apps/api && flyctl scale count 1
+	@cd apps/api && $(FLY) scale count 1
 
 fly-destroy: ## Completely delete the Fly.io app (irreversible)
 	@read -p "Type the app name to confirm: " name; \
 	[ "$$name" = "secureassess-api" ] && \
-		cd apps/api && flyctl apps destroy secureassess-api || \
+		cd apps/api && $(FLY) apps destroy secureassess-api || \
 		echo "Cancelled."
 
 # ─── VERCEL (Next.js Admin) ───────────────────────────────────────

@@ -5,7 +5,8 @@
 **Name:** SecureAssess  
 **Type:** Secure desktop-based coding assessment platform  
 **Monorepo:** Turborepo  
-**Primary Dev Machine:** macOS M1
+**Primary Dev Machine:** macOS M1  
+**API Public URL (ngrok):** https://unkind-freeware-unmoved.ngrok-free.dev
 
 ---
 

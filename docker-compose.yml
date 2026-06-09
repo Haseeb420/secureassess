@@ -1,0 +1,29 @@
+# Local development PostgreSQL — database name: secureassess
+# Usage:
+#   make db-setup-docker   — first-time: create container + run migrations
+#   make db-start          — start existing container
+#   make db-stop           — stop container (data preserved)
+#   make db-shell          — open psql prompt
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: secureassess-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: secureassess
+      POSTGRES_PASSWORD: secureassess
+      POSTGRES_DB: secureassess
+    ports:
+      - "5432:5432"
+    volumes:
+      - secureassess_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U secureassess -d secureassess"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  secureassess_pgdata:
+    driver: local

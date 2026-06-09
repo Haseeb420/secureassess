@@ -16,7 +16,8 @@
         version version-next-patch version-next-minor version-next-major \
         release-patch release-minor release-major \
         release-status release-watch release-logs \
-        releases-list release-open release-delete-old
+        releases-list release-open release-delete-old \
+        db-setup db-setup-docker db-start db-stop db-shell db-migrate db-reset db-status
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 BOLD  := \033[1m
@@ -56,6 +57,15 @@ help:
 	@printf "  $(CYAN)make deploy-trigger$(RESET)       Trigger deploy via GitHub Actions (no release)\n"
 	@printf "  $(CYAN)make deploy-status$(RESET)        Show recent deploy workflow runs\n"
 	@printf "  $(CYAN)make production-health$(RESET)    Check health of all production services\n"
+	@printf "\n$(BOLD)Database — Local Dev$(RESET)\n"
+	@printf "  $(CYAN)make db-setup$(RESET)             First-time native psql setup (creates user + db 'secureassess')\n"
+	@printf "  $(CYAN)make db-setup-docker$(RESET)      First-time Docker setup (pulls postgres:16, starts container)\n"
+	@printf "  $(CYAN)make db-start$(RESET)             Start existing Docker postgres container\n"
+	@printf "  $(CYAN)make db-stop$(RESET)              Stop Docker postgres container (data preserved)\n"
+	@printf "  $(CYAN)make db-status$(RESET)            Show whether the local DB is reachable\n"
+	@printf "  $(CYAN)make db-migrate$(RESET)           Run all SQL migrations against local 'secureassess' DB\n"
+	@printf "  $(CYAN)make db-shell$(RESET)             Open a psql prompt to the local 'secureassess' DB\n"
+	@printf "  $(CYAN)make db-reset$(RESET)             Drop and recreate 'secureassess' DB, then re-migrate $(RED)(destructive)$(RESET)\n"
 	@printf "\n$(BOLD)Setup$(RESET)\n"
 	@printf "  $(CYAN)make install$(RESET)              Install all dependencies (pnpm + Python)\n"
 	@printf "  $(CYAN)make setup-rust$(RESET)           Install required Rust targets for cross-compilation\n"
@@ -123,6 +133,95 @@ help:
 	@printf "  $(CYAN)make clean-all$(RESET)            Full reset (node_modules + .venv + artifacts)\n"
 	@printf "  $(CYAN)make clean-sessions$(RESET)       Kill all project tmux sessions\n"
 	@printf "\n"
+
+# ─── Database — Local Dev ─────────────────────────────────────────────────────
+# Credentials match DATABASE_URL in all .env files:
+#   postgresql://secureassess:secureassess@localhost:5432/secureassess
+
+DB_NAME   := secureassess
+DB_USER   := secureassess
+DB_PASS   := secureassess
+DB_HOST   := localhost
+DB_PORT   := 5432
+DB_URL    := postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)
+MIGRATIONS_DIR := apps/api/migrations
+
+db-setup: ## Native psql: create role + database (no Docker required)
+	$(call log,Setting up local PostgreSQL database '$(DB_NAME)')
+	@command -v psql >/dev/null 2>&1 || { \
+		printf "$(RED)✗ psql not found.$(RESET)\n"; \
+		printf "  macOS:      brew install postgresql@16 && brew services start postgresql@16\n"; \
+		printf "  Linux Mint: sudo apt install postgresql postgresql-contrib && sudo systemctl start postgresql\n"; \
+		exit 1; \
+	}
+	@psql -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='$(DB_USER)'" 2>/dev/null \
+		| grep -q 1 \
+		|| psql -U postgres -c "CREATE ROLE $(DB_USER) WITH LOGIN PASSWORD '$(DB_PASS)';" \
+		&& printf "$(GREEN)✓ Role '$(DB_USER)' ready$(RESET)\n"
+	@psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" 2>/dev/null \
+		| grep -q 1 \
+		|| psql -U postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" \
+		&& printf "$(GREEN)✓ Database '$(DB_NAME)' ready$(RESET)\n"
+	@psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $(DB_NAME) TO $(DB_USER);" 2>/dev/null || true
+	$(MAKE) db-migrate
+	@printf "$(GREEN)Local DB ready. DATABASE_URL=$(DB_URL)$(RESET)\n"
+
+db-setup-docker: ## Docker: pull postgres:16, create container, run migrations
+	$(call log,Starting local PostgreSQL via Docker)
+	@command -v docker >/dev/null 2>&1 || { \
+		printf "$(RED)✗ Docker not found.$(RESET)\n"; \
+		printf "  macOS:      https://docs.docker.com/desktop/install/mac-install/\n"; \
+		printf "  Linux Mint: sudo apt install docker.io && sudo systemctl start docker\n"; \
+		exit 1; \
+	}
+	@docker compose up -d postgres
+	@printf "$(YELLOW)Waiting for postgres to be healthy...$(RESET)\n"
+	@until docker compose exec postgres pg_isready -U $(DB_USER) -d $(DB_NAME) >/dev/null 2>&1; do \
+		sleep 1; \
+	done
+	@printf "$(GREEN)✓ PostgreSQL container is up$(RESET)\n"
+	$(MAKE) db-migrate
+	@printf "$(GREEN)Local DB ready. DATABASE_URL=$(DB_URL)$(RESET)\n"
+
+db-start: ## Start existing Docker postgres container
+	$(call log,Starting postgres container)
+	@docker compose start postgres
+	@printf "$(GREEN)postgres started$(RESET)\n"
+
+db-stop: ## Stop Docker postgres container (data is preserved in the volume)
+	$(call log,Stopping postgres container)
+	@docker compose stop postgres
+	@printf "$(YELLOW)postgres stopped. Data is preserved. Run 'make db-start' to resume.$(RESET)\n"
+
+db-status: ## Check whether the local DB is reachable
+	$(call log,Checking local DB connection)
+	@psql "$(DB_URL)" -c "SELECT version();" >/dev/null 2>&1 \
+		&& printf "$(GREEN)✓ DB reachable at $(DB_URL)$(RESET)\n" \
+		|| printf "$(RED)✗ Cannot connect to $(DB_URL)\n  Run: make db-setup  or  make db-setup-docker$(RESET)\n"
+
+db-migrate: ## Run all SQL migrations in apps/api/migrations/ (in order)
+	$(call log,Running migrations against '$(DB_NAME)')
+	@command -v psql >/dev/null 2>&1 || { printf "$(RED)✗ psql not found$(RESET)\n"; exit 1; }
+	@for f in $$(ls $(MIGRATIONS_DIR)/*.sql 2>/dev/null | sort); do \
+		printf "  $(CYAN)→ $$f$(RESET)\n"; \
+		psql "$(DB_URL)" -f "$$f" || exit 1; \
+	done
+	@printf "$(GREEN)Migrations complete$(RESET)\n"
+
+db-shell: ## Open a psql prompt connected to the local 'secureassess' database
+	$(call log,Opening psql shell for '$(DB_NAME)')
+	@psql "$(DB_URL)"
+
+db-reset: ## Drop and recreate 'secureassess' DB, then re-run all migrations (DESTRUCTIVE)
+	$(call log,Resetting local database '$(DB_NAME)')
+	@printf "$(RED)$(BOLD)WARNING: This will destroy all data in '$(DB_NAME)'. Continue? [y/N] $(RESET)"; \
+	read ans; [ "$$ans" = "y" ] || { echo "Aborted."; exit 1; }
+	@psql -U postgres -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null \
+		|| docker compose exec postgres psql -U $(DB_USER) -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null || true
+	@psql -U postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" 2>/dev/null \
+		|| docker compose exec postgres psql -U $(DB_USER) -c "CREATE DATABASE $(DB_NAME);" 2>/dev/null
+	$(MAKE) db-migrate
+	@printf "$(GREEN)Database reset complete$(RESET)\n"
 
 # ─── Setup ────────────────────────────────────────────────────────────────────
 install:
@@ -446,7 +545,7 @@ env-check: ## Verify all required env vars are set across all apps
 	@echo "Checking environment variables..."
 	@echo ""
 	@echo "FastAPI (apps/api/.env):"
-	@for var in SUPABASE_URL SUPABASE_SERVICE_KEY BETTER_AUTH_SECRET NGROK_STATIC_DOMAIN; do \
+	@for var in ENVIRONMENT SUPABASE_URL SUPABASE_SERVICE_KEY BETTER_AUTH_SECRET NGROK_STATIC_DOMAIN; do \
 		val=$$(grep "^$$var=" apps/api/.env 2>/dev/null | cut -d= -f2); \
 		if [ -n "$$val" ]; then \
 			echo "  ✓  $$var"; \
@@ -456,7 +555,7 @@ env-check: ## Verify all required env vars are set across all apps
 	done
 	@echo ""
 	@echo "Desktop (apps/desktop/.env):"
-	@for var in VITE_API_BASE_URL VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do \
+	@for var in ENVIRONMENT VITE_API_BASE_URL VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do \
 		val=$$(grep "^$$var=" apps/desktop/.env 2>/dev/null | cut -d= -f2); \
 		if [ -n "$$val" ]; then \
 			echo "  ✓  $$var"; \
@@ -466,7 +565,7 @@ env-check: ## Verify all required env vars are set across all apps
 	done
 	@echo ""
 	@echo "Admin (apps/admin/.env.local):"
-	@for var in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_API_BASE_URL BETTER_AUTH_SECRET; do \
+	@for var in ENVIRONMENT NEXT_PUBLIC_SUPABASE_URL API_BASE_URL BETTER_AUTH_SECRET; do \
 		val=$$(grep "^$$var=" apps/admin/.env.local 2>/dev/null | cut -d= -f2); \
 		if [ -n "$$val" ]; then \
 			echo "  ✓  $$var"; \
@@ -558,7 +657,8 @@ fly-secrets: ## Set all required environment variables on Fly.io
 		BETTER_AUTH_SECRET="$$(grep BETTER_AUTH_SECRET .env | cut -d= -f2)" \
 		BETTER_AUTH_URL="$$(grep BETTER_AUTH_URL .env | cut -d= -f2)" \
 		LOG_LEVEL="INFO" \
-		ENVIRONMENT="production"
+		ENVIRONMENT="production" \
+		DATABASE_URL="$$(grep '^# PROD: DATABASE_URL=' .env | sed 's/^# PROD: DATABASE_URL=//')"
 	@echo "Secrets set. Run: make fly-deploy"
 
 fly-secrets-set: ## Set a single secret (usage: make fly-secrets-set KEY=VALUE)

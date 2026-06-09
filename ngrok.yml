@@ -7,4 +7,3 @@ tunnels:
     proto: http
     addr: 2358
     domain: unkind-freeware-unmoved.ngrok-free.dev
-    inspect: true

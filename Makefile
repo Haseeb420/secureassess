@@ -158,16 +158,20 @@ db-setup: ## Native psql: start server if needed, create role + database
 	}
 	@if ! pg_isready -q 2>/dev/null; then \
 		printf "$(YELLOW)PostgreSQL is not running — starting it now...$(RESET)\n"; \
-		if command -v brew >/dev/null 2>&1; then \
-			brew services start postgresql@16; \
-			printf "$(YELLOW)Waiting for server to be ready...$(RESET)\n"; \
-			for i in 1 2 3 4 5 6 7 8 9 10; do \
-				pg_isready -q && break; \
-				sleep 1; \
-			done; \
-		else \
+		PG_DATA=$$([ -d /opt/homebrew/var/postgresql@16 ] && echo /opt/homebrew/var/postgresql@16 \
+		  || [ -d /usr/local/var/postgresql@16 ]         && echo /usr/local/var/postgresql@16 \
+		  || [ -d /var/lib/postgresql/16/main ]          && echo /var/lib/postgresql/16/main \
+		  || echo ""); \
+		if [ -n "$$PG_DATA" ]; then \
+			pg_ctl -D "$$PG_DATA" start -l /tmp/postgresql.log -w 2>&1 \
+				|| { printf "$(RED)✗ pg_ctl failed. Log: /tmp/postgresql.log$(RESET)\n"; cat /tmp/postgresql.log; exit 1; }; \
+		elif command -v systemctl >/dev/null 2>&1; then \
 			sudo systemctl start postgresql; \
 			sleep 2; \
+		else \
+			printf "$(RED)✗ Cannot locate PostgreSQL data directory.$(RESET)\n"; \
+			printf "  Try: pg_ctl -D /path/to/data start\n"; \
+			exit 1; \
 		fi; \
 	fi
 	@pg_isready -q || { printf "$(RED)✗ PostgreSQL did not start. Check: brew services list$(RESET)\n"; exit 1; }

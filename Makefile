@@ -186,22 +186,22 @@ db-setup: ## Native psql: start server if needed, create role + database
 	@pg_isready -q || { printf "$(RED)✗ PostgreSQL did not start. Check: brew services list$(RESET)\n"; exit 1; }
 	@printf "$(GREEN)✓ PostgreSQL server is running$(RESET)\n"
 	@PG_ADMIN=$$(whoami); \
-	if psql -U "$$PG_ADMIN" -tc "SELECT 1 FROM pg_roles WHERE rolname='$(DB_USER)'" 2>/dev/null | grep -q 1; then \
+	if psql -U "$$PG_ADMIN" -d postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='$(DB_USER)'" 2>/dev/null | grep -q 1; then \
 		printf "$(GREEN)✓ Role '$(DB_USER)' already exists$(RESET)\n"; \
 	else \
-		psql -U "$$PG_ADMIN" -c "CREATE ROLE $(DB_USER) WITH LOGIN PASSWORD '$(DB_PASS)';" \
+		psql -U "$$PG_ADMIN" -d postgres -c "CREATE ROLE $(DB_USER) WITH LOGIN PASSWORD '$(DB_PASS)';" \
 			&& printf "$(GREEN)✓ Role '$(DB_USER)' created$(RESET)\n" \
 			|| { printf "$(RED)✗ Failed to create role '$(DB_USER)'$(RESET)\n"; exit 1; }; \
 	fi
 	@PG_ADMIN=$$(whoami); \
-	if psql -U "$$PG_ADMIN" -tc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" 2>/dev/null | grep -q 1; then \
+	if psql -U "$$PG_ADMIN" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" 2>/dev/null | grep -q 1; then \
 		printf "$(GREEN)✓ Database '$(DB_NAME)' already exists$(RESET)\n"; \
 	else \
-		psql -U "$$PG_ADMIN" -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" \
+		psql -U "$$PG_ADMIN" -d postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" \
 			&& printf "$(GREEN)✓ Database '$(DB_NAME)' created$(RESET)\n" \
 			|| { printf "$(RED)✗ Failed to create database '$(DB_NAME)'$(RESET)\n"; exit 1; }; \
 	fi
-	@psql -U "$$(whoami)" -c "GRANT ALL PRIVILEGES ON DATABASE $(DB_NAME) TO $(DB_USER);" 2>/dev/null || true
+	@psql -U "$$(whoami)" -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $(DB_NAME) TO $(DB_USER);" 2>/dev/null || true
 	$(MAKE) db-migrate
 	@printf "$(GREEN)Local DB ready. Run 'make db-seed' to load test data.$(RESET)\n"
 	@printf "$(GREEN)DATABASE_URL=$(DB_URL)$(RESET)\n"
@@ -262,9 +262,9 @@ db-reset: ## Drop and recreate 'secureassess' DB, then re-run all migrations (DE
 	$(call log,Resetting local database '$(DB_NAME)')
 	@printf "$(RED)$(BOLD)WARNING: This will destroy all data in '$(DB_NAME)'. Continue? [y/N] $(RESET)"; \
 	read ans; [ "$$ans" = "y" ] || { echo "Aborted."; exit 1; }
-	@psql -U "$$(whoami)" -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null \
+	@psql -U "$$(whoami)" -d postgres -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null \
 		|| docker compose exec postgres psql -U $(DB_USER) -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null || true
-	@psql -U "$$(whoami)" -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" 2>/dev/null \
+	@psql -U "$$(whoami)" -d postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" 2>/dev/null \
 		|| docker compose exec postgres psql -U $(DB_USER) -c "CREATE DATABASE $(DB_NAME);" 2>/dev/null
 	$(MAKE) db-migrate
 	@printf "$(GREEN)Database reset complete$(RESET)\n"

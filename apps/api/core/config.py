@@ -9,8 +9,14 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_KEY: str
     SUPABASE_ANON_KEY: str = ""
     SUPABASE_JWT_SECRET: str
-    JUDGE0_URL: str = ""
+    JUDGE0_URL: str = "http://localhost:2358"
     JUDGE0_API_KEY: str = ""
+    JUDGE0_AUTH_TOKEN: str = ""
+    EXECUTION_BACKEND: str = "local"
+    ADMIN_URL: str = ""
+    BETTER_AUTH_URL: str = ""
+    BETTER_AUTH_SECRET: str = ""
+    ENVIRONMENT: str = "development"
     DATABASE_URL: str = ""
     ENCRYPTION_SECRET: str = ""
     JWT_SECRET: str = ""

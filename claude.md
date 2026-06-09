@@ -11,12 +11,16 @@
 - **API (Fly.io):**       https://secureassess-api.fly.dev
 - **Admin (Vercel):**     https://admin-delta-ecru.vercel.app
 - **Judge0 (ngrok):**     https://unkind-freeware-unmoved.ngrok-free.dev
-- **Judge0 host:**        ASUS TUF F17, Linux Mint, port 2358
+- **Judge0 host:**        Linux machine, Docker, port 2358
+
+## Current Execution Backend
+- `EXECUTION_BACKEND=judge0`
+- Code runs on Judge0 server, not on candidate's machine
 
 ## Local Development
 - **API:**    http://localhost:8000
 - **Admin:**  http://localhost:3000
-- **Judge0:** https://unkind-freeware-unmoved.ngrok-free.dev (running on ASUS)
+- **Judge0:** https://unkind-freeware-unmoved.ngrok-free.dev (running on Linux machine)
 
 ---
 

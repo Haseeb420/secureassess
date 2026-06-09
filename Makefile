@@ -169,11 +169,8 @@ db-setup: ## Native psql: start server if needed, create role + database
 		fi; \
 		if [ -n "$$PG_DATA" ]; then \
 			if [ -f "$$PG_DATA/postmaster.pid" ]; then \
-				STALE_PID=$$(head -1 "$$PG_DATA/postmaster.pid"); \
-				if ! kill -0 "$$STALE_PID" 2>/dev/null; then \
-					printf "$(YELLOW)  Removing stale postmaster.pid (PID $$STALE_PID is not running)$(RESET)\n"; \
-					rm -f "$$PG_DATA/postmaster.pid"; \
-				fi; \
+				printf "$(YELLOW)  pg_isready says server is down but postmaster.pid exists — removing stale lock file$(RESET)\n"; \
+				rm -f "$$PG_DATA/postmaster.pid"; \
 			fi; \
 			printf "$(CYAN)  pg_ctl -D $$PG_DATA start$(RESET)\n"; \
 			pg_ctl -D "$$PG_DATA" start -l /tmp/postgresql.log -w \

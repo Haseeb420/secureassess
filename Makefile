@@ -452,7 +452,7 @@ clean-rust:
 # ─────────────────────────────────────────────────────────────────
 
 .PHONY: setup check copy-env \
-        ngrok ngrok-api ngrok-admin ngrok-urls ngrok-inspect dev-ngrok \
+        ngrok judge0-tunnel ngrok-api ngrok-admin ngrok-urls ngrok-inspect dev-ngrok \
         build-mac build-mac-url build-mac-local open-builds serve-builds serve-builds-port \
         format \
         clean-all clean-sessions \
@@ -463,7 +463,7 @@ clean-rust:
         fly-open fly-scale-down fly-scale-up fly-destroy \
         vercel-login vercel-setup vercel-env vercel-env-set vercel-env-list \
         vercel-deploy vercel-preview vercel-logs vercel-open \
-        deploy deploy-api deploy-admin deploy-trigger deploy-status production-health
+        deploy deploy-api deploy-admin deploy-trigger deploy-status production-health secrets-sync
 
 # ─── SETUP ────────────────────────────────────────────────────────
 
@@ -479,10 +479,15 @@ copy-env: ## Copy .env.example files to .env (skips if .env already exists)
 
 # ─── NGROK ────────────────────────────────────────────────────────
 
-ngrok: ## Start ngrok tunnels (API + admin). API uses your static domain.
-	@echo "Starting ngrok tunnels..."
-	@echo "Make sure apps/api/.env has NGROK_STATIC_DOMAIN set."
-	@bash scripts/start-ngrok.sh
+ngrok: ## Start ngrok tunnel for Judge0 only (run on ASUS machine)
+	@echo "Run this on your ASUS machine:"
+	@echo "  ngrok start --config ngrok.yml judge0"
+	@echo ""
+	@echo "Judge0 will be available at:"
+	@echo "  https://unkind-freeware-unmoved.ngrok-free.dev"
+
+judge0-tunnel: ## Expose Judge0 via ngrok static domain (run on ASUS)
+	ngrok start --config ngrok.yml judge0
 
 ngrok-api: ## Start ngrok tunnel for API only (port 8000)
 	@source apps/api/.env 2>/dev/null; \
@@ -818,11 +823,28 @@ deploy-status: ## Show recent deploy workflow runs
 	@command -v gh >/dev/null 2>&1 || { echo "Install GitHub CLI: brew install gh"; exit 1; }
 	@gh run list --workflow=deploy.yml --limit 5
 
-production-health: ## Check health of all production services
+production-health: ## Check all production services
 	@echo ""
 	@echo "Checking production services..."
 	@echo ""
-	@echo "API (Fly.io):"
-	@curl -sf https://secureassess-api.fly.dev/health | python3 -m json.tool 2>/dev/null || echo "  UNREACHABLE"
+	@printf "API (Fly.io):   "
+	@curl -sf https://secureassess-api.fly.dev/health | python3 -c "import json,sys; d=json.load(sys.stdin); print('✓ ' + d.get('status','?'))" 2>/dev/null || echo "✗ UNREACHABLE"
+	@printf "Admin (Vercel): "
+	@curl -sf -o /dev/null -w "%{http_code}" https://admin-delta-ecru.vercel.app | \
+		awk '{print ($$1=="200" || $$1=="307") ? "✓ " $$1 : "✗ " $$1}'
+	@printf "Judge0 (ngrok): "
+	@curl -sf https://unkind-freeware-unmoved.ngrok-free.dev/about | python3 -c "import json,sys; d=json.load(sys.stdin); print('✓ v' + d.get('version','?'))" 2>/dev/null || echo "✗ OFFLINE (start Judge0 on ASUS)"
 	@echo ""
-	@echo "Run 'make fly-logs' or 'make vercel-logs' to debug issues."
+
+secrets-sync: ## Sync all secrets to GitHub from local .env files
+	@echo "Syncing secrets to GitHub..."
+	@gh secret set VITE_API_BASE_URL      --body "https://secureassess-api.fly.dev"
+	@gh secret set VITE_BETTER_AUTH_URL   --body "https://admin-delta-ecru.vercel.app"
+	@gh secret set JUDGE0_URL             --body "https://unkind-freeware-unmoved.ngrok-free.dev"
+	@gh secret set EXECUTION_BACKEND      --body "judge0"
+	@gh secret set VITE_SUPABASE_URL      --body "$$(grep ^VITE_SUPABASE_URL apps/desktop/.env | cut -d= -f2)"
+	@gh secret set VITE_SUPABASE_ANON_KEY --body "$$(grep VITE_SUPABASE_ANON_KEY apps/desktop/.env | cut -d= -f2)"
+	@gh secret set SUPABASE_URL           --body "$$(grep ^SUPABASE_URL apps/api/.env | cut -d= -f2)"
+	@gh secret set SUPABASE_SERVICE_KEY   --body "$$(grep SUPABASE_SERVICE_KEY apps/api/.env | cut -d= -f2)"
+	@gh secret set BETTER_AUTH_SECRET     --body "$$(grep BETTER_AUTH_SECRET apps/api/.env | cut -d= -f2)"
+	@echo "Done. Verify: gh secret list"

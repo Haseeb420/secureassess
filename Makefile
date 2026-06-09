@@ -179,23 +179,29 @@ db-setup: ## Native psql: start server if needed, create role + database
 			sudo systemctl start postgresql && sleep 2; \
 		else \
 			printf "$(RED)✗ Cannot locate PostgreSQL data directory.$(RESET)\n"; \
-			printf "  Find it with: psql -U postgres -c 'SHOW data_directory;'\n"; \
+			printf "  Find it with: psql -c 'SHOW data_directory;'\n"; \
 			exit 1; \
 		fi; \
 	fi
 	@pg_isready -q || { printf "$(RED)✗ PostgreSQL did not start. Check: brew services list$(RESET)\n"; exit 1; }
 	@printf "$(GREEN)✓ PostgreSQL server is running$(RESET)\n"
-	@psql -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='$(DB_USER)'" 2>/dev/null \
-		| grep -q 1 \
-		&& printf "$(GREEN)✓ Role '$(DB_USER)' already exists$(RESET)\n" \
-		|| { psql -U postgres -c "CREATE ROLE $(DB_USER) WITH LOGIN PASSWORD '$(DB_PASS)';"; \
-		     printf "$(GREEN)✓ Role '$(DB_USER)' created$(RESET)\n"; }
-	@psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" 2>/dev/null \
-		| grep -q 1 \
-		&& printf "$(GREEN)✓ Database '$(DB_NAME)' already exists$(RESET)\n" \
-		|| { psql -U postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);"; \
-		     printf "$(GREEN)✓ Database '$(DB_NAME)' created$(RESET)\n"; }
-	@psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $(DB_NAME) TO $(DB_USER);" 2>/dev/null || true
+	@PG_ADMIN=$$(whoami); \
+	if psql -U "$$PG_ADMIN" -tc "SELECT 1 FROM pg_roles WHERE rolname='$(DB_USER)'" 2>/dev/null | grep -q 1; then \
+		printf "$(GREEN)✓ Role '$(DB_USER)' already exists$(RESET)\n"; \
+	else \
+		psql -U "$$PG_ADMIN" -c "CREATE ROLE $(DB_USER) WITH LOGIN PASSWORD '$(DB_PASS)';" \
+			&& printf "$(GREEN)✓ Role '$(DB_USER)' created$(RESET)\n" \
+			|| { printf "$(RED)✗ Failed to create role '$(DB_USER)'$(RESET)\n"; exit 1; }; \
+	fi
+	@PG_ADMIN=$$(whoami); \
+	if psql -U "$$PG_ADMIN" -tc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" 2>/dev/null | grep -q 1; then \
+		printf "$(GREEN)✓ Database '$(DB_NAME)' already exists$(RESET)\n"; \
+	else \
+		psql -U "$$PG_ADMIN" -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" \
+			&& printf "$(GREEN)✓ Database '$(DB_NAME)' created$(RESET)\n" \
+			|| { printf "$(RED)✗ Failed to create database '$(DB_NAME)'$(RESET)\n"; exit 1; }; \
+	fi
+	@psql -U "$$(whoami)" -c "GRANT ALL PRIVILEGES ON DATABASE $(DB_NAME) TO $(DB_USER);" 2>/dev/null || true
 	$(MAKE) db-migrate
 	@printf "$(GREEN)Local DB ready. Run 'make db-seed' to load test data.$(RESET)\n"
 	@printf "$(GREEN)DATABASE_URL=$(DB_URL)$(RESET)\n"
@@ -256,9 +262,9 @@ db-reset: ## Drop and recreate 'secureassess' DB, then re-run all migrations (DE
 	$(call log,Resetting local database '$(DB_NAME)')
 	@printf "$(RED)$(BOLD)WARNING: This will destroy all data in '$(DB_NAME)'. Continue? [y/N] $(RESET)"; \
 	read ans; [ "$$ans" = "y" ] || { echo "Aborted."; exit 1; }
-	@psql -U postgres -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null \
+	@psql -U "$$(whoami)" -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null \
 		|| docker compose exec postgres psql -U $(DB_USER) -c "DROP DATABASE IF EXISTS $(DB_NAME);" 2>/dev/null || true
-	@psql -U postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" 2>/dev/null \
+	@psql -U "$$(whoami)" -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" 2>/dev/null \
 		|| docker compose exec postgres psql -U $(DB_USER) -c "CREATE DATABASE $(DB_NAME);" 2>/dev/null
 	$(MAKE) db-migrate
 	@printf "$(GREEN)Database reset complete$(RESET)\n"

@@ -12,7 +12,7 @@ const SYNE: React.CSSProperties = { fontFamily: "'Syne', sans-serif" }
 
 export function GlobalQuitButton() {
   const location = useLocation()
-  const { sessionId, isMock, currentAttemptId, mockAttemptId } = useAssessmentStore()
+  const { sessionId, isMock, mockAttemptId } = useAssessmentStore()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 

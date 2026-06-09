@@ -44,88 +44,173 @@ make dev
 
 ---
 
-## Remote Development (ngrok + desktop testing)
+## Production URLs
 
-Use this workflow when you need a built `.dmg` / `.exe` to talk to your local API, or when testing on a separate device.
+| Service | URL | Host |
+|---|---|---|
+| API | https://secureassess-api.fly.dev | Fly.io |
+| Admin dashboard | https://admin-delta-ecru.vercel.app | Vercel |
+| Judge0 | https://unkind-freeware-unmoved.ngrok-free.dev | ASUS TUF F17 (Linux Mint) via ngrok |
 
-### Port Map
+---
 
-```
-FastAPI   :8000  ←  local dev, Rust sync worker
-Next.js   :3000  ←  admin dashboard + API proxy for desktop app
-ngrok     :443   →  :3000  (the static domain used in desktop .env)
-```
+## Deploy — Fly.io (API)
 
-All desktop API traffic flows:
+The FastAPI backend runs on Fly.io at `https://secureassess-api.fly.dev`.
 
-```
-Desktop app  →  https://<static-domain>/api/backend/*
-             →  ngrok  →  Next.js :3000
-             →  /api/backend/[...path] proxy  →  FastAPI :8000
-```
-
-### One-command startup (no tmux)
+### First-time setup
 
 ```bash
-make serve
+# Install fly CLI (Linux/macOS)
+make fly-install
+# then add to shell: export PATH="$HOME/.fly/bin:$PATH"
+
+# Log in
+make fly-login
+
+# Create app (run once)
+make fly-setup
+
+# Push all secrets from apps/api/.env
+make fly-secrets
+
+# Deploy
+make fly-deploy
 ```
 
-Starts FastAPI (:8000), Next.js admin (:3000), and ngrok together.  
-Press `Ctrl+C` to stop everything.
+### Day-to-day
 
-**Requirements before running:**
-1. `NGROK_STATIC_DOMAIN` set in `apps/api/.env`
-2. `VITE_API_BASE_URL=https://<your-domain>/api/backend` set in `apps/desktop/.env`
-3. ngrok authenticated: `ngrok config add-authtoken <token>`
+| Command | What it does |
+|---|---|
+| `make fly-install` | Install fly CLI via official installer |
+| `make fly-login` | Authenticate with Fly.io |
+| `make fly-secrets` | Push all env vars from `apps/api/.env` to Fly.io |
+| `make fly-secrets-set KEY=X VALUE=Y` | Set a single secret |
+| `make fly-secrets-list` | List all secrets on Fly.io (values hidden) |
+| `make fly-deploy` | Deploy latest code to Fly.io (remote build) |
+| `make fly-status` | Show machine count and health |
+| `make fly-logs` | Tail live logs |
+| `make fly-logs-error` | Tail logs filtered to errors only |
+| `make fly-health` | HTTP GET `/health` on the live API |
+| `make fly-ssh` | SSH into the running machine |
+| `make fly-scale-down` | Scale to 0 machines (saves credits) |
+| `make fly-scale-up` | Scale back to 1 machine |
 
-### tmux variant (separate panes)
+---
+
+## Deploy — Vercel (Admin Dashboard)
+
+The Next.js admin dashboard deploys to Vercel at `https://admin-delta-ecru.vercel.app`.
+
+| Command | What it does |
+|---|---|
+| `make vercel-setup` | Link admin app to Vercel project (run once) |
+| `make vercel-env` | Push `.env.local` vars to Vercel production |
+| `make vercel-env-set KEY=X VALUE=Y` | Set a single Vercel env var |
+| `make vercel-deploy` | Deploy admin to Vercel production |
+| `make vercel-preview` | Deploy a preview (non-production) build |
+| `make vercel-logs` | Show latest deployment logs |
+
+---
+
+## Deploy — Combined
+
+| Command | What it does |
+|---|---|
+| `make deploy` | Deploy both API (Fly.io) and admin (Vercel) |
+| `make deploy-trigger` | Trigger deploy via GitHub Actions (no release) |
+| `make deploy-status` | Show recent deploy workflow runs |
+| `make production-health` | Check all production services: API + Admin + Judge0 |
+| `make secrets-sync` | Sync all GitHub secrets from local `.env` files |
+
+### Health check
 
 ```bash
-make dev-ngrok   # requires: brew install tmux
+make production-health
 ```
 
-Opens three tmux windows (`api`, `admin`, `ngrok`) — easier to read individual service logs.
+Checks three services and prints a one-line status for each:
+- **API (Fly.io)** — GET `/health`
+- **Admin (Vercel)** — HTTP status code
+- **Judge0 (ngrok)** — GET `/about` (returns Judge0 version; fails if ASUS machine is offline)
 
-### ngrok only (services already running)
+---
+
+## Judge0 / ngrok
+
+Judge0 runs on an ASUS TUF F17 (Linux Mint) and is exposed via ngrok static domain.
+
+```
+https://unkind-freeware-unmoved.ngrok-free.dev → localhost:2358 on ASUS
+```
+
+### Start the tunnel (run on ASUS machine)
 
 ```bash
-make ngrok          # start ngrok tunnel using ngrok.yml
-make ngrok-urls     # show live tunnel URL
-make ngrok-inspect  # open http://localhost:4040 inspector
+make judge0-tunnel
+# equivalent to: ngrok start --config ngrok.yml judge0
 ```
 
-### First-time ngrok setup
+Or print instructions for manual start:
 
 ```bash
-# 1. Install ngrok
-brew install ngrok/ngrok/ngrok
-
-# 2. Authenticate (once per machine)
-ngrok config add-authtoken YOUR_TOKEN_HERE
-# Get token at: https://dashboard.ngrok.com/authtokens
-
-# 3. Get your free static domain (once)
-# Go to: https://dashboard.ngrok.com/domains → New Domain
-# Example output: unkind-freeware-unmoved.ngrok-free.dev
-
-# 4. Add to apps/api/.env
-echo "NGROK_STATIC_DOMAIN=unkind-freeware-unmoved.ngrok-free.dev" >> apps/api/.env
-
-# 5. Add to apps/desktop/.env
-echo "VITE_API_BASE_URL=https://unkind-freeware-unmoved.ngrok-free.dev/api/backend" >> apps/desktop/.env
+make ngrok
 ```
 
-### Building the desktop app for remote testing
+### ngrok utilities
+
+| Command | What it does |
+|---|---|
+| `make judge0-tunnel` | Start ngrok tunnel for Judge0 (run on ASUS) |
+| `make ngrok` | Print start instructions |
+| `make ngrok-urls` | Show live tunnel URLs from running ngrok |
+| `make ngrok-inspect` | Open http://localhost:4040 inspector |
+
+### ngrok.yml
+
+The `ngrok.yml` at repo root configures one tunnel only:
+
+```yaml
+version: "3"
+agent:
+  authtoken: ${NGROK_AUTHTOKEN}
+
+tunnels:
+  judge0:
+    proto: http
+    addr: 2358
+    domain: unkind-freeware-unmoved.ngrok-free.dev
+    inspect: true
+```
+
+Set `NGROK_AUTHTOKEN` in your environment or shell profile on the ASUS machine.
+
+---
+
+## Secrets Management
+
+### GitHub Secrets
+
+Sync all secrets from local `.env` files to GitHub Actions:
 
 ```bash
-# Build macOS .dmg (reads VITE_API_BASE_URL from apps/desktop/.env at build time)
-make build-mac
-
-# Build with a prompted URL (if you want to override without editing .env)
-make build-mac-url
+make secrets-sync
 ```
 
-The built app has the ngrok URL baked in — the same static domain works every time ngrok restarts.
+Or set them individually:
+
+```bash
+gh secret set KEY --body "value"
+gh secret list
+```
+
+### Fly.io Secrets
+
+```bash
+make fly-secrets           # push all from apps/api/.env
+make fly-secrets-set KEY=JUDGE0_URL VALUE=https://...   # single secret
+make fly-secrets-list      # list all (values hidden)
+```
 
 ---
 
@@ -177,10 +262,8 @@ Artifacts land in `apps/desktop/src-tauri/target/<triple>/release/bundle/`.
 
 ### macOS → macOS Universal (no extra setup needed)
 
-Both ARM and Intel targets ship with Xcode. Just run:
-
 ```bash
-make setup-rust       # adds the two Apple targets
+make setup-rust
 make desktop-mac-universal
 ```
 
@@ -189,18 +272,10 @@ make desktop-mac-universal
 Building a Windows binary from macOS requires a MSVC-compatible linker. The recommended approach is [`xwin`](https://github.com/Jake-Shadle/xwin) + the LLVM linker:
 
 ```bash
-# Install toolchain
 brew install llvm
 cargo install xwin
 xwin --accept-license splat --output ~/.xwin
-
-# Install the target
 rustup target add x86_64-pc-windows-msvc
-
-# Add to ~/.cargo/config.toml:
-# [target.x86_64-pc-windows-msvc]
-# linker = "lld-link"
-# rustflags = ["-C", "link-arg=/defaultlib:msvcrt"]
 ```
 
 > **Alternative:** Use the [Tauri GitHub Actions workflow](https://tauri.app/distribute/sign/windows/) to build Windows artifacts in CI without local setup.
@@ -208,23 +283,18 @@ rustup target add x86_64-pc-windows-msvc
 ### macOS → Linux (cross-compilation)
 
 ```bash
-# Install cross-linker
 brew install filosottile/musl-cross/musl-cross
-
-# Or use the `cross` tool (Docker-based, easiest):
+# Or use cross (Docker-based):
 cargo install cross --git https://github.com/cross-rs/cross
 cd apps/desktop/src-tauri
 cross build --release --target x86_64-unknown-linux-gnu
 ```
 
-> **Recommended for Linux:** Build in CI (GitHub Actions Ubuntu runner) rather than cross-compiling from macOS, since Linux builds need GTK/WebKit2GTK system libraries that are difficult to replicate locally.
+> **Recommended for Linux:** Build in CI on an Ubuntu runner — Linux builds need GTK/WebKit2GTK system libraries.
 
-### CI Recommendation
-
-For production releases, run platform builds natively on the matching runner:
+### CI Matrix
 
 ```yaml
-# .github/workflows/release.yml (example matrix)
 strategy:
   matrix:
     include:
@@ -268,15 +338,60 @@ make api-migrate    # Push Supabase schema migrations
 
 ---
 
+## Database — Local Dev
+
+| Command | What it does |
+|---|---|
+| `make db-setup` | Create local PostgreSQL role + database (native psql) |
+| `make db-setup-docker` | Create local PostgreSQL via Docker |
+| `make db-start` | Start existing Docker postgres container |
+| `make db-stop` | Stop Docker postgres container (data preserved) |
+| `make db-status` | Check whether the local DB is reachable |
+| `make db-migrate` | Run all SQL migrations in `apps/api/migrations/` |
+| `make db-seed` | Insert dev seed data (10 questions, 3 assessments) |
+| `make db-shell` | Open psql prompt to local DB |
+| `make db-reset` | Drop and recreate DB, then re-migrate (destructive) |
+
+---
+
+## Release Management
+
+| Command | What it does |
+|---|---|
+| `make version` | Show current version from `VERSION` file |
+| `make release-patch` | Trigger patch release via GitHub Actions |
+| `make release-minor` | Trigger minor release via GitHub Actions |
+| `make release-major` | Trigger major release via GitHub Actions |
+| `make release-status` | Show last 5 release workflow runs |
+| `make release-watch` | Watch the latest release run live |
+| `make releases-list` | List all GitHub releases |
+| `make release-open` | Open latest release page in browser |
+| `make release-delete-old` | Delete releases beyond the 10 most recent |
+
+---
+
 ## Cleanup
 
 | Command | Removes |
 |---|---|
-| `make clean` | Everything: node_modules, .next, dist, .turbo, Rust target |
+| `make clean` | node_modules, .next, dist, .turbo, Rust target |
 | `make clean-node` | node_modules, .next, dist directories |
 | `make clean-rust` | `apps/desktop/src-tauri/target` (can be several GB) |
+| `make clean-all` | Full reset including .venv |
+| `make clean-sessions` | Kill all project tmux sessions |
 
-> `make clean-rust` frees the most disk space. Rust will recompile everything on the next build.
+> `make clean-rust` frees the most disk space.
+
+---
+
+## Utilities
+
+| Command | What it does |
+|---|---|
+| `make ip` | Show your LAN IP addresses |
+| `make ports` | Show which project ports are in use |
+| `make env-check` | Verify all required env vars are set |
+| `make format` | Format code (prettier + ruff + rustfmt) |
 
 ---
 

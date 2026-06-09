@@ -6,7 +6,17 @@
 **Type:** Secure desktop-based coding assessment platform  
 **Monorepo:** Turborepo  
 **Primary Dev Machine:** macOS M1  
-**API Public URL (ngrok):** https://unkind-freeware-unmoved.ngrok-free.dev
+
+## Production URLs
+- **API (Fly.io):**       https://secureassess-api.fly.dev
+- **Admin (Vercel):**     https://admin-delta-ecru.vercel.app
+- **Judge0 (ngrok):**     https://unkind-freeware-unmoved.ngrok-free.dev
+- **Judge0 host:**        ASUS TUF F17, Linux Mint, port 2358
+
+## Local Development
+- **API:**    http://localhost:8000
+- **Admin:**  http://localhost:3000
+- **Judge0:** https://unkind-freeware-unmoved.ngrok-free.dev (running on ASUS)
 
 ---
 

@@ -147,22 +147,41 @@ DB_PORT   := 5432
 DB_URL    := postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)
 MIGRATIONS_DIR := apps/api/migrations
 
-db-setup: ## Native psql: create role + database (no Docker required)
+db-setup: ## Native psql: start server if needed, create role + database
 	$(call log,Setting up local PostgreSQL database '$(DB_NAME)')
 	@command -v psql >/dev/null 2>&1 || { \
 		printf "$(RED)✗ psql not found.$(RESET)\n"; \
-		printf "  macOS:      brew install postgresql@16 && brew services start postgresql@16\n"; \
-		printf "  Linux Mint: sudo apt install postgresql postgresql-contrib && sudo systemctl start postgresql\n"; \
+		printf "  macOS:      brew install postgresql@16\n"; \
+		printf "              then add to PATH: export PATH=\"/opt/homebrew/opt/postgresql@16/bin:$$PATH\"\n"; \
+		printf "  Linux Mint: sudo apt install postgresql postgresql-contrib\n"; \
 		exit 1; \
 	}
+	@if ! pg_isready -q 2>/dev/null; then \
+		printf "$(YELLOW)PostgreSQL is not running — starting it now...$(RESET)\n"; \
+		if command -v brew >/dev/null 2>&1; then \
+			brew services start postgresql@16; \
+			printf "$(YELLOW)Waiting for server to be ready...$(RESET)\n"; \
+			for i in 1 2 3 4 5 6 7 8 9 10; do \
+				pg_isready -q && break; \
+				sleep 1; \
+			done; \
+		else \
+			sudo systemctl start postgresql; \
+			sleep 2; \
+		fi; \
+	fi
+	@pg_isready -q || { printf "$(RED)✗ PostgreSQL did not start. Check: brew services list$(RESET)\n"; exit 1; }
+	@printf "$(GREEN)✓ PostgreSQL server is running$(RESET)\n"
 	@psql -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='$(DB_USER)'" 2>/dev/null \
 		| grep -q 1 \
-		|| psql -U postgres -c "CREATE ROLE $(DB_USER) WITH LOGIN PASSWORD '$(DB_PASS)';" \
-		&& printf "$(GREEN)✓ Role '$(DB_USER)' ready$(RESET)\n"
+		&& printf "$(GREEN)✓ Role '$(DB_USER)' already exists$(RESET)\n" \
+		|| { psql -U postgres -c "CREATE ROLE $(DB_USER) WITH LOGIN PASSWORD '$(DB_PASS)';"; \
+		     printf "$(GREEN)✓ Role '$(DB_USER)' created$(RESET)\n"; }
 	@psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" 2>/dev/null \
 		| grep -q 1 \
-		|| psql -U postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);" \
-		&& printf "$(GREEN)✓ Database '$(DB_NAME)' ready$(RESET)\n"
+		&& printf "$(GREEN)✓ Database '$(DB_NAME)' already exists$(RESET)\n" \
+		|| { psql -U postgres -c "CREATE DATABASE $(DB_NAME) OWNER $(DB_USER);"; \
+		     printf "$(GREEN)✓ Database '$(DB_NAME)' created$(RESET)\n"; }
 	@psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $(DB_NAME) TO $(DB_USER);" 2>/dev/null || true
 	$(MAKE) db-migrate
 	@printf "$(GREEN)Local DB ready. Run 'make db-seed' to load test data.$(RESET)\n"

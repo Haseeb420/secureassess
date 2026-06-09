@@ -158,19 +158,24 @@ db-setup: ## Native psql: start server if needed, create role + database
 	}
 	@if ! pg_isready -q 2>/dev/null; then \
 		printf "$(YELLOW)PostgreSQL is not running — starting it now...$(RESET)\n"; \
-		PG_DATA=$$([ -d /opt/homebrew/var/postgresql@16 ] && echo /opt/homebrew/var/postgresql@16 \
-		  || [ -d /usr/local/var/postgresql@16 ]         && echo /usr/local/var/postgresql@16 \
-		  || [ -d /var/lib/postgresql/16/main ]          && echo /var/lib/postgresql/16/main \
-		  || echo ""); \
+		if [ -d /opt/homebrew/var/postgresql@16 ]; then \
+			PG_DATA=/opt/homebrew/var/postgresql@16; \
+		elif [ -d /usr/local/var/postgresql@16 ]; then \
+			PG_DATA=/usr/local/var/postgresql@16; \
+		elif [ -d /var/lib/postgresql/16/main ]; then \
+			PG_DATA=/var/lib/postgresql/16/main; \
+		else \
+			PG_DATA=""; \
+		fi; \
 		if [ -n "$$PG_DATA" ]; then \
-			pg_ctl -D "$$PG_DATA" start -l /tmp/postgresql.log -w 2>&1 \
-				|| { printf "$(RED)✗ pg_ctl failed. Log: /tmp/postgresql.log$(RESET)\n"; cat /tmp/postgresql.log; exit 1; }; \
+			printf "$(CYAN)  pg_ctl -D $$PG_DATA start$(RESET)\n"; \
+			pg_ctl -D "$$PG_DATA" start -l /tmp/postgresql.log -w \
+				|| { printf "$(RED)✗ pg_ctl failed. Log:$(RESET)\n"; cat /tmp/postgresql.log 2>/dev/null; exit 1; }; \
 		elif command -v systemctl >/dev/null 2>&1; then \
-			sudo systemctl start postgresql; \
-			sleep 2; \
+			sudo systemctl start postgresql && sleep 2; \
 		else \
 			printf "$(RED)✗ Cannot locate PostgreSQL data directory.$(RESET)\n"; \
-			printf "  Try: pg_ctl -D /path/to/data start\n"; \
+			printf "  Find it with: psql -U postgres -c 'SHOW data_directory;'\n"; \
 			exit 1; \
 		fi; \
 	fi

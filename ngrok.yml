@@ -1,16 +1,10 @@
 version: "3"
+agent:
+  authtoken: ${NGROK_AUTHTOKEN}
 
 tunnels:
-  api:
-    proto: http
-    addr: 8000
-    domain: unkind-freeware-unmoved.ngrok-free.dev
-
-  admin:
-    proto: http
-    addr: 3000
-
   judge0:
     proto: http
     addr: 2358
-    domain: ${JUDGE0_NGROK_DOMAIN}
+    domain: unkind-freeware-unmoved.ngrok-free.dev
+    inspect: true

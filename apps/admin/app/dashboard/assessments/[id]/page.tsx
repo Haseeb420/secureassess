@@ -27,7 +27,7 @@ type InviteStatus = 'active' | 'expired' | 'limit_reached' | 'revoked'
 
 function getInviteStatus(invite: Invite): InviteStatus {
   if (invite.is_revoked) return 'revoked'
-  if (isPast(new Date(invite.expiry_at))) return 'expired'
+  if (invite.expiry_at && isPast(new Date(invite.expiry_at))) return 'expired'
   if (invite.used_count >= invite.usage_limit) return 'limit_reached'
   return 'active'
 }
@@ -139,10 +139,14 @@ const inviteSchema = z.object({
   candidateName:  z.string().min(1, 'Enter candidate name'),
   candidateEmail: z.string().email('Enter a valid email'),
   mockIds:        z.array(z.string()),
-  expiryAt:       z.string().min(1, 'Set an expiry date'),
+  noExpiry:       z.boolean(),
+  expiryAt:       z.string().optional(),
   usageMode:      z.enum(['single', 'multiple']),
   usageLimit:     z.number().int().min(1).max(10),
   notes:          z.string().optional(),
+}).refine((d) => d.noExpiry || (d.expiryAt && d.expiryAt.length > 0), {
+  message: 'Set an expiry date or enable no expiry',
+  path: ['expiryAt'],
 })
 
 type InviteFormValues = z.infer<typeof inviteSchema>
@@ -170,18 +174,19 @@ function InviteDrawer({
   const defaultExpiry = addDays(new Date(), 7).toISOString().slice(0, 16)
 
   const {
-    register, handleSubmit, control, watch, reset,
+    register, handleSubmit, control, watch, reset, setValue,
     formState: { errors, isSubmitting },
   } = useForm<InviteFormValues>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
       candidateName: '', candidateEmail: '',
-      mockIds: [], expiryAt: defaultExpiry,
+      mockIds: [], noExpiry: false, expiryAt: defaultExpiry,
       usageMode: 'single', usageLimit: 1, notes: '',
     },
   })
 
   const usageMode = watch('usageMode')
+  const noExpiry = watch('noExpiry')
 
   const mockOptions = allAssessments.filter((a) => a.id !== assessmentId && a.is_mock)
 
@@ -191,7 +196,7 @@ function InviteDrawer({
         candidate_name:  data.candidateName,
         candidate_email: data.candidateEmail,
         mock_ids:        data.mockIds,
-        expiry_at:       new Date(data.expiryAt).toISOString(),
+        expiry_at:       data.noExpiry ? null : (data.expiryAt ? new Date(data.expiryAt).toISOString() : null),
         usage_limit:     data.usageMode === 'single' ? 1 : data.usageLimit,
         notes:           data.notes || null,
       }),
@@ -357,14 +362,42 @@ function InviteDrawer({
 
                   {/* Token Expiry */}
                   <div>
-                    <label htmlFor="expiryAt" className="mb-1.5 block text-sm font-medium text-brand-navy">
-                      Access expires on <span className="text-red-500" aria-hidden="true">*</span>
-                    </label>
-                    <input
-                      {...register('expiryAt')} id="expiryAt" type="datetime-local" aria-required="true"
-                      aria-describedby={errors.expiryAt ? 'expiryAt-error' : undefined}
-                      className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-brand-navy outline-none transition-shadow ${errors.expiryAt ? 'border-red-400 focus:ring-2 focus:ring-red-200' : 'border-brand-border focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15'}`}
-                    />
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label htmlFor="expiryAt" className="text-sm font-medium text-brand-navy">
+                        Access expires on {!noExpiry && <span className="text-red-500" aria-hidden="true">*</span>}
+                      </label>
+                      <Controller
+                        control={control}
+                        name="noExpiry"
+                        render={({ field }) => (
+                          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={field.value}
+                              onChange={(e) => {
+                                field.onChange(e.target.checked)
+                                if (e.target.checked) setValue('expiryAt', '')
+                              }}
+                              className="rounded border-brand-border accent-brand-orange"
+                              aria-label="No expiry"
+                            />
+                            <span className="text-xs font-medium text-brand-navy/70">No expiry</span>
+                          </label>
+                        )}
+                      />
+                    </div>
+                    {noExpiry ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-brand-border bg-brand-surface/50 px-3 py-2.5">
+                        <span className="text-sm text-brand-navy/50">Token never expires</span>
+                      </div>
+                    ) : (
+                      <input
+                        {...register('expiryAt')} id="expiryAt" type="datetime-local"
+                        aria-required={!noExpiry}
+                        aria-describedby={errors.expiryAt ? 'expiryAt-error' : undefined}
+                        className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-brand-navy outline-none transition-shadow ${errors.expiryAt ? 'border-red-400 focus:ring-2 focus:ring-red-200' : 'border-brand-border focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15'}`}
+                      />
+                    )}
                     {errors.expiryAt && (
                       <motion.p id="expiryAt-error" role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-1.5 text-xs text-red-500">
                         {errors.expiryAt.message}
@@ -510,7 +543,7 @@ function InviteRow({
 }) {
   const st = getInviteStatus(invite)
   const cfg = INVITE_STATUS_CONFIG[st]
-  const expiry = new Date(invite.expiry_at)
+  const expiry = invite.expiry_at ? new Date(invite.expiry_at) : null
   const usagePct = Math.min(100, Math.round((invite.used_count / invite.usage_limit) * 100))
 
   return (
@@ -561,12 +594,21 @@ function InviteRow({
 
       {/* Expires */}
       <div className="w-28">
-        <p className={`text-sm font-medium ${isPast(expiry) ? 'text-red-500' : 'text-brand-navy'}`}>
-          {format(expiry, 'MMM d, yyyy')}
-        </p>
-        <p className={`text-xs ${isPast(expiry) ? 'text-red-400' : 'text-brand-navy/40'}`}>
-          {isPast(expiry) ? `${formatDistanceToNow(expiry)} ago` : `in ${formatDistanceToNow(expiry)}`}
-        </p>
+        {expiry ? (
+          <>
+            <p className={`text-sm font-medium ${isPast(expiry) ? 'text-red-500' : 'text-brand-navy'}`}>
+              {format(expiry, 'MMM d, yyyy')}
+            </p>
+            <p className={`text-xs ${isPast(expiry) ? 'text-red-400' : 'text-brand-navy/40'}`}>
+              {isPast(expiry) ? `${formatDistanceToNow(expiry)} ago` : `in ${formatDistanceToNow(expiry)}`}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-brand-navy">Never</p>
+            <p className="text-xs text-brand-navy/40">No expiry</p>
+          </>
+        )}
       </div>
 
       {/* Status badge */}

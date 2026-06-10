@@ -116,7 +116,7 @@ export interface Invite {
   token_value: string
   candidate_email: string
   candidate_name: string
-  expiry_at: string         // ISO datetime
+  expiry_at: string | null  // ISO datetime; null = no expiry
   usage_limit: number
   used_count: number
   is_revoked: boolean
@@ -132,7 +132,7 @@ export interface CreateInviteBody {
   candidate_email: string
   candidate_name: string
   mock_ids?: string[]
-  expiry_at: string         // ISO datetime
+  expiry_at?: string | null  // ISO datetime; null/omitted = no expiry
   usage_limit?: number
   notes?: string | null
 }

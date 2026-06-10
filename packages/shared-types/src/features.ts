@@ -8,7 +8,7 @@ export type Token = {
   candidateName:  string
   assessmentId:   string
   mockIds:        string[]
-  expiryAt:       string        // ISO datetime
+  expiryAt?:      string | null  // ISO datetime; null = no expiry
   usageLimit:     number
   usedCount:      number
   tokenValue:     string

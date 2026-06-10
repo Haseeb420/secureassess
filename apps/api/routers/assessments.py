@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr
 
 from core.dependencies import get_current_admin, get_current_candidate
 from core.supabase import get_supabase
+from services.email import send_invite_email
 from services.token_generator import generate_token_value
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
@@ -444,3 +445,52 @@ async def create_invite(
     token = result.data[0]
     token["assessment_title"] = check.data[0]["title"]
     return token
+
+
+# ── Bulk send invite emails ───────────────────────────────────────────────────
+
+class SendEmailsRequest(BaseModel):
+    token_ids: list[str]
+
+
+@router.post("/{assessment_id}/invites/send-emails")
+async def send_invite_emails(
+    assessment_id: str,
+    body: SendEmailsRequest,
+    _admin: dict = Depends(get_current_admin),
+):
+    if not body.token_ids:
+        return {"sent": [], "failed": []}
+
+    supabase = get_supabase()
+
+    assessment = supabase.table("assessments").select("title").eq("id", assessment_id).single().execute()
+    if not assessment.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    assessment_title = assessment.data["title"]
+
+    tokens_result = (
+        supabase.table("tokens")
+        .select("id, candidate_name, candidate_email, token_value")
+        .in_("id", body.token_ids)
+        .eq("assessment_id", assessment_id)
+        .execute()
+    )
+    tokens = tokens_result.data or []
+
+    sent: list[dict] = []
+    failed: list[dict] = []
+
+    for t in tokens:
+        try:
+            send_invite_email(
+                candidate_name=t["candidate_name"],
+                candidate_email=t["candidate_email"],
+                assessment_title=assessment_title,
+                token_value=t["token_value"],
+            )
+            sent.append({"id": t["id"], "email": t["candidate_email"], "name": t["candidate_name"]})
+        except Exception as exc:
+            failed.append({"id": t["id"], "email": t["candidate_email"], "name": t["candidate_name"], "error": str(exc)})
+
+    return {"sent": sent, "failed": failed}

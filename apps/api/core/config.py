@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     ENCRYPTION_SECRET: str = ""
     JWT_SECRET: str = ""
     LOG_LEVEL: str = "INFO"
+    GMAIL_ADDRESS: str = ""
+    GMAIL_APP_PASSWORD: str = ""
 
     @model_validator(mode="after")
     def _check_required(self) -> "Settings":

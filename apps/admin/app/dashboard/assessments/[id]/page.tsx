@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import {
   Clock, Shield, Code, Users, ArrowLeft, UserPlus,
   Check, Copy, BarChart2, AlertCircle, FileCode2, Search, X, Plus,
-  GripVertical, Trash2, Loader2, CheckCircle2, ShieldOff,
+  GripVertical, Trash2, Loader2, CheckCircle2, ShieldOff, Mail,
 } from 'lucide-react'
 import { ConfirmDialog } from '@secureassess/ui'
 import {
@@ -616,6 +616,7 @@ export default function AssessmentDetailPage() {
   const [selectedInviteIds, setSelectedInviteIds] = useState<Set<string>>(new Set())
   const [showBulkRevokeDialog, setShowBulkRevokeDialog] = useState(false)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [showBulkEmailDialog, setShowBulkEmailDialog] = useState(false)
   const [activeTab, setActiveTab] = useState<'candidates' | 'questions' | 'invites'>('candidates')
 
   const { data, isLoading } = useQuery({
@@ -672,6 +673,23 @@ export default function AssessmentDetailPage() {
       setShowBulkDeleteDialog(false)
     },
     onError: () => toast.error('Failed to delete invites'),
+  })
+
+  const bulkSendEmail = useMutation({
+    mutationFn: (ids: string[]) => assessmentsApi.sendInviteEmails(id, ids),
+    onSuccess: (result) => {
+      const sentCount = result.sent.length
+      const failedCount = result.failed.length
+      if (sentCount > 0) {
+        toast.success(`Email${sentCount !== 1 ? 's' : ''} sent to ${sentCount} candidate${sentCount !== 1 ? 's' : ''}`)
+      }
+      if (failedCount > 0) {
+        toast.error(`Failed to send to ${failedCount} candidate${failedCount !== 1 ? 's' : ''}: ${result.failed.map((f) => f.name).join(', ')}`)
+      }
+      setSelectedInviteIds(new Set())
+      setShowBulkEmailDialog(false)
+    },
+    onError: () => toast.error('Failed to send emails — check API email configuration'),
   })
 
   useEffect(() => {
@@ -880,6 +898,15 @@ export default function AssessmentDetailPage() {
                     </span>
                     <button
                       type="button"
+                      onClick={() => setShowBulkEmailDialog(true)}
+                      disabled={bulkSendEmail.isPending}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-brand-orange/30 bg-brand-orange/8 px-3 py-1.5 text-xs font-medium text-brand-orange hover:bg-brand-orange/15 transition-colors disabled:opacity-50"
+                    >
+                      {bulkSendEmail.isPending ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : <Mail size={12} aria-hidden="true" />}
+                      Send Email
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setShowBulkRevokeDialog(true)}
                       disabled={bulkRevoke.isPending}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
@@ -1024,6 +1051,18 @@ export default function AssessmentDetailPage() {
         variant="danger"
         onConfirm={() => deleteTarget && bulkDelete.mutate([deleteTarget.id])}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Bulk send email confirm */}
+      <ConfirmDialog
+        open={showBulkEmailDialog}
+        title={`Send invite email to ${selectedInviteIds.size} ${selectedInviteIds.size === 1 ? 'candidate' : 'candidates'}?`}
+        description={`Each selected candidate will receive an email with their unique access token, a download link for the SecureAssess app, and assessment guidelines. Emails are sent from hiring@wamolabs.com.`}
+        confirmLabel={bulkSendEmail.isPending ? 'Sending…' : `Send ${selectedInviteIds.size} ${selectedInviteIds.size === 1 ? 'Email' : 'Emails'}`}
+        cancelLabel="Cancel"
+        variant="primary"
+        onConfirm={() => bulkSendEmail.mutate([...selectedInviteIds])}
+        onCancel={() => setShowBulkEmailDialog(false)}
       />
 
       {/* Bulk revoke confirm */}

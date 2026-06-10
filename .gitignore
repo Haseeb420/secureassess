@@ -67,3 +67,8 @@ dist/installers/
 
 # tmux
 .tmux.conf.local
+
+# Recruitment / invite CSVs — contain PII and active tokens
+*.csv
+scripts/*_sent.csv
+"June_Recruitment_Drive - don't touch.csv"

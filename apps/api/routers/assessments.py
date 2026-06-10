@@ -390,7 +390,7 @@ class CreateInviteRequest(BaseModel):
     candidate_email: EmailStr
     candidate_name: str
     mock_ids: list[str] = []
-    expiry_at: datetime
+    expiry_at: Optional[datetime] = None  # None = no expiry (unlimited time)
     usage_limit: int = 1
     notes: Optional[str] = None
 
@@ -430,7 +430,7 @@ async def create_invite(
         "candidate_name": body.candidate_name,
         "assessment_id": assessment_id,
         "mock_ids": body.mock_ids,
-        "expiry_at": body.expiry_at.isoformat(),
+        "expiry_at": body.expiry_at.isoformat() if body.expiry_at else None,
         "usage_limit": body.usage_limit,
         "used_count": 0,
         "token_value": token_value,

@@ -115,7 +115,9 @@ async def patch_token(
 ):
     supabase = get_supabase()
     updates: dict = {}
-    if body.expiry_at is not None:
+    if body.clear_expiry:
+        updates["expiry_at"] = None
+    elif body.expiry_at is not None:
         updates["expiry_at"] = body.expiry_at.isoformat()
     if body.usage_limit is not None:
         updates["usage_limit"] = body.usage_limit

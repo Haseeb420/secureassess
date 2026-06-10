@@ -1,84 +1,97 @@
 """
-Session validation against the Better Auth `session` table in Postgres.
-Better Auth stores sessions in a table called `session` with a unique `token`
-column. We validate incoming Bearer tokens by looking them up there and joining
-with the `user` table to get role information.
+Session validation against the Better Auth `session` table in PostgreSQL.
+Connects directly via DATABASE_URL — works for both local PG and Supabase
+direct-connection strings. Never goes through the Supabase REST API, which
+doesn't see the local dev database.
 """
 
-import httpx
+import time
+from datetime import datetime
+
+import psycopg2
+import psycopg2.extras
 from fastapi import HTTPException, Request, status
 
-from .supabase import get_supabase
+from .config import settings
+
+
+def _get_pg_conn():
+    if not settings.DATABASE_URL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="DATABASE_URL is not configured",
+        )
+    return psycopg2.connect(settings.DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
 
 
 def _get_user_from_token(token: str) -> dict:
     """Look up a Better Auth session token and return user data."""
-    supabase = get_supabase()
-
-    # Query the session table; Better Auth uses camelCase column names
     try:
-        session_result = (
-            supabase.table("session")
-            .select('id, "expiresAt", "userId"')
-            .eq("token", token)
-            .execute()
-        )
-    except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.TimeoutException) as exc:
+        conn = _get_pg_conn()
+    except psycopg2.OperationalError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Auth service temporarily unavailable",
+            detail="Auth database unavailable",
         ) from exc
-
-    if not session_result.data:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
-
-    session = session_result.data[0]
-
-    import time
-    from datetime import datetime
-
-    # Check expiry — expiresAt is an ISO string from Postgres
-    expires_raw = session.get("expiresAt") or session.get("expires_at")
-    if expires_raw:
-        try:
-            # Handle both ISO format and unix timestamp
-            if isinstance(expires_raw, (int, float)):
-                expires_ts = expires_raw
-            else:
-                dt = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
-                expires_ts = dt.timestamp()
-            if expires_ts < time.time():
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
-        except (ValueError, TypeError):
-            pass  # If we can't parse expiry, allow through
-
-    user_id = session.get("userId") or session.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
 
     try:
-        user_result = (
-            supabase.table("user")
-            .select("id, email, name, role")
-            .eq("id", user_id)
-            .execute()
-        )
-    except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.TimeoutException) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Auth service temporarily unavailable",
-        ) from exc
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''SELECT id, "expiresAt", "userId" FROM session WHERE token = %s LIMIT 1''',
+                    (token,),
+                )
+                session = cur.fetchone()
 
-    if not user_result.data:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+                if not session:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid session",
+                    )
 
-    user = user_result.data[0]
-    return {
-        "id": user["id"],
-        "email": user.get("email", ""),
-        "name": user.get("name", ""),
-        "role": user.get("role", "candidate"),
-    }
+                expires_raw = session.get("expiresAt") or session.get("expires_at")
+                if expires_raw:
+                    try:
+                        if isinstance(expires_raw, (int, float)):
+                            expires_ts = float(expires_raw)
+                        else:
+                            dt = datetime.fromisoformat(str(expires_raw).replace("Z", "+00:00"))
+                            expires_ts = dt.timestamp()
+                        if expires_ts < time.time():
+                            raise HTTPException(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Session expired",
+                            )
+                    except (ValueError, TypeError):
+                        pass
+
+                user_id = session.get("userId") or session.get("user_id")
+                if not user_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid session",
+                    )
+
+                cur.execute(
+                    'SELECT id, email, name, role FROM "user" WHERE id = %s LIMIT 1',
+                    (user_id,),
+                )
+                user = cur.fetchone()
+
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User not found",
+                    )
+
+                return {
+                    "id": user["id"],
+                    "email": user.get("email", ""),
+                    "name": user.get("name", ""),
+                    "role": user.get("role", "candidate"),
+                }
+    finally:
+        conn.close()
 
 
 def get_session_user(request: Request) -> dict:

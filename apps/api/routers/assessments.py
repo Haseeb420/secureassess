@@ -33,6 +33,7 @@ class AssessmentCreate(BaseModel):
     window_end: Optional[str] = None
     timezone: str = "Asia/Karachi"
     is_mock: bool = False
+    allow_question_navigation: bool = False
 
 
 class AssessmentPatch(BaseModel):
@@ -48,6 +49,7 @@ class AssessmentPatch(BaseModel):
     window_start: Optional[str] = None
     window_end: Optional[str] = None
     timezone: Optional[str] = None
+    allow_question_navigation: Optional[bool] = None
 
 
 class BulkAssessmentIds(BaseModel):
@@ -109,6 +111,7 @@ async def create_assessment(
                 "window_end": body.window_end,
                 "timezone": body.timezone,
                 "is_mock": body.is_mock,
+                "allow_question_navigation": body.allow_question_navigation,
             }
         )
         .execute()

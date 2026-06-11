@@ -27,18 +27,19 @@ export type TokenValidationResult =
 export type AssessmentType = 'open' | 'deadline' | 'window'
 
 export type Assessment = {
-  id:                  string
-  title:               string
-  description?:        string
-  type:                AssessmentType
-  deadlineAt?:         string
-  windowStart?:        string
-  windowEnd?:          string
-  timezone:            string
-  durationMins:        number
-  isMock:              boolean
-  questions:           AssessmentQuestion[]
-  createdAt:           string
+  id:                       string
+  title:                    string
+  description?:             string
+  type:                     AssessmentType
+  deadlineAt?:              string
+  windowStart?:             string
+  windowEnd?:               string
+  timezone:                 string
+  durationMins:             number
+  isMock:                   boolean
+  allowQuestionNavigation:  boolean
+  questions:                AssessmentQuestion[]
+  createdAt:                string
 }
 
 export type AssessmentStatus =

@@ -142,18 +142,19 @@ function normalizeAssessment(raw: RawRecord): Assessment {
   }))
 
   return {
-    id:           raw['id'],
-    title:        raw['title'] ?? '',
-    description:  raw['description'],
-    type:         raw['assessment_type'] ?? raw['type'] ?? 'open',
-    deadlineAt:   raw['deadline_at']   ?? raw['deadlineAt'],
-    windowStart:  raw['window_start']  ?? raw['windowStart'],
-    windowEnd:    raw['window_end']    ?? raw['windowEnd'],
-    timezone:     raw['timezone']      ?? 'UTC',
-    durationMins: raw['duration_minutes'] ?? raw['durationMins'] ?? 0,
-    isMock:       raw['is_mock']       ?? raw['isMock']       ?? false,
+    id:                      raw['id'],
+    title:                   raw['title'] ?? '',
+    description:             raw['description'],
+    type:                    raw['assessment_type'] ?? raw['type'] ?? 'open',
+    deadlineAt:              raw['deadline_at']   ?? raw['deadlineAt'],
+    windowStart:             raw['window_start']  ?? raw['windowStart'],
+    windowEnd:               raw['window_end']    ?? raw['windowEnd'],
+    timezone:                raw['timezone']      ?? 'UTC',
+    durationMins:            raw['duration_minutes'] ?? raw['durationMins'] ?? 0,
+    isMock:                  raw['is_mock']       ?? raw['isMock']       ?? false,
+    allowQuestionNavigation: raw['allow_question_navigation'] ?? raw['allowQuestionNavigation'] ?? false,
     questions,
-    createdAt:    raw['created_at']    ?? raw['createdAt']    ?? '',
+    createdAt:               raw['created_at']    ?? raw['createdAt']    ?? '',
   }
 }
 

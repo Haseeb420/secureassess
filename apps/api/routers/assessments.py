@@ -147,7 +147,8 @@ async def get_my_assessment(candidate: dict = Depends(get_current_candidate)):
     log = logging.getLogger(__name__)
 
     assessment_id = candidate.get("assessment_id")
-    log.info("GET /assessments/my — candidate_id=%s assessment_id=%s", candidate.get("id"), assessment_id)
+    _safe = lambda v: str(v).replace('\n', '\\n').replace('\r', '\\r') if v else v
+    log.info("GET /assessments/my — candidate_id=%s assessment_id=%s", _safe(candidate.get("id")), _safe(assessment_id))
 
     if not assessment_id:
         raise HTTPException(
@@ -491,6 +492,8 @@ async def send_invite_emails(
             )
             sent.append({"id": t["id"], "email": t["candidate_email"], "name": t["candidate_name"]})
         except Exception as exc:
-            failed.append({"id": t["id"], "email": t["candidate_email"], "name": t["candidate_name"], "error": str(exc)})
+            import logging as _logging
+            _logging.getLogger(__name__).error("send_invite_email failed for token %s: %s", t["id"], exc)
+            failed.append({"id": t["id"], "email": t["candidate_email"], "name": t["candidate_name"], "error": "Failed to send email"})
 
     return {"sent": sent, "failed": failed}

@@ -23,7 +23,8 @@ def _ensure_session(supabase, session_id: str) -> None:
             on_conflict="id",
         ).execute()
     except Exception as exc:
-        log.warning("Could not auto-create session %s: %s", session_id, exc)
+        safe_sid = str(session_id).replace('\n', '\\n').replace('\r', '\\r')
+        log.warning("Could not auto-create session %s: %s", safe_sid, exc)
 
 
 class SyncItem(BaseModel):

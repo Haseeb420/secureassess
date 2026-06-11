@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Search, Plus, Minus, CheckCircle2, Infinity, CalendarX2, Clock, GripVertical, Trash2, FileCode2, Info } from 'lucide-react'
+import { ArrowLeft, Search, Plus, Minus, CheckCircle2, Infinity, CalendarX2, Clock, GripVertical, Navigation, Trash2, FileCode2, Info } from 'lucide-react'
 import Link from 'next/link'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -177,6 +177,7 @@ export default function NewAssessmentPage() {
   const [typeFilter, setTypeFilter] = useState('')
 
   const [isMock, setIsMock] = useState(false)
+  const [allowQuestionNavigation, setAllowQuestionNavigation] = useState(false)
   const [assessmentType, setAssessmentType] = useState<'open' | 'deadline' | 'window'>('open')
   const [deadlineAt, setDeadlineAt] = useState('')
   const [windowStart, setWindowStart] = useState('')
@@ -271,6 +272,7 @@ export default function NewAssessmentPage() {
       window_end:   !isMock && assessmentType === 'window'   ? windowEnd   : undefined,
       timezone,
       is_mock: isMock,
+      allow_question_navigation: allowQuestionNavigation,
     })
   }
 
@@ -482,6 +484,58 @@ export default function NewAssessmentPage() {
                 </div>
               </div>
             </motion.div>
+
+            {/* Section 3b: Question Navigation — hidden for mock assessments */}
+            {!isMock && (
+              <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">
+                <div className="border-b border-brand-border bg-brand-surface/50 px-6 py-3">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Question Navigation</h2>
+                </div>
+                <div className="p-6">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={allowQuestionNavigation}
+                    onClick={() => setAllowQuestionNavigation((p) => !p)}
+                    className={[
+                      'flex w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all',
+                      allowQuestionNavigation
+                        ? 'border-brand-orange bg-brand-orange-pale/30'
+                        : 'border-brand-border bg-white hover:border-brand-navy/25',
+                    ].join(' ')}
+                  >
+                    <div className={[
+                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                      allowQuestionNavigation ? 'bg-brand-orange/15' : 'bg-brand-surface',
+                    ].join(' ')}>
+                      <Navigation
+                        size={18}
+                        className={allowQuestionNavigation ? 'text-brand-orange' : 'text-brand-navy/30'}
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-brand-navy">Allow question navigation</p>
+                        <div className={[
+                          'h-5 w-9 rounded-full transition-colors shrink-0',
+                          allowQuestionNavigation ? 'bg-brand-orange' : 'bg-brand-border',
+                        ].join(' ')}>
+                          <div className={[
+                            'h-4 w-4 m-0.5 rounded-full bg-white shadow transition-transform',
+                            allowQuestionNavigation ? 'translate-x-4' : 'translate-x-0',
+                          ].join(' ')} />
+                        </div>
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-brand-navy/50">
+                        When enabled, candidates can freely switch between questions during the assessment.
+                        All answers are submitted at the end as a single batch instead of one-by-one.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </motion.div>
+            )}
 
             {/* Section 4: Schedule — hidden for mock assessments */}
             {!isMock && <motion.div variants={sectionVariants} className="rounded-xl border border-brand-border bg-white shadow-sm overflow-hidden">

@@ -79,6 +79,7 @@ export interface CreateAssessmentBody {
   window_end?: string
   timezone?: string
   is_mock?: boolean
+  allow_question_navigation?: boolean
 }
 
 export interface PatchAssessmentBody {
@@ -94,6 +95,7 @@ export interface PatchAssessmentBody {
   window_start?: string
   window_end?: string
   timezone?: string
+  allow_question_navigation?: boolean
 }
 
 export interface AssessmentDetail extends Assessment {

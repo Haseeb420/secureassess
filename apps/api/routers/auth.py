@@ -134,19 +134,33 @@ async def login_with_assessment_token(body: TokenLoginRequest):
     password = hashlib.sha256(body.token_value.encode()).hexdigest()
 
     auth = get_auth_client()
+    user_metadata = {"name": name, "role": "candidate", "assessment_id": token["assessment_id"]}
     try:
         auth_response = auth.auth.sign_in_with_password({"email": email, "password": password})
     except AuthApiError:
-        get_supabase().auth.admin.create_user({
-            "email": email,
-            "password": password,
-            "email_confirm": True,
-            "user_metadata": {
-                "name": name,
-                "role": "candidate",
-                "assessment_id": token["assessment_id"],
-            },
-        })
+        try:
+            auth.auth.admin.create_user({
+                "email": email,
+                "password": password,
+                "email_confirm": True,
+                "user_metadata": user_metadata,
+            })
+        except AuthApiError:
+            # User already exists from a previous token — update password to current token's hash
+            users = auth.auth.admin.list_users()
+            existing = next(
+                (u for u in (users or []) if getattr(u, "email", "") == email),
+                None,
+            )
+            if existing is None:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to setup candidate authentication",
+                )
+            auth.auth.admin.update_user_by_id(
+                existing.id,
+                {"password": password, "user_metadata": user_metadata},
+            )
         auth_response = auth.auth.sign_in_with_password({"email": email, "password": password})
 
     if not auth_response.session:

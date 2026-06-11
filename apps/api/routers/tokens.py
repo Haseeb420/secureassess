@@ -166,9 +166,9 @@ async def bulk_delete_tokens(
     if not body.token_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No token IDs provided")
     supabase = get_supabase()
-    # Null out token_id on any attempts that reference these tokens so attempt data is preserved.
-    supabase.table("assessment_attempts").update({"token_id": None}).in_("token_id", body.token_ids).execute()
-    supabase.table("token_usage_log").delete().in_("token_id", body.token_ids).execute()
+    # FK constraints handle cleanup automatically (migration 012):
+    #   token_usage_log  → ON DELETE CASCADE (rows deleted with token)
+    #   assessment_attempts → ON DELETE SET NULL (attempt history preserved, token_id nulled)
     supabase.table("tokens").delete().in_("id", body.token_ids).execute()
     return {"deleted": len(body.token_ids)}
 

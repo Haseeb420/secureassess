@@ -313,9 +313,6 @@ export function AssessmentPage() {
     if (!currentAttemptId) return
     setIsSubmittingAnswer(true)
 
-    // Flush current question's code into savedCodeByQuestion before submitting
-    switchToQuestion(currentQuestionIdx)
-
     try {
       const store = useAssessmentStore.getState()
 
@@ -362,7 +359,7 @@ export function AssessmentPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     currentAttemptId, questions, submittedQuestions, currentQuestion,
-    currentLanguage, codeByLanguage, answers, navigate, currentQuestionIdx, switchToQuestion,
+    currentLanguage, codeByLanguage, answers, navigate,
   ])
 
   // Navigate to completion when assessment is locked server-side

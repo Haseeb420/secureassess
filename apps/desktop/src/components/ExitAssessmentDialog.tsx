@@ -219,28 +219,42 @@ export function ExitAssessmentDialog({
               ← Back
             </button>
 
-            <h2 id="exit-submit-title" className="text-lg font-bold text-brand-navy" style={SYNE}>
-              Submit and exit
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-brand-navy/70" style={DM_SANS}>
-              Your current code will be submitted for all
-              {questionsRemaining > 0 ? ` ${questionsRemaining} remaining` : ''} question
-              {questionsRemaining !== 1 ? 's' : ''} and the session will end.
-            </p>
-            <div className="mt-3 rounded-xl border border-brand-border bg-brand-surface p-3">
-              <p className="text-xs text-brand-navy/50" style={DM_SANS}>
-                Unsubmitted questions will receive a score based on whatever code you have written
-                so far.
-              </p>
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-navy/10">
+                <Send className="h-4 w-4 text-brand-navy" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 id="exit-submit-title" className="text-sm font-semibold text-brand-navy" style={SYNE}>
+                  Submit Assessment
+                </h2>
+                <p className="mt-1 text-sm text-brand-navy/60" style={DM_SANS}>
+                  Are you sure you want to submit your assessment?
+                </p>
+              </div>
             </div>
 
-            <div className="mt-6 flex gap-3">
+            <ul className="mb-4 space-y-1.5 text-sm text-brand-navy/60" style={DM_SANS}>
+              <li>• Your answers will be finalized.</li>
+              <li>• You may not be able to make further changes.</li>
+              <li>• The assessment session will end.</li>
+            </ul>
+
+            {questionsRemaining > 0 && (
+              <div className="mb-4 rounded-xl border border-brand-border bg-brand-surface p-3">
+                <p className="text-xs text-brand-navy/50" style={DM_SANS}>
+                  {questionsRemaining} unsubmitted question{questionsRemaining !== 1 ? 's' : ''} will
+                  be scored on whatever you have written so far.
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
               <button
                 onClick={() => setStep('warning')}
                 className="flex-1 rounded-xl border border-brand-border py-2.5 text-sm text-brand-navy transition-colors hover:border-brand-navy"
                 style={DM_SANS}
               >
-                Back
+                Cancel
               </button>
               <button
                 onClick={async () => {
@@ -249,7 +263,7 @@ export function ExitAssessmentDialog({
                   setIsSubmitting(false)
                 }}
                 disabled={isSubmitting}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-navy py-2.5 text-sm text-white transition-colors hover:bg-brand-navy-light disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-orange py-2.5 text-sm text-white transition-colors hover:bg-brand-orange-light disabled:opacity-50"
                 style={DM_SANS}
               >
                 {isSubmitting ? (
@@ -258,10 +272,7 @@ export function ExitAssessmentDialog({
                     Submitting…
                   </>
                 ) : (
-                  <>
-                    <Send className="h-4 w-4" aria-hidden="true" />
-                    Confirm submit
-                  </>
+                  'Submit Assessment'
                 )}
               </button>
             </div>

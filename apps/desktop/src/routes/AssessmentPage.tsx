@@ -653,14 +653,23 @@ export function AssessmentPage() {
       {/* Submit confirmation dialog */}
       <ConfirmDialog
         open={confirmSubmitOpen}
-        title={allowQuestionNavigation ? 'Submit assessment?' : 'Submit this answer?'}
+        title={allowQuestionNavigation ? 'Submit Assessment' : 'Submit Answer'}
         description={
-          allowQuestionNavigation
-            ? `You're about to submit all ${questions.length} question${questions.length !== 1 ? 's' : ''}. You cannot make changes after submitting.`
-            : 'You cannot change your answer after submitting.'
+          allowQuestionNavigation ? (
+            <span>
+              <span className="block">Are you sure you want to submit your assessment?</span>
+              <ul className="mt-2 space-y-1">
+                <li>• Your answers will be finalized.</li>
+                <li>• You may not be able to make further changes.</li>
+                <li>• The assessment session will end.</li>
+              </ul>
+            </span>
+          ) : (
+            'Your answer will be finalized and cannot be changed after submission.'
+          )
         }
-        confirmLabel="Submit"
-        cancelLabel="Go back"
+        confirmLabel={allowQuestionNavigation ? 'Submit Assessment' : 'Submit'}
+        cancelLabel="Cancel"
         variant="primary"
         onConfirm={() => {
           setConfirmSubmitOpen(false)

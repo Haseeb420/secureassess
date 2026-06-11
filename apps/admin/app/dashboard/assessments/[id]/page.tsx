@@ -12,7 +12,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import {
   Clock, Shield, Code, Users, ArrowLeft, UserPlus,
-  Check, Copy, BarChart2, AlertCircle, FileCode2, Search, X, Plus,
+  Check, Copy, BarChart2, AlertCircle, FileCode2, Navigation, Search, X, Plus,
   GripVertical, Trash2, Loader2, CheckCircle2, ShieldOff, Mail,
 } from 'lucide-react'
 import { ConfirmDialog } from '@secureassess/ui'
@@ -687,6 +687,15 @@ export default function AssessmentDetailPage() {
     },
   })
 
+  const toggleNavigation = useMutation({
+    mutationFn: (value: boolean) => assessmentsApi.patch(id, { allow_question_navigation: value }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['assessments', id] })
+      toast.success('Setting saved')
+    },
+    onError: () => toast.error('Failed to save setting'),
+  })
+
   const revoke = useMutation({
     mutationFn: (tokenId: string) => tokensApi.revoke(tokenId),
     onSuccess: () => {
@@ -833,6 +842,50 @@ export default function AssessmentDetailPage() {
       </div>
 
       <div className="p-8 max-w-5xl space-y-6">
+        {/* Settings strip */}
+        {!data.is_mock && (
+          <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+            <div className="border-b border-brand-border bg-brand-surface/50 px-5 py-2.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-brand-navy/50">Assessment Settings</span>
+            </div>
+            <div className="px-5 py-4">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!!(data as any).allow_question_navigation}
+                disabled={toggleNavigation.isPending}
+                onClick={() => toggleNavigation.mutate(!((data as any).allow_question_navigation))}
+                className="flex w-full items-center gap-4 rounded-lg p-2 -mx-2 text-left transition-colors hover:bg-brand-surface disabled:opacity-60"
+              >
+                <div className={[
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                  (data as any).allow_question_navigation ? 'bg-brand-orange/15' : 'bg-brand-surface',
+                ].join(' ')}>
+                  {toggleNavigation.isPending
+                    ? <Loader2 size={14} className="animate-spin text-brand-navy/30" />
+                    : <Navigation size={14} className={(data as any).allow_question_navigation ? 'text-brand-orange' : 'text-brand-navy/30'} />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-brand-navy">Allow question navigation</p>
+                  <p className="text-xs text-brand-navy/50 mt-0.5">
+                    Candidates can switch freely between questions. All answers submit at the end.
+                  </p>
+                </div>
+                <div className={[
+                  'h-5 w-9 rounded-full transition-colors shrink-0',
+                  (data as any).allow_question_navigation ? 'bg-brand-orange' : 'bg-brand-border',
+                ].join(' ')}>
+                  <div className={[
+                    'h-4 w-4 m-0.5 rounded-full bg-white shadow transition-transform',
+                    (data as any).allow_question_navigation ? 'translate-x-4' : 'translate-x-0',
+                  ].join(' ')} />
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-brand-border">
           {([

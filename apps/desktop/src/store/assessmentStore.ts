@@ -39,6 +39,13 @@ interface AssessmentState {
   finalScore: number | null
   answers: Record<string, QuestionAnswer>
 
+  // Navigation mode
+  allowQuestionNavigation: boolean
+  // Per-question code snapshots: questionId → (language → code)
+  savedCodeByQuestion: Record<string, Record<Language, string>>
+  // Per-question language selection: questionId → language
+  languageByQuestion: Record<string, Language>
+
   // Mock assessment flow
   isMock: boolean
   mockAttemptId: string | null
@@ -75,6 +82,11 @@ interface AssessmentState {
   saveAnswer: (questionId: string, answer: Partial<QuestionAnswer>) => void
   clearAttempt: () => void
 
+  // Navigation mode actions
+  switchToQuestion: (newIdx: number) => void
+  getCodeForQuestion: (questionId: string, language: Language) => string
+  getLanguageForQuestion: (questionId: string) => Language
+
   // Mock flow actions
   setIsMock: (value: boolean) => void
   setMockAttemptId: (id: string | null) => void
@@ -106,12 +118,16 @@ const initialState = {
   finalScore: null,
   answers: {} as Record<string, QuestionAnswer>,
 
+  allowQuestionNavigation: false,
+  savedCodeByQuestion: {} as Record<string, Record<Language, string>>,
+  languageByQuestion: {} as Record<string, Language>,
+
   isMock: false,
   mockAttemptId: null,
   mockResults: null,
 }
 
-export const useAssessmentStore = create<AssessmentState>((set) => ({
+export const useAssessmentStore = create<AssessmentState>((set, get) => ({
   ...initialState,
   setCandidate: (id) => set({ candidateId: id }),
   setAssessment: (id) => set({ assessmentId: id }),
@@ -133,7 +149,15 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
     }),
   setQuestions: (questions) => set({ questions, currentQuestionIndex: 0 }),
   setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
-  setLanguage: (lang) => set({ currentLanguage: lang }),
+  setLanguage: (lang) =>
+    set((state) => {
+      const currentQ = state.questions[state.currentQuestionIdx]
+      if (!currentQ) return { currentLanguage: lang }
+      return {
+        currentLanguage: lang,
+        languageByQuestion: { ...state.languageByQuestion, [currentQ.id]: lang },
+      }
+    }),
   setCode: (lang, code) =>
     set((state) => ({
       codeByLanguage: { ...state.codeByLanguage, [lang]: code },
@@ -141,10 +165,20 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
   appendOutput: (line) =>
     set((state) => ({ consoleOutput: [...state.consoleOutput, line] })),
   clearOutput: () => set({ consoleOutput: [] }),
-  reset: () => set({ ...initialState, submittedQuestions: new Set<string>(), isMock: false, mockAttemptId: null, mockResults: null }),
+  reset: () => set({
+    ...initialState,
+    submittedQuestions: new Set<string>(),
+    isMock: false,
+    mockAttemptId: null,
+    mockResults: null,
+  }),
 
   setToken: (token) => set({ token }),
-  setLandingData: (data) => set({ landingData: data, mocks: data.mocks }),
+  setLandingData: (data) => set({
+    landingData: data,
+    mocks: data.mocks,
+    allowQuestionNavigation: data.assessment.allowQuestionNavigation ?? false,
+  }),
   setAttempt: (attemptId, questions) =>
     set({
       currentAttemptId: attemptId,
@@ -179,7 +213,58 @@ export const useAssessmentStore = create<AssessmentState>((set) => ({
       isMock: false,
       mockAttemptId: null,
       mockResults: null,
+      savedCodeByQuestion: {},
+      languageByQuestion: {},
     }),
+
+  // Navigation mode: snapshot current question state then load the target question
+  switchToQuestion: (newIdx: number) =>
+    set((state) => {
+      const currentQ = state.questions[state.currentQuestionIdx]
+      const newQ = state.questions[newIdx]
+      if (!newQ || newIdx === state.currentQuestionIdx) return {}
+
+      // Snapshot current question's code + language
+      const updatedSaved: Record<string, Record<Language, string>> = {
+        ...state.savedCodeByQuestion,
+      }
+      if (currentQ) {
+        updatedSaved[currentQ.id] = { ...state.codeByLanguage }
+      }
+
+      const updatedLangByQ: Record<string, Language> = {
+        ...state.languageByQuestion,
+      }
+      if (currentQ) {
+        updatedLangByQ[currentQ.id] = state.currentLanguage
+      }
+
+      // Load saved state for target question (or fresh defaults)
+      const savedCode = updatedSaved[newQ.id] ?? { ...defaultTemplates }
+      const savedLang = updatedLangByQ[newQ.id] ?? ('python' as Language)
+
+      return {
+        currentQuestionIdx: newIdx,
+        savedCodeByQuestion: updatedSaved,
+        languageByQuestion: updatedLangByQ,
+        codeByLanguage: savedCode,
+        currentLanguage: savedLang,
+      }
+    }),
+
+  getCodeForQuestion: (questionId: string, language: Language): string => {
+    const state = get()
+    const currentQ = state.questions[state.currentQuestionIdx]
+    if (currentQ?.id === questionId) {
+      return state.codeByLanguage[language]
+    }
+    return state.savedCodeByQuestion[questionId]?.[language] ?? defaultTemplates[language]
+  },
+
+  getLanguageForQuestion: (questionId: string): Language => {
+    const state = get()
+    return state.languageByQuestion[questionId] ?? ('python' as Language)
+  },
 
   setIsMock: (value) => set({ isMock: value }),
   setMockAttemptId: (id) => set({ mockAttemptId: id }),

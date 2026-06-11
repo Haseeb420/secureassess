@@ -59,6 +59,11 @@ pub async fn start_sync_worker(app_handle: AppHandle) {
             Ok(r) => r,
             Err(e) => {
                 warn!("Sync worker: DB error fetching pending: {e}");
+                // Emit online status so the frontend doesn't stay stuck showing offline.
+                let _ = app_handle.emit(
+                    "sync:status",
+                    SyncStatus { online: true, pending_count: 0, last_sync_at: None },
+                );
                 continue;
             }
         };

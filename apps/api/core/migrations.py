@@ -19,7 +19,7 @@ def run_migrations() -> None:
     try:
         conn = psycopg2.connect(settings.DATABASE_URL)
     except Exception as exc:
-        logger.error("Could not connect to database for migrations: %s", exc)
+        logger.error("Could not connect to database for migrations", error=str(exc))
         return
 
     conn.autocommit = True
@@ -49,7 +49,7 @@ def run_migrations() -> None:
             cur.execute("INSERT INTO schema_migrations (filename) VALUES (%s)", (f.name,))
             logger.info("Applied migration: %s", f.name)
         except Exception as exc:
-            logger.error("Migration %s failed: %s", f.name, exc)
+            logger.error("Migration failed", migration=f.name, error=str(exc))
             break
 
     cur.close()

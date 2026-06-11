@@ -88,7 +88,10 @@ app.include_router(tokens.router)
 @app.on_event("startup")
 async def _startup() -> None:
     logger.info("SecureAssess API starting up")
-    run_migrations()
+    try:
+        run_migrations()
+    except Exception as exc:
+        logger.error("run_migrations raised unexpectedly", error=str(exc))
 
 
 @app.get("/health")

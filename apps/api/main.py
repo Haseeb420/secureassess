@@ -6,6 +6,7 @@ from fastapi.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from core.logging import configure_logging, get_logger
+from core.migrations import run_migrations
 from routers import assessments, attempts, auth, mock_attempts, questions, reports, sessions, sync, tokens
 
 configure_logging()
@@ -87,6 +88,7 @@ app.include_router(tokens.router)
 @app.on_event("startup")
 async def _startup() -> None:
     logger.info("SecureAssess API starting up")
+    run_migrations()
 
 
 @app.get("/health")

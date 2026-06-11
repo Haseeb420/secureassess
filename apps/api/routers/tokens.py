@@ -168,6 +168,7 @@ async def bulk_delete_tokens(
     supabase = get_supabase()
     # Null out token_id on any attempts that reference these tokens so attempt data is preserved.
     supabase.table("assessment_attempts").update({"token_id": None}).in_("token_id", body.token_ids).execute()
+    supabase.table("token_usage_log").delete().in_("token_id", body.token_ids).execute()
     supabase.table("tokens").delete().in_("id", body.token_ids).execute()
     return {"deleted": len(body.token_ids)}
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import * as Select from '@radix-ui/react-select'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { HelpCircle, Loader2, PlayCircle, RotateCcw } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, HelpCircle, Loader2, PlayCircle, RotateCcw } from 'lucide-react'
 import { cn, ConfirmDialog } from '@secureassess/ui'
 import type { Language } from './templates'
 import { IdeGuideModal } from './IdeGuideModal'
@@ -19,14 +20,29 @@ interface EditorToolbarProps {
 const FONT_MIN = 12
 const FONT_MAX = 20
 
-const LANGUAGES = [
-  { value: 'python',     label: 'Python',     color: '#3572A5' },
-  { value: 'javascript', label: 'JavaScript', color: '#F7DF1E' },
-  { value: 'typescript', label: 'TypeScript', color: '#3178C6' },
-  { value: 'cpp',        label: 'C++',        color: '#f34b7d' },
-  { value: 'java',       label: 'Java',       color: '#b07219' },
+// All languages supported by the Judge0 Extra CE instance, sorted alphabetically.
+const LANGUAGES: Array<{ value: Language; label: string; color: string }> = [
+  { value: 'bash',       label: 'Bash',       color: '#4EAA25' },
+  { value: 'c',          label: 'C',          color: '#7B8DB0' },
+  { value: 'csharp',     label: 'C#',         color: '#239120' },
+  { value: 'cpp',        label: 'C++',        color: '#00599C' },
+  { value: 'elixir',     label: 'Elixir',     color: '#6E4A7E' },
   { value: 'go',         label: 'Go',         color: '#00ADD8' },
-] as const
+  { value: 'haskell',    label: 'Haskell',    color: '#5D4F85' },
+  { value: 'java',       label: 'Java',       color: '#B07219' },
+  { value: 'javascript', label: 'JavaScript', color: '#F7DF1E' },
+  { value: 'kotlin',     label: 'Kotlin',     color: '#7F52FF' },
+  { value: 'lua',        label: 'Lua',        color: '#6B8CC3' },
+  { value: 'perl',       label: 'Perl',       color: '#39457E' },
+  { value: 'php',        label: 'PHP',        color: '#777BB4' },
+  { value: 'python',     label: 'Python',     color: '#3572A5' },
+  { value: 'r',          label: 'R',          color: '#198CE7' },
+  { value: 'ruby',       label: 'Ruby',       color: '#CC342D' },
+  { value: 'rust',       label: 'Rust',       color: '#DEA584' },
+  { value: 'scala',      label: 'Scala',      color: '#DC322F' },
+  { value: 'swift',      label: 'Swift',      color: '#FA7343' },
+  { value: 'typescript', label: 'TypeScript', color: '#3178C6' },
+]
 
 const DM_SANS: React.CSSProperties = { fontFamily: "'DM Sans', system-ui, sans-serif" }
 const DM_MONO: React.CSSProperties = { fontFamily: "'DM Mono', 'Courier New', monospace" }
@@ -60,39 +76,75 @@ export function EditorToolbar({
       <Tooltip.Provider delayDuration={400}>
         <div className="flex h-[42px] shrink-0 items-center gap-0 border-b border-[#383850] bg-[#1E1E30] px-2">
 
-          {/* Language tabs — scrollable */}
-          <div
-            className="flex flex-1 items-center gap-0.5 overflow-x-auto pr-2"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
-            role="tablist"
-            aria-label="Programming language"
-          >
-            {LANGUAGES.map((lang) => {
-              const isActive = lang.value === language
-              return (
-                <button
-                  key={lang.value}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => onLanguageChange(lang.value as Language)}
-                  className={cn(
-                    'flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold transition-all duration-150 select-none whitespace-nowrap',
-                    isActive
-                      ? 'bg-brand-orange/15 text-brand-orange ring-1 ring-inset ring-brand-orange/30'
-                      : 'text-[#CDD6F4]/35 hover:bg-white/5 hover:text-[#CDD6F4]/75',
-                  )}
-                  style={DM_MONO}
-                >
+          {/* Language selector dropdown */}
+          <div className="flex flex-1 items-center pl-1">
+            <Select.Root value={language} onValueChange={(val) => onLanguageChange(val as Language)}>
+              <Select.Trigger
+                aria-label="Programming language"
+                className={cn(
+                  'flex items-center gap-2 rounded-md border border-[#383850] px-2.5 py-1 text-[11px] font-semibold',
+                  'text-[#CDD6F4]/80 transition-colors hover:border-[#505070] hover:text-[#CDD6F4]',
+                  'outline-none focus-visible:ring-1 focus-visible:ring-brand-orange/50',
+                  'min-w-[120px] justify-between select-none',
+                )}
+                style={DM_MONO}
+              >
+                <span className="flex items-center gap-1.5 truncate">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: lang.color }}
+                    style={{ background: LANGUAGES.find((l) => l.value === language)?.color }}
                     aria-hidden="true"
                   />
-                  {lang.label}
-                </button>
-              )
-            })}
+                  <Select.Value />
+                </span>
+                <Select.Icon asChild>
+                  <ChevronDown size={10} className="shrink-0 text-[#CDD6F4]/40" aria-hidden="true" />
+                </Select.Icon>
+              </Select.Trigger>
+
+              <Select.Portal>
+                <Select.Content
+                  className="z-50 min-w-[160px] overflow-hidden rounded-lg border border-[#383850] bg-[#1A1A2E] shadow-2xl"
+                  position="popper"
+                  sideOffset={5}
+                  align="start"
+                >
+                  <Select.ScrollUpButton className="flex cursor-default items-center justify-center py-1.5 text-[#CDD6F4]/30">
+                    <ChevronUp size={12} aria-hidden="true" />
+                  </Select.ScrollUpButton>
+
+                  <Select.Viewport className="max-h-64 p-1">
+                    {LANGUAGES.map((lang) => (
+                      <Select.Item
+                        key={lang.value}
+                        value={lang.value}
+                        className={cn(
+                          'flex cursor-default items-center gap-2 rounded px-2.5 py-1.5 text-[11px]',
+                          'text-[#CDD6F4]/60 outline-none select-none',
+                          'data-[highlighted]:bg-white/5 data-[highlighted]:text-[#CDD6F4]',
+                          'data-[state=checked]:text-brand-orange',
+                        )}
+                        style={DM_MONO}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 shrink-0 rounded-full"
+                          style={{ background: lang.color }}
+                          aria-hidden="true"
+                        />
+                        <Select.ItemText>{lang.label}</Select.ItemText>
+                        <Select.ItemIndicator className="ml-auto">
+                          <Check size={10} className="text-brand-orange" aria-hidden="true" />
+                        </Select.ItemIndicator>
+                      </Select.Item>
+                    ))}
+                  </Select.Viewport>
+
+                  <Select.ScrollDownButton className="flex cursor-default items-center justify-center py-1.5 text-[#CDD6F4]/30">
+                    <ChevronDown size={12} aria-hidden="true" />
+                  </Select.ScrollDownButton>
+                </Select.Content>
+              </Select.Portal>
+            </Select.Root>
           </div>
 
           {/* Fixed right section */}

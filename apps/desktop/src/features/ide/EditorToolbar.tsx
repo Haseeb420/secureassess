@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import * as Select from '@radix-ui/react-select'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { ChevronDown, HelpCircle, Loader2, PlayCircle, RotateCcw } from 'lucide-react'
+import { HelpCircle, Loader2, PlayCircle, RotateCcw } from 'lucide-react'
 import { cn, ConfirmDialog } from '@secureassess/ui'
 import type { Language } from './templates'
 import { IdeGuideModal } from './IdeGuideModal'
@@ -29,6 +28,9 @@ const LANGUAGES = [
   { value: 'go',         label: 'Go',         color: '#00ADD8' },
 ] as const
 
+const DM_SANS: React.CSSProperties = { fontFamily: "'DM Sans', system-ui, sans-serif" }
+const DM_MONO: React.CSSProperties = { fontFamily: "'DM Mono', 'Courier New', monospace" }
+
 export function EditorToolbar({
   language,
   onLanguageChange,
@@ -53,83 +55,77 @@ export function EditorToolbar({
     }
   }, [isRunning])
 
-  const currentLang = LANGUAGES.find((l) => l.value === language)
-
   return (
     <>
       <Tooltip.Provider delayDuration={400}>
-        <div className="flex h-[38px] shrink-0 items-center gap-2 border-b border-[#383850] bg-[#262637] px-3">
+        <div className="flex h-[42px] shrink-0 items-center gap-0 border-b border-[#383850] bg-[#1E1E30] px-2">
 
-          {/* Language selector */}
-          <Select.Root value={language} onValueChange={(v) => onLanguageChange(v as Language)}>
-            <Select.Trigger
-              aria-label="Programming language"
-              className="flex items-center gap-2 rounded-lg border border-[#383850] bg-transparent px-3 py-1 font-dm-mono text-xs text-[#CDD6F4]/60 outline-none transition-colors hover:border-[#CDD6F4]/20 hover:text-[#CDD6F4]"
-            >
-              {currentLang && (
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ background: currentLang.color }}
-                  aria-hidden="true"
-                />
-              )}
-              <Select.Value />
-              <ChevronDown size={12} className="ml-1 text-[#CDD6F4]/30" aria-hidden="true" />
-            </Select.Trigger>
-
-            <Select.Portal>
-              <Select.Content
-                className="z-50 overflow-hidden rounded-xl border border-[#383850] bg-[#1E1E2E] p-1 shadow-2xl"
-                position="popper"
-                sideOffset={4}
-              >
-                <Select.Viewport>
-                  {LANGUAGES.map((lang) => (
-                    <Select.Item
-                      key={lang.value}
-                      value={lang.value}
-                      className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 font-dm-mono text-xs text-[#CDD6F4]/60 outline-none transition-colors hover:bg-white/5 hover:text-[#CDD6F4] data-[highlighted]:bg-white/5 data-[highlighted]:text-[#CDD6F4] data-[state=checked]:text-brand-orange"
-                    >
-                      <span
-                        className="h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ background: lang.color }}
-                        aria-hidden="true"
-                      />
-                      <Select.ItemText>{lang.label}</Select.ItemText>
-                    </Select.Item>
-                  ))}
-                </Select.Viewport>
-              </Select.Content>
-            </Select.Portal>
-          </Select.Root>
-
-          {/* Thin divider */}
-          <span className="mx-1 h-4 w-px bg-[#383850]" aria-hidden="true" />
-
-          {/* Font size controls */}
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={() => onFontSizeChange(Math.max(FONT_MIN, fontSize - 1))}
-              disabled={fontSize <= FONT_MIN}
-              aria-label="Decrease font size"
-              className="rounded px-2 py-0.5 font-dm-mono text-xs text-[#CDD6F4]/35 transition-colors hover:bg-white/5 hover:text-[#CDD6F4]/70 disabled:opacity-30"
-            >
-              A-
-            </button>
-            <button
-              type="button"
-              onClick={() => onFontSizeChange(Math.min(FONT_MAX, fontSize + 1))}
-              disabled={fontSize >= FONT_MAX}
-              aria-label="Increase font size"
-              className="rounded px-2 py-0.5 font-dm-mono text-[0.9375rem] text-[#CDD6F4]/35 transition-colors hover:bg-white/5 hover:text-[#CDD6F4]/70 disabled:opacity-30"
-            >
-              A+
-            </button>
+          {/* Language tabs — scrollable */}
+          <div
+            className="flex flex-1 items-center gap-0.5 overflow-x-auto pr-2"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+            role="tablist"
+            aria-label="Programming language"
+          >
+            {LANGUAGES.map((lang) => {
+              const isActive = lang.value === language
+              return (
+                <button
+                  key={lang.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => onLanguageChange(lang.value as Language)}
+                  className={cn(
+                    'flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold transition-all duration-150 select-none whitespace-nowrap',
+                    isActive
+                      ? 'bg-brand-orange/15 text-brand-orange ring-1 ring-inset ring-brand-orange/30'
+                      : 'text-[#CDD6F4]/35 hover:bg-white/5 hover:text-[#CDD6F4]/75',
+                  )}
+                  style={DM_MONO}
+                >
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: lang.color }}
+                    aria-hidden="true"
+                  />
+                  {lang.label}
+                </button>
+              )
+            })}
           </div>
 
-          {/* Right group */}
-          <div className="ml-auto flex items-center gap-2">
+          {/* Fixed right section */}
+          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#383850] pl-2">
+
+            {/* Font size controls */}
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => onFontSizeChange(Math.max(FONT_MIN, fontSize - 1))}
+                disabled={fontSize <= FONT_MIN}
+                aria-label="Decrease font size"
+                className="rounded px-1.5 py-0.5 text-xs text-[#CDD6F4]/30 transition-colors hover:bg-white/5 hover:text-[#CDD6F4]/70 disabled:opacity-25"
+                style={DM_MONO}
+              >
+                A-
+              </button>
+              <span className="min-w-[28px] text-center text-[10px] text-[#CDD6F4]/25" style={DM_MONO}>
+                {fontSize}
+              </span>
+              <button
+                type="button"
+                onClick={() => onFontSizeChange(Math.min(FONT_MAX, fontSize + 1))}
+                disabled={fontSize >= FONT_MAX}
+                aria-label="Increase font size"
+                className="rounded px-1.5 py-0.5 text-[0.9375rem] text-[#CDD6F4]/30 transition-colors hover:bg-white/5 hover:text-[#CDD6F4]/70 disabled:opacity-25"
+                style={DM_MONO}
+              >
+                A+
+              </button>
+            </div>
+
+            <span className="h-4 w-px bg-[#383850]" aria-hidden="true" />
 
             {/* Reset */}
             {onResetCode && (
@@ -139,9 +135,9 @@ export function EditorToolbar({
                     type="button"
                     onClick={() => setResetConfirmOpen(true)}
                     aria-label="Reset to template code"
-                    className="flex h-6 w-6 items-center justify-center rounded text-[#CDD6F4]/30 transition-colors hover:text-[#CDD6F4]/70"
+                    className="flex h-6 w-6 items-center justify-center rounded text-[#CDD6F4]/25 transition-colors hover:text-[#CDD6F4]/65"
                   >
-                    <RotateCcw size={14} aria-hidden="true" />
+                    <RotateCcw size={13} aria-hidden="true" />
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
@@ -149,25 +145,23 @@ export function EditorToolbar({
                     className="rounded-lg border border-[#383850] bg-[#1E1E2E] px-2.5 py-1.5 shadow-xl"
                     sideOffset={6}
                   >
-                    <span className="font-dm-mono text-xs text-[#CDD6F4]/60">
-                      Reset to template code
-                    </span>
+                    <span className="text-xs text-[#CDD6F4]/60" style={DM_MONO}>Reset to template</span>
                     <Tooltip.Arrow className="fill-[#383850]" />
                   </Tooltip.Content>
                 </Tooltip.Portal>
               </Tooltip.Root>
             )}
 
-            {/* Guide / help */}
+            {/* Guide */}
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <button
                   type="button"
                   onClick={() => setGuideOpen(true)}
                   aria-label="Open assessment guide"
-                  className="flex h-6 w-6 items-center justify-center rounded text-[#CDD6F4]/30 transition-colors hover:text-[#CDD6F4]/70"
+                  className="flex h-6 w-6 items-center justify-center rounded text-[#CDD6F4]/25 transition-colors hover:text-[#CDD6F4]/65"
                 >
-                  <HelpCircle size={14} aria-hidden="true" />
+                  <HelpCircle size={13} aria-hidden="true" />
                 </button>
               </Tooltip.Trigger>
               <Tooltip.Portal>
@@ -177,7 +171,7 @@ export function EditorToolbar({
                   side="bottom"
                   align="end"
                 >
-                  <span className="font-dm-mono text-xs text-[#CDD6F4]/60">I/O guide & shortcuts</span>
+                  <span className="text-xs text-[#CDD6F4]/60" style={DM_MONO}>I/O guide & shortcuts</span>
                   <Tooltip.Arrow className="fill-[#383850]" />
                 </Tooltip.Content>
               </Tooltip.Portal>
@@ -185,25 +179,26 @@ export function EditorToolbar({
 
             <span className="h-4 w-px bg-[#383850]" aria-hidden="true" />
 
-            {/* Run Tests button */}
+            {/* Run Tests */}
             <button
               type="button"
               onClick={onRun}
               disabled={isRunning}
               aria-label={isRunning ? 'Running tests…' : 'Run tests (⌘ Enter)'}
               className={cn(
-                'flex items-center rounded-lg px-4 py-1.5 font-dm-sans text-sm font-medium text-white transition-colors disabled:opacity-50',
+                'flex items-center rounded-lg px-3.5 py-1.5 text-[11px] font-semibold text-white transition-colors disabled:opacity-50',
                 passFlash ? 'bg-green-600' : 'bg-brand-orange hover:bg-brand-orange-light',
               )}
+              style={DM_SANS}
             >
               {isRunning ? (
                 <>
-                  <Loader2 size={14} className="mr-2 animate-spin" aria-hidden="true" />
-                  Running...
+                  <Loader2 size={12} className="mr-1.5 animate-spin" aria-hidden="true" />
+                  Running…
                 </>
               ) : (
                 <>
-                  <PlayCircle size={14} className="mr-2" aria-hidden="true" />
+                  <PlayCircle size={12} className="mr-1.5" aria-hidden="true" />
                   Run Tests
                 </>
               )}

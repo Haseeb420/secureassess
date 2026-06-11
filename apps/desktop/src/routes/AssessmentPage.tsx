@@ -14,7 +14,7 @@ import { EditorToolbar } from '../features/ide/EditorToolbar'
 import { MCQAnswerPanel } from '../features/ide/MCQAnswerPanel'
 import { TextAnswerPanel } from '../features/ide/TextAnswerPanel'
 import { QuestionPanel } from '../features/ide/QuestionPanel'
-import { QuestionNavPanel } from '../features/ide/QuestionNavPanel'
+import { QuestionNavigator } from '../features/ide/QuestionNavigator'
 import { ViolationBanner } from '../features/security/ViolationBanner'
 import { useSecurityMonitor } from '../features/security/useSecurityMonitor'
 import { exitKioskMode } from '../features/security/securityService'
@@ -400,12 +400,6 @@ export function AssessmentPage() {
     navigate(isMock ? '/landing' : '/login', { replace: true })
   }, [navigate, isMock])
 
-  // Build progress dots for TopBar
-  const progressItems = questions.map((q, i) => ({
-    submitted: submittedQuestions.has(q.id),
-    current:   i === currentQuestionIdx,
-  }))
-
   const consoleStatus: ConsoleStatus = isRunning
     ? 'running'
     : runResult == null
@@ -478,26 +472,23 @@ export function AssessmentPage() {
         onSubmit={() => {}}
         onExitClick={() => setExitDialogOpen(true)}
         isExitLocked={isRunning || isSubmittingAnswer}
-        isExitDialogOpen={exitDialogOpen}
-        sequentialMode
-        progressItems={progressItems}
-        hideSubmitButton
         mockMode={isMock}
+        currentLanguage={currentQuestion?.type === 'coding' ? currentLanguage : undefined}
+        questionType={currentQuestion?.type}
+      />
+
+      {/* Horizontal question navigator (always visible) */}
+      <QuestionNavigator
+        questions={questions}
+        currentIdx={currentQuestionIdx}
+        submittedQuestions={submittedQuestions}
+        answers={answers}
+        currentCode={codeByLanguage[currentLanguage]}
+        allowNavigation={allowQuestionNavigation}
+        onNavigate={handleNavigate}
       />
 
       <div className="min-h-0 flex-1 flex overflow-hidden">
-        {/* Question navigation sidebar (navigation mode only) */}
-        {allowQuestionNavigation && (
-          <QuestionNavPanel
-            questions={questions}
-            currentIdx={currentQuestionIdx}
-            submittedQuestions={submittedQuestions}
-            answers={answers}
-            currentCode={codeByLanguage[currentLanguage]}
-            onNavigate={handleNavigate}
-          />
-        )}
-
         <div className="flex min-w-0 flex-1 overflow-hidden">
           <PanelGroup orientation="horizontal" className="h-full">
             {/* Left: question description */}

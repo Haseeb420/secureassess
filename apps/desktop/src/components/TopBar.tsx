@@ -1,48 +1,52 @@
-import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { useEffect } from 'react'
+import { LogOut } from 'lucide-react'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { ConfirmDialog } from '@secureassess/ui'
 import { useSyncStatus } from '../features/sync/useSyncStatus'
 import { useTimerPersistence } from '../features/persistence/useTimerPersistence'
 
-interface ProgressItem {
-  submitted: boolean
-  current: boolean
-}
-
-interface TopBarProps {
-  candidateName: string
-  assessmentTitle?: string
-  questionIndex: number
-  totalQuestions: number
-  timerSeconds: number
-  timerTotalSeconds?: number
-  sessionId: string | null
-  onSubmit: () => void
-  onPrevQuestion?: () => void
-  onNextQuestion?: () => void
-  isSubmitting?: boolean
-  onExitClick?: () => void
-  isExitLocked?: boolean
-  isExitDialogOpen?: boolean
-  /** When true: hides nav arrows and shows progress dots */
-  sequentialMode?: boolean
-  /** Progress dot state for each question in sequential mode */
-  progressItems?: ProgressItem[]
-  /** Hide the top-right submit button (used when bottom bar has per-question submit) */
-  hideSubmitButton?: boolean
-  /** When true: replace timer ring with amber Practice Round badge, hide kiosk controls */
-  mockMode?: boolean
-}
-
-const RING_R = 14
-const RING_C = 2 * Math.PI * RING_R
-
-const SYNE: React.CSSProperties = { fontFamily: "'Syne', sans-serif" }
+const SYNE:    React.CSSProperties = { fontFamily: "'Syne', sans-serif" }
 const DM_SANS: React.CSSProperties = { fontFamily: "'DM Sans', sans-serif" }
 const DM_MONO: React.CSSProperties = { fontFamily: "'DM Mono', monospace" }
 
+const LANGUAGE_LABELS: Record<string, string> = {
+  python:     'Python',
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  cpp:        'C++',
+  java:       'Java',
+  go:         'Go',
+  rust:       'Rust',
+  c:          'C',
+  csharp:     'C#',
+  ruby:       'Ruby',
+  kotlin:     'Kotlin',
+  swift:      'Swift',
+}
+
+const LANGUAGE_COLORS: Record<string, string> = {
+  python:     '#3572A5',
+  javascript: '#F7DF1E',
+  typescript: '#3178C6',
+  cpp:        '#f34b7d',
+  java:       '#b07219',
+  go:         '#00ADD8',
+  rust:       '#dea584',
+  c:          '#555555',
+  csharp:     '#178600',
+  ruby:       '#701516',
+  kotlin:     '#A97BFF',
+  swift:      '#F05138',
+}
+
+const RING_R = 13
+const RING_C = 2 * Math.PI * RING_R
+
 function formatTime(seconds: number): string {
+  if (seconds >= 3600) {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    return `${String(h)}:${String(m).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+  }
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
@@ -76,6 +80,30 @@ function WamoMark() {
   )
 }
 
+interface TopBarProps {
+  candidateName: string
+  assessmentTitle?: string
+  questionIndex: number
+  totalQuestions: number
+  timerSeconds: number
+  timerTotalSeconds?: number
+  sessionId: string | null
+  onSubmit: () => void
+  onExitClick?: () => void
+  isExitLocked?: boolean
+  isExitDialogOpen?: boolean
+  mockMode?: boolean
+  currentLanguage?: string
+  questionType?: 'coding' | 'mcq' | 'text'
+  // Legacy props kept for call-site compatibility
+  onPrevQuestion?: () => void
+  onNextQuestion?: () => void
+  isSubmitting?: boolean
+  sequentialMode?: boolean
+  progressItems?: unknown[]
+  hideSubmitButton?: boolean
+}
+
 export function TopBar({
   candidateName,
   assessmentTitle = 'Assessment',
@@ -85,21 +113,15 @@ export function TopBar({
   timerTotalSeconds = 3600,
   sessionId,
   onSubmit,
-  onPrevQuestion,
-  onNextQuestion,
-  isSubmitting = false,
   onExitClick,
   isExitLocked = false,
-  isExitDialogOpen = false,
-  sequentialMode = false,
-  progressItems,
-  hideSubmitButton = false,
+  isExitDialogOpen: _isExitDialogOpen,
   mockMode = false,
+  currentLanguage,
+  questionType,
 }: TopBarProps) {
-  const [confirmOpen, setConfirmOpen] = useState(false)
   const { isOnline, pendingCount } = useSyncStatus()
   const isExpired = timerSeconds === 0
-  const isMultiQuestion = totalQuestions > 1
 
   useTimerPersistence({ sessionId, timerSeconds })
 
@@ -129,242 +151,198 @@ export function TopBar({
     syncTextClass = 'text-white/40'
   }
 
-  const submitDisabled = isSubmitting || isExitDialogOpen
+  const showLanguage = questionType === 'coding' && currentLanguage
+  const langLabel = currentLanguage ? (LANGUAGE_LABELS[currentLanguage] ?? currentLanguage) : null
+  const langColor = currentLanguage ? (LANGUAGE_COLORS[currentLanguage] ?? '#888888') : null
 
   return (
-    <>
-      <Tooltip.Provider delayDuration={400}>
-        <div
-          className="flex h-[52px] shrink-0 items-center border-b border-white/8 bg-brand-navy px-5"
-          role="banner"
-        >
-          {/* Left: logo mark + divider + avatar + name + divider + exit */}
-          <div className="flex w-1/4 min-w-0 items-center gap-3">
-            <WamoMark />
-            <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
-            <div
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-orange"
-              aria-hidden="true"
-            >
-              <span className="text-xs font-bold leading-none text-white" style={SYNE}>
-                {initial}
-              </span>
-            </div>
-            <span
-              className="truncate text-sm font-medium text-white/75"
-              style={DM_SANS}
-              title={candidateName}
-            >
-              {candidateName}
-            </span>
+    <Tooltip.Provider delayDuration={400}>
+      <div
+        className="flex h-[52px] shrink-0 items-center border-b border-white/8 bg-brand-navy px-5"
+        role="banner"
+      >
+        {/* ── Left: logo + title ────────────────────────────────────── */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <WamoMark />
+          <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+          <span
+            className="truncate text-sm font-semibold text-white/80"
+            style={SYNE}
+            title={assessmentTitle}
+          >
+            {assessmentTitle}
+          </span>
+        </div>
 
-            {onExitClick && (
-              <>
-                <span className="h-4 w-px shrink-0 bg-white/15" aria-hidden="true" />
-                <Tooltip.Root>
-                  <Tooltip.Trigger asChild>
-                    <button
-                      type="button"
-                      onClick={onExitClick}
-                      disabled={isExitLocked}
-                      aria-label="Exit assessment"
-                      className={[
-                        'flex items-center gap-1.5 text-xs transition-colors duration-150',
-                        isExitLocked
-                          ? 'pointer-events-none opacity-20'
-                          : 'text-white/30 hover:text-red-400',
-                      ].join(' ')}
-                      style={DM_SANS}
-                    >
-                      <LogOut size={14} aria-hidden="true" />
-                      Exit
-                    </button>
-                  </Tooltip.Trigger>
-                  <Tooltip.Portal>
-                    <Tooltip.Content
-                      side="bottom"
-                      sideOffset={6}
-                      className="rounded-lg bg-brand-navy-light px-2.5 py-1.5 text-xs text-white/80 shadow-lg"
-                      style={DM_SANS}
-                    >
-                      {isExitLocked
-                        ? 'Cannot exit while code is running'
-                        : 'Exit assessment'}
-                      <Tooltip.Arrow className="fill-brand-navy-light" />
-                    </Tooltip.Content>
-                  </Tooltip.Portal>
-                </Tooltip.Root>
-              </>
-            )}
+        {/* ── Center: Q counter + language ──────────────────────────── */}
+        <div className="flex items-center gap-3 px-6">
+          <div className="flex items-center gap-1.5" style={DM_SANS}>
+            <span className="text-[11px] font-semibold text-white/50">Q</span>
+            <span className="text-sm font-bold text-white/80">{questionIndex}</span>
+            <span className="text-[11px] text-white/30">of {totalQuestions}</span>
           </div>
 
-          {/* Center: question nav + assessment title */}
-          <div className="flex flex-1 flex-col items-center justify-center">
-            {sequentialMode ? (
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-sm font-medium text-white/80" style={DM_SANS}>
-                  Question {questionIndex} of {totalQuestions}
-                </span>
-                {progressItems && progressItems.length > 0 && (
-                  <div className="mt-0.5 flex gap-1.5 justify-center" aria-hidden="true">
-                    {progressItems.map((item, i) => (
-                      <span
-                        key={i}
-                        className={[
-                          'h-2 w-2 rounded-full transition-colors',
-                          item.submitted
-                            ? 'bg-brand-orange'
-                            : item.current
-                              ? 'border-2 border-brand-orange bg-transparent'
-                              : 'bg-white/20',
-                        ].join(' ')}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : isMultiQuestion ? (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={onPrevQuestion}
-                  disabled={questionIndex <= 1}
-                  aria-label="Previous question"
-                  className="text-white/40 transition-colors hover:text-white disabled:opacity-30"
+          {showLanguage && (
+            <>
+              <span className="h-3 w-px bg-white/15" aria-hidden="true" />
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: langColor ?? undefined }}
+                  aria-hidden="true"
+                />
+                <span
+                  className="text-[11px] font-medium text-white/50"
+                  style={DM_MONO}
+                  aria-label={`Language: ${langLabel}`}
                 >
-                  <ChevronLeft size={14} aria-hidden="true" />
-                </button>
-                <span className="text-sm font-medium text-white/80" style={DM_SANS}>
-                  Question {questionIndex}
+                  {langLabel}
                 </span>
-                <span className="text-sm text-white/30" style={DM_SANS}>
-                  of {totalQuestions}
-                </span>
-                <button
-                  type="button"
-                  onClick={onNextQuestion}
-                  disabled={questionIndex >= totalQuestions}
-                  aria-label="Next question"
-                  className="text-white/40 transition-colors hover:text-white disabled:opacity-30"
-                >
-                  <ChevronRight size={14} aria-hidden="true" />
-                </button>
               </div>
-            ) : null}
-            <span className="mt-0.5 text-xs text-white/30" style={DM_SANS}>
-              {assessmentTitle}
-            </span>
-          </div>
+            </>
+          )}
 
-          {/* Right: sync + divider + timer (or mock badge) + divider + submit */}
-          <div className="flex w-1/4 items-center justify-end gap-3">
-            {/* Sync indicator */}
-            <div
-              className="flex items-center gap-1.5"
-              aria-label={`Sync status: ${syncText}`}
-            >
-              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncDot}`} aria-hidden="true" />
-              <span className={`text-[11px] ${syncTextClass}`} style={DM_MONO}>
-                {syncText}
-              </span>
-            </div>
-
-            <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
-
-            {mockMode ? (
-              /* Practice Round badge — replaces the countdown timer */
+          {mockMode && (
+            <>
+              <span className="h-3 w-px bg-white/15" aria-hidden="true" />
               <span
-                className="rounded-full border border-amber-400/40 bg-amber-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-300"
+                className="rounded-full border border-amber-400/40 bg-amber-400/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300"
                 style={DM_MONO}
               >
-                Practice Round
+                Practice
               </span>
-            ) : (
-              /* Timer: SVG ring + centered time + "REMAINING" label */
-              <div className="flex flex-col items-center gap-px">
-                <div className="relative flex items-center justify-center">
-                  <svg
-                    width="36"
-                    height="36"
-                    viewBox="0 0 36 36"
-                    className="-rotate-90"
-                    aria-hidden="true"
-                  >
-                    <circle
-                      cx="18" cy="18" r={RING_R}
-                      fill="none"
-                      stroke="rgba(255,255,255,0.10)"
-                      strokeWidth="2.5"
-                    />
-                    <circle
-                      cx="18" cy="18" r={RING_R}
-                      fill="none"
-                      stroke={ringColor}
-                      strokeWidth="2.5"
-                      strokeDasharray={RING_C}
-                      strokeDashoffset={dashOffset}
-                      strokeLinecap="round"
-                      style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
-                    />
-                  </svg>
-                  <span
-                    className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${timerNumClass(timerSeconds)}`}
-                    style={{ ...SYNE, letterSpacing: '-0.01em' }}
-                    aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
-                    aria-live="off"
-                  >
-                    {formatTime(timerSeconds)}
-                  </span>
-                </div>
-                <span
-                  className="text-[9px] uppercase tracking-widest text-white/25"
-                  style={DM_MONO}
+            </>
+          )}
+        </div>
+
+        {/* ── Right: sync + timer + exit ────────────────────────────── */}
+        <div className="flex flex-1 items-center justify-end gap-4">
+          {/* Sync indicator */}
+          <div className="flex items-center gap-1.5" aria-label={`Sync: ${syncText}`}>
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${syncDot}`} aria-hidden="true" />
+            <span className={`text-[10px] ${syncTextClass}`} style={DM_MONO}>
+              {syncText}
+            </span>
+          </div>
+
+          <span className="h-4 w-px shrink-0 bg-white/15" aria-hidden="true" />
+
+          {/* Timer */}
+          {mockMode ? (
+            <span
+              className="text-[11px] font-medium text-amber-300/70"
+              style={DM_MONO}
+            >
+              Practice Round
+            </span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center justify-center">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 32 32"
+                  className="-rotate-90"
+                  aria-hidden="true"
                 >
-                  remaining
+                  <circle
+                    cx="16" cy="16" r={RING_R}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeWidth="2.5"
+                  />
+                  <circle
+                    cx="16" cy="16" r={RING_R}
+                    fill="none"
+                    stroke={ringColor}
+                    strokeWidth="2.5"
+                    strokeDasharray={RING_C}
+                    strokeDashoffset={dashOffset}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
+                  />
+                </svg>
+                <span
+                  className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold ${timerNumClass(timerSeconds)}`}
+                  style={{ ...SYNE, letterSpacing: '-0.01em' }}
+                  aria-label={`Time remaining: ${formatTime(timerSeconds)}`}
+                  aria-live="off"
+                >
+                  {formatTime(timerSeconds)}
                 </span>
               </div>
-            )}
+              <span
+                className="text-[9px] uppercase tracking-widest text-white/20"
+                style={DM_MONO}
+              >
+                left
+              </span>
+            </div>
+          )}
 
-            {!hideSubmitButton && (
-              <>
-                <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+          <span className="h-4 w-px shrink-0 bg-white/15" aria-hidden="true" />
 
-                {/* Submit button */}
+          {/* Candidate avatar */}
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <div
+                className="flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full bg-brand-orange"
+                aria-label={`Candidate: ${candidateName}`}
+              >
+                <span className="text-xs font-bold leading-none text-white" style={SYNE}>
+                  {initial}
+                </span>
+              </div>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content
+                side="bottom"
+                sideOffset={6}
+                className="rounded-lg bg-[#252535] px-2.5 py-1.5 text-xs text-white/70 shadow-lg"
+                style={DM_SANS}
+              >
+                {candidateName}
+                <Tooltip.Arrow className="fill-[#252535]" />
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+
+          {/* Exit Assessment button */}
+          {onExitClick && (
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
                 <button
                   type="button"
-                  onClick={() => setConfirmOpen(true)}
-                  disabled={submitDisabled}
-                  aria-label={isSubmitting ? 'Submitting…' : 'Submit assessment'}
-                  className="flex items-center rounded-xl border border-white/15 bg-white/8 px-4 py-1.5 text-sm font-medium text-white/80 transition-all hover:border-brand-orange/40 hover:bg-white/15 hover:text-brand-orange disabled:opacity-50"
+                  onClick={onExitClick}
+                  disabled={isExitLocked}
+                  aria-label="Exit assessment"
+                  className={[
+                    'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150',
+                    isExitLocked
+                      ? 'cursor-not-allowed border-white/5 text-white/15'
+                      : 'border-red-400/20 text-red-400/50 hover:border-red-400/40 hover:bg-red-400/6 hover:text-red-400/80',
+                  ].join(' ')}
                   style={DM_SANS}
                 >
-                  {isSubmitting && (
-                    <svg className="mr-1.5 h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  )}
-                  {isSubmitting ? 'Submitting…' : 'Submit'}
-                  {!isSubmitting && (
-                    <ChevronRight size={14} className="ml-1" aria-hidden="true" />
-                  )}
+                  <LogOut size={12} aria-hidden="true" />
+                  Exit
                 </button>
-              </>
-            )}
-          </div>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  side="bottom"
+                  sideOffset={6}
+                  className="rounded-lg bg-[#252535] px-2.5 py-1.5 text-xs text-white/70 shadow-lg"
+                  style={DM_SANS}
+                >
+                  {isExitLocked ? 'Cannot exit while code is running' : 'Exit assessment'}
+                  <Tooltip.Arrow className="fill-[#252535]" />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          )}
         </div>
-      </Tooltip.Provider>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Submit your solution?"
-        description="Once submitted you cannot edit this answer. Your code will be evaluated against all test cases."
-        confirmLabel="Submit"
-        cancelLabel="Keep editing"
-        variant="primary"
-        onConfirm={() => { setConfirmOpen(false); onSubmit() }}
-        onCancel={() => setConfirmOpen(false)}
-      />
-    </>
+      </div>
+    </Tooltip.Provider>
   )
 }

@@ -392,7 +392,7 @@ class CreateInviteRequest(BaseModel):
     candidate_name: str
     mock_ids: list[str] = []
     expiry_at: Optional[datetime] = None  # None = no expiry (unlimited time)
-    usage_limit: int = 1
+    usage_limit: Optional[int] = 1
     notes: Optional[str] = None
 
 

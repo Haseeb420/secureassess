@@ -7,9 +7,12 @@ import {
   ArrowLeft,
   Bot,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   Lock,
   Monitor,
+  Navigation,
   RefreshCw,
   Share2,
   Shield,
@@ -172,6 +175,7 @@ export function PreAssessmentPage() {
   const [assessmentTitle, setAssessmentTitle] = useState<string | null>(null)
   const [fetchError,      setFetchError]     = useState<string | null>(null)
   const [isFetching,      setIsFetching]     = useState(false)
+  const [instructionsOpen, setInstructionsOpen] = useState(false)
 
   useEffect(() => {
     // Mock assessments must not enter kiosk mode — redirect to landing if misconfigured.
@@ -689,6 +693,122 @@ export function PreAssessmentPage() {
                   </span>
                 ))}
               </div>
+            </motion.div>
+
+            {/* Assessment instructions */}
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }}
+              className="mt-6"
+            >
+              <button
+                type="button"
+                onClick={() => setInstructionsOpen((p) => !p)}
+                className="flex w-full items-center justify-between rounded-xl border border-brand-border bg-white px-4 py-3 text-left transition-colors hover:border-brand-navy/30"
+                aria-expanded={instructionsOpen}
+              >
+                <span className="text-[13px] font-semibold text-brand-navy" style={DMSANS}>
+                  How this assessment works
+                </span>
+                {instructionsOpen
+                  ? <ChevronUp size={14} className="text-brand-navy/40 shrink-0" />
+                  : <ChevronDown size={14} className="text-brand-navy/40 shrink-0" />
+                }
+              </button>
+
+              <AnimatePresence initial={false}>
+                {instructionsOpen && (
+                  <motion.div
+                    key="instructions"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="rounded-b-xl border border-t-0 border-brand-border bg-white px-4 py-4 space-y-4">
+
+                      {/* Evaluation */}
+                      <div>
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-brand-navy/35" style={DMSANS}>
+                          Evaluation
+                        </p>
+                        <ul className="space-y-1.5">
+                          {[
+                            'Your code will be evaluated against both visible sample tests and hidden test cases.',
+                            'Sample tests are shown in the problem description — use them to verify your solution.',
+                            'Hidden test cases cover edge cases and are not revealed before submission.',
+                            'Your score is based on the percentage of all test cases (visible + hidden) that pass.',
+                          ].map((item) => (
+                            <li key={item} className="flex items-start gap-2" style={DMSANS}>
+                              <CheckCircle2 size={11} className="mt-0.5 shrink-0 text-brand-orange" />
+                              <span className="text-[12px] leading-relaxed text-brand-navy/60">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="h-px bg-brand-border" />
+
+                      {/* Writing solutions */}
+                      <div>
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-brand-navy/35" style={DMSANS}>
+                          Writing Solutions
+                        </p>
+                        <ul className="space-y-1.5">
+                          {[
+                            'Each coding question provides a starter template — implement your logic inside the solve() function.',
+                            'Read input from stdin and write output to stdout exactly as shown in sample tests.',
+                            'Do not modify the function signature unless explicitly instructed.',
+                            'Your solution runs within a time and memory limit shown in the problem.',
+                          ].map((item) => (
+                            <li key={item} className="flex items-start gap-2" style={DMSANS}>
+                              <CheckCircle2 size={11} className="mt-0.5 shrink-0 text-brand-orange" />
+                              <span className="text-[12px] leading-relaxed text-brand-navy/60">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Navigation */}
+                      {landingData?.assessment.allowQuestionNavigation !== undefined && (
+                        <>
+                          <div className="h-px bg-brand-border" />
+                          <div className={cn(
+                            'flex items-start gap-2.5 rounded-lg px-3 py-2.5',
+                            landingData.assessment.allowQuestionNavigation
+                              ? 'bg-brand-orange/8 border border-brand-orange/20'
+                              : 'bg-brand-surface border border-brand-border',
+                          )}>
+                            <Navigation
+                              size={13}
+                              className={cn(
+                                'mt-0.5 shrink-0',
+                                landingData.assessment.allowQuestionNavigation
+                                  ? 'text-brand-orange'
+                                  : 'text-brand-navy/30',
+                              )}
+                            />
+                            <div>
+                              <p className="text-[12px] font-semibold text-brand-navy" style={DMSANS}>
+                                Question navigation is{' '}
+                                <span className={landingData.assessment.allowQuestionNavigation ? 'text-brand-orange' : 'text-brand-navy/50'}>
+                                  {landingData.assessment.allowQuestionNavigation ? 'enabled' : 'disabled'}
+                                </span>
+                              </p>
+                              <p className="mt-0.5 text-[11px] leading-relaxed text-brand-navy/50" style={DMSANS}>
+                                {landingData.assessment.allowQuestionNavigation
+                                  ? 'You can freely switch between questions. Use the navigation panel on the left to jump to any question. Submit all answers when you are done.'
+                                  : 'Questions must be answered in sequence. Once you submit an answer you cannot go back.'}
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
           </div>

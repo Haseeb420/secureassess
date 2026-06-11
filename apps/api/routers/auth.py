@@ -1,10 +1,12 @@
 import hashlib
+import hmac
 import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase_auth.errors import AuthApiError
 
+from core.config import settings
 from core.dependencies import get_current_candidate
 from core.supabase import get_auth_client, get_supabase
 from schemas.auth import (
@@ -131,7 +133,13 @@ async def login_with_assessment_token(body: TokenLoginRequest):
 
     email = token["candidate_email"]
     name = token.get("candidate_name") or email.split("@")[0]
-    password = hashlib.sha256(body.token_value.encode()).hexdigest()
+    # Stable per-email password: same candidate can use multiple tokens without conflict.
+    # Derived from email + service key so it's unpredictable from the outside.
+    password = hmac.new(
+        settings.SUPABASE_SERVICE_KEY.encode(),
+        email.lower().encode(),
+        hashlib.sha256,
+    ).hexdigest()
 
     auth = get_auth_client()
     user_metadata = {"name": name, "role": "candidate", "assessment_id": token["assessment_id"]}
@@ -139,15 +147,16 @@ async def login_with_assessment_token(body: TokenLoginRequest):
         auth_response = auth.auth.sign_in_with_password({"email": email, "password": password})
     except AuthApiError:
         try:
-            auth.auth.admin.create_user({
+            # First time this candidate uses the platform — create their auth account
+            get_supabase().auth.admin.create_user({
                 "email": email,
                 "password": password,
                 "email_confirm": True,
                 "user_metadata": user_metadata,
             })
         except AuthApiError:
-            # User already exists from a previous token — update password to current token's hash
-            users = auth.auth.admin.list_users()
+            # Account already exists (created with old per-token password) — migrate to stable password
+            users = get_supabase().auth.admin.list_users(page=1, per_page=1000)
             existing = next(
                 (u for u in (users or []) if getattr(u, "email", "") == email),
                 None,
@@ -157,7 +166,7 @@ async def login_with_assessment_token(body: TokenLoginRequest):
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to setup candidate authentication",
                 )
-            auth.auth.admin.update_user_by_id(
+            get_supabase().auth.admin.update_user_by_id(
                 existing.id,
                 {"password": password, "user_metadata": user_metadata},
             )

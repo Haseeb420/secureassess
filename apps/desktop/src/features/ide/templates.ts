@@ -22,27 +22,32 @@ export type Language =
 
 export const defaultTemplates: Record<Language, string> = {
   python: `import sys
+from typing import List
 
-def main():
-    name = input()
-    print(f"Hello, {name}!")
+def solve(input_data: str) -> str:
+    # Write your solution here
+    lines = input_data.strip().split('\\n')
+    result = lines[0]
+    return result
 
 if __name__ == "__main__":
-    main()
+    data = sys.stdin.read()
+    print(solve(data))
 `,
 
   javascript: `const readline = require('readline');
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  terminal: false,
-});
+function solve(inputData) {
+    // Write your solution here
+    const lines = inputData.trim().split('\\n');
+    return lines[0];
+}
 
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
 const lines = [];
 rl.on('line', (line) => lines.push(line));
 rl.on('close', () => {
-  const name = lines[0] !== undefined ? lines[0] : 'World';
-  console.log(\`Hello, \${name}!\`);
+    console.log(solve(lines.join('\\n')));
 });
 `,
 
@@ -51,61 +56,94 @@ declare const process: any;
 
 const readline = require('readline');
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  terminal: false,
-});
+function solve(inputData: string): string {
+    // Write your solution here
+    const lines = inputData.trim().split('\\n');
+    return lines[0];
+}
 
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
 const lines: string[] = [];
 rl.on('line', (line: string) => lines.push(line));
 rl.on('close', () => {
-  const name: string = lines[0] !== undefined ? lines[0] : 'World';
-  console.log(\`Hello, \${name}!\`);
+    console.log(solve(lines.join('\\n')));
 });
 `,
 
   java: `import java.util.Scanner;
 
 public class Main {
+    public static String solve(String inputData) {
+        // Write your solution here
+        String[] lines = inputData.trim().split("\\n");
+        return lines[0];
+    }
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        String name = scanner.nextLine();
-        System.out.println("Hello, " + name + "!");
+        StringBuilder sb = new StringBuilder();
+        while (scanner.hasNextLine()) {
+            sb.append(scanner.nextLine()).append("\\n");
+        }
+        System.out.println(solve(sb.toString()));
         scanner.close();
     }
 }
 `,
 
   cpp: `#include <iostream>
+#include <sstream>
 #include <string>
 using namespace std;
 
+string solve(const string& inputData) {
+    // Write your solution here
+    istringstream iss(inputData);
+    string line;
+    getline(iss, line);
+    return line;
+}
+
 int main() {
-    string name;
-    getline(cin, name);
-    cout << "Hello, " << name << "!" << endl;
+    ostringstream buffer;
+    buffer << cin.rdbuf();
+    cout << solve(buffer.str()) << endl;
     return 0;
 }
 `,
 
   c: `#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+void solve(const char* input, char* output) {
+    /* Write your solution here */
+    sscanf(input, "%[^\\n]", output);
+}
 
 int main() {
-    char name[256];
-    fgets(name, sizeof(name), stdin);
-    name[strcspn(name, "\\n")] = 0;
-    printf("Hello, %s!\\n", name);
+    char input[4096] = {0};
+    char output[4096] = {0};
+    fread(input, 1, sizeof(input) - 1, stdin);
+    solve(input, output);
+    printf("%s\\n", output);
     return 0;
 }
 `,
 
   csharp: `using System;
+using System.IO;
 
 class Main {
+    static string Solve(string inputData) {
+        // Write your solution here
+        var lines = inputData.Trim().Split('\\n');
+        return lines[0];
+    }
+
     static void Main(string[] args) {
-        string name = Console.ReadLine() ?? "World";
-        Console.WriteLine($"Hello, {name}!");
+        string input = Console.In.ReadToEnd();
+        Console.WriteLine(Solve(input));
     }
 }
 `,
@@ -119,83 +157,179 @@ import (
 \t"strings"
 )
 
+func solve(inputData string) string {
+\t// Write your solution here
+\tlines := strings.Split(strings.TrimSpace(inputData), "\\n")
+\treturn lines[0]
+}
+
 func main() {
 \treader := bufio.NewReader(os.Stdin)
-\tname, _ := reader.ReadString('\\n')
-\tname = strings.TrimSpace(name)
-\tfmt.Printf("Hello, %s!\\n", name)
+\tvar sb strings.Builder
+\tfor {
+\t\tline, err := reader.ReadString('\\n')
+\t\tsb.WriteString(line)
+\t\tif err != nil {
+\t\t\tbreak
+\t\t}
+\t}
+\tfmt.Println(solve(sb.String()))
 }
 `,
 
-  rust: `use std::io::{self, BufRead};
+  rust: `use std::io::{self, Read};
+
+fn solve(input: &str) -> String {
+    // Write your solution here
+    input.lines().next().unwrap_or("").to_string()
+}
 
 fn main() {
-    let stdin = io::stdin();
-    let name = stdin.lock().lines().next().unwrap().unwrap();
-    println!("Hello, {}!", name);
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input).unwrap();
+    println!("{}", solve(&input));
 }
 `,
 
-  ruby: `name = gets.chomp
-puts "Hello, #{name}!"
+  ruby: `def solve(input_data)
+  # Write your solution here
+  lines = input_data.strip.split("\\n")
+  lines[0]
+end
+
+input = $stdin.read
+puts solve(input)
 `,
 
-  kotlin: `fun main() {
-    val name = readLine() ?: "World"
-    println("Hello, $name!")
+  kotlin: `fun solve(inputData: String): String {
+    // Write your solution here
+    return inputData.trim().lines().first()
+}
+
+fun main() {
+    val input = generateSequence(::readLine).joinToString("\\n")
+    println(solve(input))
 }
 `,
 
   swift: `import Foundation
 
-if let name = readLine() {
-    print("Hello, \\(name)!")
+func solve(_ inputData: String) -> String {
+    // Write your solution here
+    let lines = inputData.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\\n")
+    return lines.first ?? ""
 }
+
+var input = ""
+while let line = readLine() {
+    input += line + "\\n"
+}
+print(solve(input))
 `,
 
   php: `<?php
-$name = trim(fgets(STDIN));
-echo "Hello, $name!\\n";
+function solve(string $inputData): string {
+    // Write your solution here
+    $lines = explode("\\n", trim($inputData));
+    return $lines[0];
+}
+
+$input = stream_get_contents(STDIN);
+echo solve($input) . "\\n";
 `,
 
-  r: `name <- readLines("stdin", n = 1)
-cat(sprintf("Hello, %s!\\n", name))
+  r: `solve <- function(input_data) {
+  # Write your solution here
+  lines <- strsplit(trimws(input_data), "\\n")[[1]]
+  return(lines[1])
+}
+
+input <- paste(readLines(con = stdin()), collapse = "\\n")
+cat(solve(input), "\\n", sep = "")
 `,
 
   scala: `import scala.io.StdIn
 
 object Main {
+  def solve(inputData: String): String = {
+    // Write your solution here
+    inputData.trim.split("\\n").head
+  }
+
   def main(args: Array[String]): Unit = {
-    val name = StdIn.readLine()
-    println(s"Hello, $name!")
+    val input = Iterator.continually(StdIn.readLine())
+      .takeWhile(_ != null)
+      .mkString("\\n")
+    println(solve(input))
   }
 }
 `,
 
   bash: `#!/bin/bash
-read -r name
-echo "Hello, $name!"
+
+# Read all input
+input=$(cat)
+
+# Write your solution here
+solve() {
+    local data="$1"
+    echo "$data" | head -1
+}
+
+solve "$input"
 `,
 
-  haskell: `main :: IO ()
+  haskell: `import System.IO
+
+solve :: String -> String
+solve inputData =
+    -- Write your solution here
+    head (lines inputData)
+
+main :: IO ()
 main = do
-    name <- getLine
-    putStrLn ("Hello, " ++ name ++ "!")
+    input <- getContents
+    putStrLn (solve input)
 `,
 
-  lua: `local name = io.read()
-print("Hello, " .. name .. "!")
+  lua: `local function solve(inputData)
+    -- Write your solution here
+    local lines = {}
+    for line in inputData:gmatch("[^\\n]+") do
+        table.insert(lines, line)
+    end
+    return lines[1] or ""
+end
+
+local input = io.read("*a")
+print(solve(input))
 `,
 
   perl: `use strict;
 use warnings;
 
-my $name = <STDIN>;
-chomp $name;
-print "Hello, $name!\\n";
+sub solve {
+    my ($input_data) = @_;
+    # Write your solution here
+    my @lines = split /\\n/, $input_data;
+    return $lines[0] // "";
+}
+
+my $input = do { local $/; <STDIN> };
+print solve($input) . "\\n";
 `,
 
-  elixir: `name = IO.gets("") |> String.trim()
-IO.puts("Hello, \#{name}!")
+  elixir: `defmodule Solution do
+  def solve(input_data) do
+    # Write your solution here
+    input_data
+    |> String.trim()
+    |> String.split("\\n")
+    |> List.first()
+  end
+end
+
+input = IO.read(:stdio, :all)
+IO.puts(Solution.solve(input))
 `,
 }

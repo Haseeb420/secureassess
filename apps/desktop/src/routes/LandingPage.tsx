@@ -76,7 +76,7 @@ export function LandingPage() {
     token.candidateEmail ??
     'Candidate'
   const initials = getInitials(candidateName)
-  const attemptsRemaining = token.usedCount < token.usageLimit
+  const attemptsRemaining = token.usageLimit === null || token.usedCount < token.usageLimit
 
   const handleLogout = () => {
     reset()
@@ -387,7 +387,9 @@ export function LandingPage() {
                 {/* Attempts info */}
                 <div className="mt-2">
                   <p className="text-xs text-brand-navy/40" style={DMMONO}>
-                    Attempt {token.usedCount + 1} of {token.usageLimit}
+                    {token.usageLimit === null
+                      ? `Attempt ${token.usedCount + 1} · Unlimited attempts`
+                      : `Attempt ${token.usedCount + 1} of ${token.usageLimit}`}
                   </p>
                   {token.usedCount > 0 && (
                     <p className="mt-0.5 text-xs text-brand-navy/40" style={DMMONO}>

@@ -85,7 +85,7 @@ export default function AttemptDetailPage() {
             <p className="mt-2 font-dm-sans text-sm text-brand-navy/60">{data.candidate_name}</p>
             <p className="mt-0.5 font-dm-sans text-xs text-brand-navy/40">
               {data.assessment_title ?? '—'}&nbsp;·&nbsp;Attempt {data.attempt_number} of{' '}
-              {data.usage_limit ?? '?'}
+              {data.usage_limit == null ? '∞' : data.usage_limit}
             </p>
             {data.completed_at && (
               <p className="mt-0.5 font-dm-sans text-xs text-brand-navy/40">
@@ -116,7 +116,7 @@ export default function AttemptDetailPage() {
               },
               {
                 label: 'Token used',
-                value: `Attempt ${data.attempt_number} of ${data.usage_limit ?? '?'}`,
+                value: `Attempt ${data.attempt_number} of ${data.usage_limit == null ? '∞' : data.usage_limit}`,
               },
             ].map(({ label, value, warn }) => (
               <div key={label} className="flex items-center justify-between">

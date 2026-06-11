@@ -97,8 +97,9 @@ async def start_attempt(body: StartAttemptRequest):
         if now > expiry:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token has expired")
 
-    # 2. Check usage limit
-    if token.get("used_count", 0) >= token.get("usage_limit", 1):
+    # 2. Check usage limit (None = unlimited)
+    usage_limit = token.get("usage_limit")
+    if usage_limit is not None and token.get("used_count", 0) >= usage_limit:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token usage limit reached")
 
     # 3. Fetch assessment and check it is active

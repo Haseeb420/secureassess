@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -171,7 +171,7 @@ jobs:
 
     steps:
       - name: Checkout (post-version-bump)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main    # always pull the freshest main, which includes the version commit
 
@@ -184,7 +184,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -283,7 +283,7 @@ jobs:
           ls -lh "$OUT/"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: dist/release/${{ matrix.artifact }}/
@@ -300,7 +300,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
 
@@ -355,7 +355,7 @@ jobs:
           EOF
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name:    ${{ needs.version.outputs.new_tag }}
           name:        "SecureAssess ${{ needs.version.outputs.new_tag }}"
@@ -390,7 +390,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
 

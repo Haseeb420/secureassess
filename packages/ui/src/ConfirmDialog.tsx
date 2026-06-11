@@ -1,13 +1,14 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Send } from 'lucide-react'
 import { Button } from './Button'
 
 interface ConfirmDialogProps {
   open: boolean
   title: string
-  description: string
+  description: string | ReactNode
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'danger' | 'primary'
@@ -50,12 +51,18 @@ export function ConfirmDialog({
             transition={{ duration: 0.15 }}
           >
             <div className="mb-4 flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle size={18} className="text-red-500" aria-hidden="true" />
-              </div>
-              <div>
+              {variant === 'danger' ? (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle size={18} className="text-red-500" aria-hidden="true" />
+                </div>
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-navy/10">
+                  <Send size={18} className="text-brand-navy" aria-hidden="true" />
+                </div>
+              )}
+              <div className="min-w-0">
                 <h2 id="confirm-title" className="text-sm font-semibold text-brand-navy">{title}</h2>
-                <p className="mt-1 text-sm text-brand-navy/60">{description}</p>
+                <div className="mt-1 text-sm text-brand-navy/60">{description}</div>
               </div>
             </div>
             <div className="flex gap-3 justify-end">

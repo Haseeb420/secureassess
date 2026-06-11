@@ -117,7 +117,7 @@ export interface Invite {
   candidate_email: string
   candidate_name: string
   expiry_at: string | null  // ISO datetime; null = no expiry
-  usage_limit: number
+  usage_limit: number | null  // null = unlimited
   used_count: number
   is_revoked: boolean
   mock_ids: string[]
@@ -133,7 +133,7 @@ export interface CreateInviteBody {
   candidate_name: string
   mock_ids?: string[]
   expiry_at?: string | null  // ISO datetime; null/omitted = no expiry
-  usage_limit?: number
+  usage_limit?: number | null  // null = unlimited
   notes?: string | null
 }
 
@@ -314,7 +314,7 @@ export interface Token {
   assessment_id: string
   mock_ids: string[]
   expiry_at: string
-  usage_limit: number
+  usage_limit: number | null  // null = unlimited
   used_count: number
   token_value: string
   created_by: string
@@ -330,13 +330,13 @@ export interface CreateTokenBody {
   assessment_id: string
   mock_ids?: string[]
   expiry_at: string
-  usage_limit: number
+  usage_limit: number | null  // null = unlimited
   notes?: string | null
 }
 
 export interface PatchTokenBody {
   expiry_at?: string
-  usage_limit?: number
+  usage_limit?: number | null  // null = unlimited
   mock_ids?: string[]
   notes?: string | null
 }
@@ -409,7 +409,7 @@ export interface AttemptListItem {
   total_time_secs?: number
   attempt_number: number
   token_id?: string
-  usage_limit?: number
+  usage_limit?: number | null  // null = unlimited
   has_pending_review: boolean
   questions_answered?: number
   total_questions?: number

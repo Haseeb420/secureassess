@@ -10,14 +10,14 @@ class CreateTokenRequest(BaseModel):
     assessment_id: str
     mock_ids: list[str] = []
     expiry_at: Optional[datetime] = None  # None = no expiry (unlimited time)
-    usage_limit: int = Field(default=1, ge=1, le=100)
+    usage_limit: Optional[int] = Field(default=1, ge=1, le=None)  # None = unlimited
     notes: Optional[str] = None
 
 
 class PatchTokenRequest(BaseModel):
     expiry_at: Optional[datetime] = None
     clear_expiry: bool = False            # set True to remove expiry entirely
-    usage_limit: Optional[int] = Field(default=None, ge=1, le=100)
+    usage_limit: Optional[int] = Field(default=None, ge=1, le=None)  # None = unlimited
     mock_ids: Optional[list[str]] = None
     notes: Optional[str] = None
 

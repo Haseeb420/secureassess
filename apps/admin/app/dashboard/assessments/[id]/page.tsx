@@ -28,7 +28,7 @@ type InviteStatus = 'active' | 'expired' | 'limit_reached' | 'revoked'
 function getInviteStatus(invite: Invite): InviteStatus {
   if (invite.is_revoked) return 'revoked'
   if (invite.expiry_at && isPast(new Date(invite.expiry_at))) return 'expired'
-  if (invite.used_count >= invite.usage_limit) return 'limit_reached'
+  if (invite.usage_limit !== null && invite.usage_limit !== undefined && invite.used_count >= invite.usage_limit) return 'limit_reached'
   return 'active'
 }
 
@@ -141,8 +141,8 @@ const inviteSchema = z.object({
   mockIds:        z.array(z.string()),
   noExpiry:       z.boolean(),
   expiryAt:       z.string().optional(),
-  usageMode:      z.enum(['single', 'multiple']),
-  usageLimit:     z.number().int().min(1).max(10),
+  usageMode:      z.enum(['single', 'multiple', 'unlimited']),
+  usageLimit:     z.number().int().min(2).optional(),
   notes:          z.string().optional(),
 }).refine((d) => d.noExpiry || (d.expiryAt && d.expiryAt.length > 0), {
   message: 'Set an expiry date or enable no expiry',
@@ -181,7 +181,7 @@ function InviteDrawer({
     defaultValues: {
       candidateName: '', candidateEmail: '',
       mockIds: [], noExpiry: false, expiryAt: defaultExpiry,
-      usageMode: 'single', usageLimit: 1, notes: '',
+      usageMode: 'single', usageLimit: undefined, notes: '',
     },
   })
 
@@ -197,7 +197,7 @@ function InviteDrawer({
         candidate_email: data.candidateEmail,
         mock_ids:        data.mockIds,
         expiry_at:       data.noExpiry ? null : (data.expiryAt ? new Date(data.expiryAt).toISOString() : null),
-        usage_limit:     data.usageMode === 'single' ? 1 : data.usageLimit,
+        usage_limit:     data.usageMode === 'single' ? 1 : data.usageMode === 'unlimited' ? null : (data.usageLimit ?? 2),
         notes:           data.notes || null,
       }),
     onSuccess: (invite) => {
@@ -414,13 +414,13 @@ function InviteDrawer({
                         name="usageMode"
                         render={({ field }) => (
                           <>
-                            {(['single', 'multiple'] as const).map((mode) => (
+                            {(['single', 'multiple', 'unlimited'] as const).map((mode) => (
                               <button
                                 key={mode} type="button"
                                 onClick={() => field.onChange(mode)}
                                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${field.value === mode ? 'border-brand-orange bg-brand-orange/5 text-brand-orange' : 'border-brand-border text-brand-navy/60 hover:border-brand-navy/30'}`}
                               >
-                                {mode === 'single' ? 'Single attempt' : 'Multiple attempts'}
+                                {mode === 'single' ? 'Single' : mode === 'multiple' ? 'Multiple' : 'Unlimited'}
                               </button>
                             ))}
                           </>
@@ -431,7 +431,7 @@ function InviteDrawer({
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.15 }}>
                         <input
                           {...register('usageLimit', { valueAsNumber: true })}
-                          type="number" min={2} max={10} placeholder="e.g. 3"
+                          type="number" min={2} placeholder="e.g. 3"
                           className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-sm text-brand-navy outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/15 transition-shadow"
                         />
                       </motion.div>
@@ -544,7 +544,8 @@ function InviteRow({
   const st = getInviteStatus(invite)
   const cfg = INVITE_STATUS_CONFIG[st]
   const expiry = invite.expiry_at ? new Date(invite.expiry_at) : null
-  const usagePct = Math.min(100, Math.round((invite.used_count / invite.usage_limit) * 100))
+  const isUnlimited = invite.usage_limit === null || invite.usage_limit === undefined
+  const usagePct = isUnlimited ? 0 : Math.min(100, Math.round((invite.used_count / invite.usage_limit!) * 100))
 
   return (
     <motion.div
@@ -582,14 +583,16 @@ function InviteRow({
       {/* Usage */}
       <div className="w-24">
         <p className="text-xs font-medium text-brand-navy tabular-nums mb-1.5">
-          {invite.used_count}/{invite.usage_limit}
+          {isUnlimited ? `${invite.used_count} / ∞` : `${invite.used_count}/${invite.usage_limit}`}
         </p>
-        <div className="h-1.5 rounded-full bg-brand-border overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${usagePct >= 100 ? 'bg-amber-400' : 'bg-brand-orange'}`}
-            style={{ width: `${usagePct}%` }}
-          />
-        </div>
+        {!isUnlimited && (
+          <div className="h-1.5 rounded-full bg-brand-border overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${usagePct >= 100 ? 'bg-amber-400' : 'bg-brand-orange'}`}
+              style={{ width: `${usagePct}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Expires */}
@@ -764,7 +767,7 @@ export default function AssessmentDetailPage() {
   const inviteStats = {
     total:  invites.length,
     active: invites.filter((i) => getInviteStatus(i) === 'active').length,
-    done:   invites.filter((i) => i.used_count >= i.usage_limit).length,
+    done:   invites.filter((i) => i.usage_limit !== null && i.usage_limit !== undefined && i.used_count >= i.usage_limit).length,
   }
 
   return (

@@ -105,7 +105,7 @@ function normalizeToken(raw: RawRecord): Token {
     assessmentId:   raw['assessmentId']   ?? raw['assessment_id']   ?? '',
     mockIds:        raw['mockIds']        ?? raw['mock_ids']         ?? [],
     expiryAt:       raw['expiryAt']       ?? raw['expiry_at']        ?? '',
-    usageLimit:     raw['usageLimit']     ?? raw['usage_limit']      ?? 1,
+    usageLimit:     raw['usageLimit']     ?? raw['usage_limit']      ?? null,
     usedCount:      raw['usedCount']      ?? raw['used_count']       ?? 0,
     tokenValue:     raw['tokenValue']     ?? raw['token_value']      ?? '',
     organizationId: raw['organizationId'] ?? raw['organization_id'],

@@ -198,7 +198,8 @@ async def validate_token(body: ValidateTokenRequest, request: Request):
         if datetime.now(tz=timezone.utc) > expiry:
             return ValidateTokenResponse(valid=False, reason="expired")
 
-    if token.get("used_count", 0) >= token.get("usage_limit", 1):
+    usage_limit = token.get("usage_limit")
+    if usage_limit is not None and token.get("used_count", 0) >= usage_limit:
         return ValidateTokenResponse(valid=False, reason="usage_limit_reached")
 
     a_result = (

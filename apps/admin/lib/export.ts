@@ -21,15 +21,19 @@ export function downloadCSV(filename: string, headers: string[], rows: Cell[][])
 }
 
 export async function downloadExcel(filename: string, headers: string[], rows: Cell[][]) {
-  const { utils, writeFile } = await import('xlsx')
-  const data = [headers, ...rows.map((r) => r.map((c) => c ?? ''))]
-  const ws = utils.aoa_to_sheet(data)
-  ws['!cols'] = headers.map((h, i) => ({
-    wch: Math.max(h.length, ...rows.map((r) => String(r[i] ?? '').length)) + 2,
-  }))
-  const wb = utils.book_new()
-  utils.book_append_sheet(wb, ws, 'Sheet1')
-  writeFile(wb, `${filename}.xlsx`)
+  const { Workbook } = await import('exceljs')
+  const wb = new Workbook()
+  const ws = wb.addWorksheet('Sheet1')
+  ws.addRow(headers)
+  rows.forEach((r) => ws.addRow(r.map((c) => c ?? '')))
+  headers.forEach((h, i) => {
+    ws.getColumn(i + 1).width = Math.max(h.length, ...rows.map((r) => String(r[i] ?? '').length)) + 2
+  })
+  const buffer = await wb.xlsx.writeBuffer()
+  triggerDownload(
+    `${filename}.xlsx`,
+    new Blob([buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+  )
 }
 
 export async function downloadPDF(

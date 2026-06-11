@@ -23,6 +23,7 @@
     "@uiw/react-md-editor": "^4.1.1",
     "better-auth": "^1.6.12",
     "date-fns": "^4.3.0",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.40.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
@@ -36,7 +37,6 @@
     "recharts": "^3.8.1",
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
-    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -2,8 +2,8 @@
 """
 Create an admin user in Better Auth (used by the admin dashboard).
 
-This is separate from seed_admin.py which creates Supabase Auth users
-(used by the desktop app / candidate flow).
+This is separate from seed_admin.py which targets Supabase Auth (desktop/candidate flow).
+Better Auth stores users in its own tables in the PostgreSQL database.
 
 Usage:
     python scripts/seed_better_auth_admin.py \
@@ -11,23 +11,20 @@ Usage:
         --password YourPassword123! \
         --name "Admin User"
 
-Reads BETTER_AUTH_URL from apps/admin/.env.local (defaults to http://localhost:3000).
-The admin dashboard must be running before you call this script.
+Reads DATABASE_URL from apps/admin/.env.local (defaults to local Supabase on :54322).
+Does NOT require the admin dashboard to be running.
 
-How it works:
-    1. POST /api/auth/sign-up/email  → creates the user in Better Auth's DB
-    2. PATCH /api/auth/admin/set-role → promotes the user to role=admin
-       (uses Better Auth admin plugin endpoint)
+Dependencies: bcrypt, psycopg2  (already in apps/api/requirements.txt)
+    pip install bcrypt psycopg2-binary
 """
 
 from __future__ import annotations
 
 import argparse
-import json
+import datetime
 import os
+import secrets
 import sys
-import urllib.request
-import urllib.error
 from pathlib import Path
 
 
@@ -44,66 +41,73 @@ def load_env(path: Path) -> dict[str, str]:
     return env
 
 
-def post(url: str, payload: dict, headers: dict | None = None) -> dict:
-    data = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json", **(headers or {})},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        print(f"HTTP {e.code}: {body}", file=sys.stderr)
-        sys.exit(1)
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed a Better Auth admin user for the admin dashboard")
-    parser.add_argument("--email", required=True)
+    parser.add_argument("--email",    required=True)
     parser.add_argument("--password", required=True)
-    parser.add_argument("--name", default="Admin")
+    parser.add_argument("--name",     default="Admin")
     args = parser.parse_args()
+
+    try:
+        import bcrypt
+        import psycopg2
+    except ImportError:
+        print("Missing dependencies. Run: pip install bcrypt psycopg2-binary", file=sys.stderr)
+        sys.exit(1)
 
     repo_root = Path(__file__).parent.parent
     env = load_env(repo_root / "apps" / "admin" / ".env.local")
 
-    base_url = (
-        env.get("BETTER_AUTH_URL")
-        or env.get("NEXT_PUBLIC_BETTER_AUTH_URL")
-        or os.environ.get("BETTER_AUTH_URL", "http://localhost:3000")
-    ).rstrip("/")
-
-    print(f"Creating Better Auth admin user: {args.email}")
-    print(f"Target: {base_url}")
-
-    # Step 1: sign up
-    result = post(
-        f"{base_url}/api/auth/sign-up/email",
-        {"email": args.email, "password": args.password, "name": args.name},
+    db_url = (
+        env.get("DATABASE_URL")
+        or os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:54322/postgres")
     )
-    user_id = result.get("user", {}).get("id") or result.get("id")
-    if not user_id:
-        print(f"Unexpected response: {result}", file=sys.stderr)
+
+    print(f"Connecting to: {db_url}")
+
+    try:
+        conn = psycopg2.connect(db_url)
+    except Exception as e:
+        print(f"DB connection failed: {e}", file=sys.stderr)
+        print("Make sure local Supabase is running: make supabase-start", file=sys.stderr)
         sys.exit(1)
 
-    print(f"✓ User created: {user_id}")
+    cur = conn.cursor()
 
-    # Step 2: promote to admin via Better Auth admin plugin
-    # Requires BETTER_AUTH_SECRET — set as Authorization header
-    secret = env.get("BETTER_AUTH_SECRET") or os.environ.get("BETTER_AUTH_SECRET", "")
-    result2 = post(
-        f"{base_url}/api/auth/admin/set-role",
-        {"userId": user_id, "role": "admin"},
-        headers={"Authorization": f"Bearer {secret}"} if secret else {},
+    cur.execute('SELECT id, role FROM "user" WHERE email = %s', (args.email,))
+    existing = cur.fetchone()
+    if existing:
+        print(f"User already exists (id={existing[0]}, role={existing[1]})")
+        if existing[1] != "admin":
+            cur.execute('UPDATE "user" SET role = %s WHERE email = %s', ("admin", args.email))
+            conn.commit()
+            print("  → Role updated to admin")
+        conn.close()
+        return
+
+    pw_hash    = bcrypt.hashpw(args.password.encode(), bcrypt.gensalt(rounds=10)).decode()
+    now        = datetime.datetime.now(datetime.timezone.utc)
+    user_id    = secrets.token_urlsafe(24)
+    account_id = secrets.token_urlsafe(24)
+
+    cur.execute(
+        '''INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt", role)
+           VALUES (%s, %s, %s, TRUE, %s, %s, %s)''',
+        (user_id, args.name, args.email, now, now, "admin"),
     )
-    print(f"✓ Role set to admin")
-    print(f"\nAdmin user ready. Log in at {base_url}/login")
-    print(f"  Email:    {args.email}")
-    print(f"  Password: {args.password}")
+    cur.execute(
+        '''INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
+           VALUES (%s, %s, %s, %s, %s, %s, %s)''',
+        (account_id, args.email, "credential", user_id, pw_hash, now, now),
+    )
+    conn.commit()
+    conn.close()
+
+    print(f"✓ Admin user created")
+    print(f"  email:    {args.email}")
+    print(f"  password: {args.password}")
+    print(f"  role:     admin")
+    print(f"\nLog in at: http://localhost:3000/login")
 
 
 if __name__ == "__main__":

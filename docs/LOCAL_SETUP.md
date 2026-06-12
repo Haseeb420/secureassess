@@ -111,68 +111,54 @@ All three apps share the same Supabase project. Find values at:
 
 ### `apps/api/.env`
 
-| Variable | Value | Notes |
+| Variable | Local dev value | Notes |
 |---|---|---|
+| `ENVIRONMENT` | `development` | `production` on Fly.io (set by fly.toml) |
 | `SUPABASE_URL` | Supabase project URL | Required |
+| `SUPABASE_ANON_KEY` | Supabase anon key | Required |
 | `SUPABASE_SERVICE_KEY` | service_role JWT | Required — never expose in frontend |
 | `SUPABASE_JWT_SECRET` | JWT secret | Required |
-| `DATABASE_URL` | Supabase pooler URL | Required for production DB |
-| `JUDGE0_URL` | `https://unkind-freeware-unmoved.ngrok-free.dev` | Production — same in local dev |
-| `JUDGE0_API_KEY` | (empty) | Leave empty; no auth configured |
-| `EXECUTION_BACKEND` | `judge0` | `local` for dev without Judge0 |
-| `ENVIRONMENT` | `production` | `development` for local dev |
-| `ADMIN_URL` | `https://admin-delta-ecru.vercel.app` | Better Auth trusted origin |
-| `BETTER_AUTH_URL` | `https://admin-delta-ecru.vercel.app` | Better Auth base URL |
-| `BETTER_AUTH_SECRET` | random secret | Required |
-| `ENCRYPTION_SECRET` | random hex string | Submission HMAC signing |
-| `JWT_SECRET` | Same as `SUPABASE_JWT_SECRET` | |
-
-For **local dev**, override:
-```
-ENVIRONMENT=development
-ADMIN_URL=http://localhost:3000
-BETTER_AUTH_URL=http://localhost:3000
-```
+| `DATABASE_URL` | `postgresql://secureassess:secureassess@localhost:5432/secureassess` | Local postgres; Supabase pooler URL in prod |
+| `BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
+| `BETTER_AUTH_SECRET` | random string ≥32 chars | Must match `apps/admin/.env.local` |
+| `ADMIN_URL` | `http://localhost:3000` | CORS trusted origin |
+| `ENCRYPTION_SECRET` | 64-char hex string | Submission HMAC signing |
+| `JWT_SECRET` | Same as `SUPABASE_JWT_SECRET` | JWT verification |
+| `GMAIL_ADDRESS` | _(empty for local)_ | Gmail address; set in Fly.io secrets for prod |
+| `GMAIL_APP_PASSWORD` | _(empty for local)_ | Gmail App Password; set in Fly.io secrets for prod |
+| `LOG_LEVEL` | `INFO` | `DEBUG` useful during development |
+| `NGROK_STATIC_DOMAIN` | `unkind-freeware-unmoved.ngrok-free.dev` | Only needed if you operate the Judge0 machine |
+| `EXECUTION_BACKEND` | `local` | Reserved for future API-level execution routing; unused by API today |
+| `JUDGE0_URL` | `http://localhost:2358` | Reserved for future API-level execution routing; unused by API today |
 
 ---
 
 ### `apps/desktop/.env`
 
-| Variable | Value | Notes |
+| Variable | Local dev value | Notes |
 |---|---|---|
-| `VITE_API_BASE_URL` | `https://secureassess-api.fly.dev` | Production API |
-| `VITE_BETTER_AUTH_URL` | `https://admin-delta-ecru.vercel.app` | Auth base URL |
-| `VITE_SUPABASE_URL` | Supabase project URL | |
-| `VITE_SUPABASE_ANON_KEY` | anon/public key | |
-| `VITE_JUDGE0_URL` | `https://unkind-freeware-unmoved.ngrok-free.dev` | Same as production |
-| `VITE_EXECUTION_BACKEND` | `judge0` | `local` to use LocalExecutor in dev |
-
-For **local dev**, override:
-```
-VITE_API_BASE_URL=http://localhost:8000
-VITE_BETTER_AUTH_URL=http://localhost:3000
-```
+| `VITE_API_BASE_URL` | `http://localhost:8000` | `https://secureassess-api.fly.dev` in prod |
+| `VITE_ADMIN_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
+| `VITE_BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
+| `VITE_SUPABASE_URL` | Supabase project URL | Same for dev and prod |
+| `VITE_SUPABASE_ANON_KEY` | anon/public key | Same for dev and prod; public, safe to embed |
+| `VITE_JUDGE0_URL` | _(empty)_ | `https://unkind-freeware-unmoved.ngrok-free.dev` in prod |
+| `VITE_EXECUTION_BACKEND` | `local` | `judge0` in prod builds (injected by GitHub Actions) |
 
 ---
 
 ### `apps/admin/.env.local`
 
-| Variable | Value | Notes |
+| Variable | Local dev value | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon/public key | |
-| `NEXT_PUBLIC_API_BASE_URL` | `https://secureassess-api.fly.dev` | Production API |
-| `BETTER_AUTH_URL` | `https://admin-delta-ecru.vercel.app` | Better Auth base URL |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | `https://admin-delta-ecru.vercel.app` | Client-side auth URL |
-| `BETTER_AUTH_SECRET` | random secret | Must match API |
-| `DATABASE_URL` | Supabase pooler URL | |
-
-For **local dev**, override:
-```
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-BETTER_AUTH_URL=http://localhost:3000
-NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
-```
+| `ENVIRONMENT` | `development` | |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Same for dev and prod |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon/public key | Same for dev and prod |
+| `API_BASE_URL` | `http://localhost:8000` | `https://secureassess-api.fly.dev` in prod; server-side only |
+| `BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
+| `BETTER_AUTH_SECRET` | random string ≥32 chars | Must match `apps/api/.env` |
+| `DATABASE_URL` | `postgresql://secureassess:secureassess@localhost:5432/secureassess` | Supabase pooler URL in prod |
 
 ---
 
@@ -197,11 +183,11 @@ cd ../..
 cp apps/desktop/.env.example apps/desktop/.env
 cp apps/api/.env.example apps/api/.env
 cp apps/admin/.env.local.example apps/admin/.env.local
-# Edit each file and fill in the Supabase values + override URLs for local dev
+# Edit each file and fill in the Supabase values
 
-# Apply Supabase migrations
-supabase db push --db-url "postgresql://postgres:[password]@[host]:5432/postgres"
-# Or paste each file in Supabase dashboard → SQL Editor
+# Set up the local PostgreSQL database (choose one path):
+make db-setup          # native psql — requires: brew install postgresql@16
+# make db-setup-docker # Docker alternative — requires Docker Desktop
 
 # Verify everything builds
 pnpm build --filter=!@secureassess/desktop

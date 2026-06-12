@@ -95,17 +95,14 @@ java --version && go version && g++ --version && python3 --version && node --ver
 
 ## 2. Environment Variables
 
-Each app reads from its own `.env` file. The values below reflect the production setup. For local dev, swap the URLs as noted.
+The example files contain working local defaults — **no manual editing required** for most variables once you run `make supabase-start`.
 
-### Supabase credentials
+The only production-specific values live in:
+- Fly.io secrets (`make fly-secrets`) for the API
+- Vercel environment variables (`make vercel-env`) for the admin dashboard
+- GitHub secrets (`make secrets-sync`) for Tauri release builds
 
-All three apps share the same Supabase project. Find values at:
-**Supabase dashboard → your project → Project Settings → API**
-
-- **Project URL** → `SUPABASE_URL` / `VITE_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`
-- **anon / public key** → `VITE_SUPABASE_ANON_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- **service_role key** → `SUPABASE_SERVICE_KEY` (never expose in frontend)
-- **JWT secret** → **Project Settings → API → JWT Settings** → `SUPABASE_JWT_SECRET`
+For production templates see each app's `.env.production.example` / `.env.production.local.example`.
 
 ---
 
@@ -113,23 +110,20 @@ All three apps share the same Supabase project. Find values at:
 
 | Variable | Local dev value | Notes |
 |---|---|---|
-| `ENVIRONMENT` | `development` | `production` on Fly.io (set by fly.toml) |
-| `SUPABASE_URL` | Supabase project URL | Required |
-| `SUPABASE_ANON_KEY` | Supabase anon key | Required |
-| `SUPABASE_SERVICE_KEY` | service_role JWT | Required — never expose in frontend |
-| `SUPABASE_JWT_SECRET` | JWT secret | Required |
-| `DATABASE_URL` | `postgresql://secureassess:secureassess@localhost:5432/secureassess` | Local postgres; Supabase pooler URL in prod |
+| `SUPABASE_URL` | `http://localhost:54321` | `https://<ref>.supabase.co` in prod |
+| `SUPABASE_ANON_KEY` | local default key | Well-known dev key — not a real secret |
+| `SUPABASE_SERVICE_KEY` | local default key | Well-known dev key — not a real secret |
+| `SUPABASE_JWT_SECRET` | `super-secret-jwt-token-with-at-least-32-characters-long` | Real secret in prod |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:54322/postgres` | Supabase bundled DB; pooler URL in prod |
 | `BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
-| `BETTER_AUTH_SECRET` | random string ≥32 chars | Must match `apps/admin/.env.local` |
+| `BETTER_AUTH_SECRET` | `local-dev-better-auth-secret-change-in-production` | Must match `apps/admin/.env.local` |
 | `ADMIN_URL` | `http://localhost:3000` | CORS trusted origin |
-| `ENCRYPTION_SECRET` | 64-char hex string | Submission HMAC signing |
+| `ENCRYPTION_SECRET` | `000...000` (64 zeros) | Real 64-char hex string in prod |
 | `JWT_SECRET` | Same as `SUPABASE_JWT_SECRET` | JWT verification |
-| `GMAIL_ADDRESS` | _(empty for local)_ | Gmail address; set in Fly.io secrets for prod |
-| `GMAIL_APP_PASSWORD` | _(empty for local)_ | Gmail App Password; set in Fly.io secrets for prod |
-| `LOG_LEVEL` | `INFO` | `DEBUG` useful during development |
-| `NGROK_STATIC_DOMAIN` | `unkind-freeware-unmoved.ngrok-free.dev` | Only needed if you operate the Judge0 machine |
-| `EXECUTION_BACKEND` | `local` | Reserved for future API-level execution routing; unused by API today |
-| `JUDGE0_URL` | `http://localhost:2358` | Reserved for future API-level execution routing; unused by API today |
+| `GMAIL_ADDRESS` | _(empty)_ | Set in Fly.io secrets for prod |
+| `GMAIL_APP_PASSWORD` | _(empty)_ | Set in Fly.io secrets for prod |
+| `EXECUTION_BACKEND` | `local` | Unused by API — reserved for future server-side execution |
+| `JUDGE0_URL` | `http://localhost:2358` | Unused by API — reserved for future server-side execution |
 
 ---
 
@@ -140,9 +134,9 @@ All three apps share the same Supabase project. Find values at:
 | `VITE_API_BASE_URL` | `http://localhost:8000` | `https://secureassess-api.fly.dev` in prod |
 | `VITE_ADMIN_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
 | `VITE_BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
-| `VITE_SUPABASE_URL` | Supabase project URL | Same for dev and prod |
-| `VITE_SUPABASE_ANON_KEY` | anon/public key | Same for dev and prod; public, safe to embed |
-| `VITE_JUDGE0_URL` | _(empty)_ | `https://unkind-freeware-unmoved.ngrok-free.dev` in prod |
+| `VITE_SUPABASE_URL` | `http://localhost:54321` | `https://<ref>.supabase.co` in prod |
+| `VITE_SUPABASE_ANON_KEY` | local default key | Well-known dev key — not a real secret |
+| `VITE_JUDGE0_URL` | _(empty)_ | ngrok URL in prod |
 | `VITE_EXECUTION_BACKEND` | `local` | `judge0` in prod builds (injected by GitHub Actions) |
 
 ---
@@ -151,14 +145,13 @@ All three apps share the same Supabase project. Find values at:
 
 | Variable | Local dev value | Notes |
 |---|---|---|
-| `ENVIRONMENT` | `development` | |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Same for dev and prod |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon/public key | Same for dev and prod |
-| `API_BASE_URL` | `http://localhost:8000` | `https://secureassess-api.fly.dev` in prod; server-side only |
+| `NEXT_PUBLIC_SUPABASE_URL` | `http://localhost:54321` | `https://<ref>.supabase.co` in prod |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | local default key | Well-known dev key — not a real secret |
+| `API_BASE_URL` | `http://localhost:8000` | `https://secureassess-api.fly.dev` in prod |
 | `BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | `http://localhost:3000` | `https://admin-delta-ecru.vercel.app` in prod |
-| `BETTER_AUTH_SECRET` | random string ≥32 chars | Must match `apps/api/.env` |
-| `DATABASE_URL` | `postgresql://secureassess:secureassess@localhost:5432/secureassess` | Supabase pooler URL in prod |
+| `BETTER_AUTH_SECRET` | `local-dev-better-auth-secret-change-in-production` | Must match `apps/api/.env` |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:54322/postgres` | Supabase bundled DB; pooler URL in prod |
 
 ---
 
@@ -179,19 +172,27 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cd ../..
 
-# Copy and fill in env files
-cp apps/desktop/.env.example apps/desktop/.env
-cp apps/api/.env.example apps/api/.env
+# Copy env files — local defaults work out of the box, no editing required
+cp apps/desktop/.env.example    apps/desktop/.env
+cp apps/api/.env.example        apps/api/.env
 cp apps/admin/.env.local.example apps/admin/.env.local
-# Edit each file and fill in the Supabase values
 
-# Set up the local PostgreSQL database (choose one path):
-make db-setup          # native psql — requires: brew install postgresql@16
-# make db-setup-docker # Docker alternative — requires Docker Desktop
+# Start local Supabase (auth + PostgreSQL — requires Docker)
+make supabase-start
+
+# Apply schema migrations to local Supabase PostgreSQL
+make supabase-migrate
+
+# (Optional) load sample questions and assessments
+make supabase-seed
 
 # Verify everything builds
 pnpm build --filter=!@secureassess/desktop
 ```
+
+> **Docker required.** `make supabase-start` pulls and runs Supabase containers.
+> If you prefer not to use Docker, fall back to `make db-setup` (native psql) and
+> point your `.env` files at the old `postgresql://secureassess:secureassess@localhost:5432/secureassess` URL.
 
 ---
 
@@ -299,6 +300,10 @@ make test
 | Admin dashboard (Next.js) | 3000 | http://localhost:3000 |
 | FastAPI backend | 8000 | http://localhost:8000 |
 | FastAPI interactive docs | 8000 | http://localhost:8000/docs |
+| Supabase Auth API | 54321 | http://localhost:54321 |
+| Supabase PostgreSQL | 54322 | postgresql://postgres:postgres@localhost:54322/postgres |
+| Supabase Studio | 54323 | http://localhost:54323 |
+| Supabase Inbucket (email) | 54324 | http://localhost:54324 |
 | Judge0 CE API (ASUS via ngrok) | 443 | https://unkind-freeware-unmoved.ngrok-free.dev |
 
 ---
@@ -397,5 +402,8 @@ export PATH="$HOME/.fly/bin:$PATH"
 | Deploy API | `make fly-deploy` |
 | Deploy admin | `make vercel-deploy` |
 | Sync GitHub secrets | `make secrets-sync` |
+| Start local Supabase | `make supabase-start` |
+| Stop local Supabase | `make supabase-stop` |
+| Open Supabase Studio | `make supabase-studio` |
 | Inspect SQLite DB | Open `apps/desktop/src-tauri/*.db` with DB Browser for SQLite |
 | View recent commits | `git log --oneline --all` |

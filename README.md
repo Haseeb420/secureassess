@@ -114,16 +114,22 @@ cd secureassess
 # 2. Install JS dependencies
 pnpm install
 
-# 3. Install Python dependencies
-cd apps/api && pip install -r requirements.txt && cd ../..
+# 3. Set up Python virtual environment and install API dependencies
+cd apps/api && python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && cd ../..
 
 # 4. Copy environment files and fill in values (see Environment Variables below)
 cp apps/desktop/.env.example apps/desktop/.env
 cp apps/api/.env.example apps/api/.env
 cp apps/admin/.env.local.example apps/admin/.env.local
 
-# 5. Start Judge0 (required for code execution)
-cd infra/judge0 && docker-compose up -d && cd ../..
+# 5. Set up local database (choose one)
+make db-setup          # native psql (macOS: brew install postgresql@16)
+# make db-setup-docker # Docker alternative
+
+# 6. Code execution for local dev uses LocalExecutor (no Judge0 needed)
+#    Ensure .env files have EXECUTION_BACKEND=local and VITE_EXECUTION_BACKEND=local
+#    Judge0 runs on a remote machine via ngrok — see docs/LOCAL_SETUP.md#judge0
 ```
 
 ---
@@ -166,34 +172,51 @@ pnpm --filter desktop test
 
 ## Environment Variables
 
+See each app's `.env.example` / `.env.local.example` for the full variable list with inline documentation.
+
 ### `apps/desktop/.env`
 
-| Variable | Description |
-|---|---|
-| `VITE_API_BASE_URL` | FastAPI base URL (e.g. `http://localhost:8000`) |
-| `VITE_SUPABASE_URL` | Your Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `VITE_JUDGE0_URL` | Judge0 base URL (e.g. `http://localhost:2358`) |
+| Variable | Local dev value | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:8000` | FastAPI base URL |
+| `VITE_ADMIN_URL` | `http://localhost:3000` | Admin dashboard URL |
+| `VITE_BETTER_AUTH_URL` | `http://localhost:3000` | Better Auth base URL |
+| `VITE_SUPABASE_URL` | Supabase project URL | Same for dev and prod |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key | Public — safe in frontend |
+| `VITE_JUDGE0_URL` | _(empty)_ | ngrok URL for Judge0 (prod only) |
+| `VITE_EXECUTION_BACKEND` | `local` | `local` for dev, `judge0` for prod |
 
 ### `apps/api/.env`
 
-| Variable | Description |
-|---|---|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_SERVICE_KEY` | Supabase service role key (never expose to frontend) |
-| `SUPABASE_JWT_SECRET` | JWT secret from Supabase project settings |
-| `JUDGE0_URL` | Judge0 base URL |
-| `JUDGE0_API_KEY` | Judge0 API key (leave empty for local) |
-| `ENCRYPTION_SECRET` | Secret for submission HMAC signing |
-| `LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` (default: `INFO`) |
+| Variable | Local dev value | Description |
+|---|---|---|
+| `ENVIRONMENT` | `development` | Controls CORS and logging behaviour |
+| `SUPABASE_URL` | Supabase project URL | Required |
+| `SUPABASE_ANON_KEY` | Supabase anon key | Required |
+| `SUPABASE_SERVICE_KEY` | Supabase service key | Required — never expose to frontend |
+| `SUPABASE_JWT_SECRET` | Supabase JWT secret | Required |
+| `DATABASE_URL` | `postgresql://secureassess:secureassess@localhost:5432/secureassess` | Local or Supabase pooler |
+| `BETTER_AUTH_URL` | `http://localhost:3000` | Admin dashboard URL |
+| `BETTER_AUTH_SECRET` | random string ≥32 chars | Must match admin `.env.local` |
+| `ADMIN_URL` | `http://localhost:3000` | CORS trusted origin |
+| `ENCRYPTION_SECRET` | 64-char hex string | Submission HMAC signing |
+| `JWT_SECRET` | Same as `SUPABASE_JWT_SECRET` | JWT verification |
+| `GMAIL_ADDRESS` | _(empty for local)_ | Gmail address for email sending |
+| `GMAIL_APP_PASSWORD` | _(empty for local)_ | Gmail App Password |
+| `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 
 ### `apps/admin/.env.local`
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `NEXT_PUBLIC_API_BASE_URL` | FastAPI base URL |
+| Variable | Local dev value | Description |
+|---|---|---|
+| `ENVIRONMENT` | `development` | Environment flag |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Same for dev and prod |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | Public — safe in frontend |
+| `API_BASE_URL` | `http://localhost:8000` | FastAPI base URL (server-side only) |
+| `BETTER_AUTH_URL` | `http://localhost:3000` | Better Auth base URL |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | `http://localhost:3000` | Better Auth URL (client-side) |
+| `BETTER_AUTH_SECRET` | random string ≥32 chars | Must match API `.env` |
+| `DATABASE_URL` | `postgresql://secureassess:secureassess@localhost:5432/secureassess` | Local or Supabase pooler |
 
 ---
 

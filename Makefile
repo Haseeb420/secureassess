@@ -718,13 +718,17 @@ fly-secrets: ## Set all required environment variables on Fly.io from apps/api/.
 	@cd apps/api && \
 	$(FLY) secrets set \
 		SUPABASE_URL="$$(grep ^SUPABASE_URL .env | cut -d= -f2)" \
-		SUPABASE_SERVICE_KEY="$$(grep SUPABASE_SERVICE_KEY .env | cut -d= -f2)" \
-		SUPABASE_JWT_SECRET="$$(grep SUPABASE_JWT_SECRET .env | cut -d= -f2)" \
-		BETTER_AUTH_SECRET="$$(grep BETTER_AUTH_SECRET .env | cut -d= -f2)" \
+		SUPABASE_ANON_KEY="$$(grep ^SUPABASE_ANON_KEY .env | cut -d= -f2)" \
+		SUPABASE_SERVICE_KEY="$$(grep ^SUPABASE_SERVICE_KEY .env | cut -d= -f2)" \
+		SUPABASE_JWT_SECRET="$$(grep ^SUPABASE_JWT_SECRET .env | cut -d= -f2)" \
+		DATABASE_URL="$$(grep ^DATABASE_URL .env | cut -d= -f2)" \
+		BETTER_AUTH_SECRET="$$(grep ^BETTER_AUTH_SECRET .env | cut -d= -f2)" \
 		BETTER_AUTH_URL="$$(grep ^BETTER_AUTH_URL .env | cut -d= -f2)" \
 		ADMIN_URL="$$(grep ^ADMIN_URL .env | cut -d= -f2)" \
-		JUDGE0_URL="$$(grep ^JUDGE0_URL .env | cut -d= -f2)" \
-		EXECUTION_BACKEND="$$(grep ^EXECUTION_BACKEND .env | cut -d= -f2)" \
+		ENCRYPTION_SECRET="$$(grep ^ENCRYPTION_SECRET .env | cut -d= -f2)" \
+		JWT_SECRET="$$(grep ^JWT_SECRET .env | cut -d= -f2)" \
+		GMAIL_ADDRESS="$$(grep ^GMAIL_ADDRESS .env | cut -d= -f2)" \
+		GMAIL_APP_PASSWORD="$$(grep ^GMAIL_APP_PASSWORD .env | cut -d= -f2)" \
 		LOG_LEVEL="INFO" \
 		ENVIRONMENT="production"
 	@echo "Secrets set. Run: make fly-deploy"
@@ -852,13 +856,18 @@ production-health: ## Check all production services
 
 secrets-sync: ## Sync all secrets to GitHub from local .env files
 	@echo "Syncing secrets to GitHub..."
+	@# ── Tauri build-time secrets (VITE_* embedded into the desktop binary) ──────
 	@gh secret set VITE_API_BASE_URL      --body "https://secureassess-api.fly.dev"
 	@gh secret set VITE_BETTER_AUTH_URL   --body "https://admin-delta-ecru.vercel.app"
-	@gh secret set JUDGE0_URL             --body "https://unkind-freeware-unmoved.ngrok-free.dev"
-	@gh secret set EXECUTION_BACKEND      --body "judge0"
+	@gh secret set VITE_JUDGE0_URL        --body "https://unkind-freeware-unmoved.ngrok-free.dev"
+	@gh secret set VITE_EXECUTION_BACKEND --body "judge0"
 	@gh secret set VITE_SUPABASE_URL      --body "$$(grep ^VITE_SUPABASE_URL apps/desktop/.env | cut -d= -f2)"
-	@gh secret set VITE_SUPABASE_ANON_KEY --body "$$(grep VITE_SUPABASE_ANON_KEY apps/desktop/.env | cut -d= -f2)"
+	@gh secret set VITE_SUPABASE_ANON_KEY --body "$$(grep ^VITE_SUPABASE_ANON_KEY apps/desktop/.env | cut -d= -f2)"
+	@# ── API secrets mirrored to GitHub (referenced by release.yml deploy step) ─
 	@gh secret set SUPABASE_URL           --body "$$(grep ^SUPABASE_URL apps/api/.env | cut -d= -f2)"
-	@gh secret set SUPABASE_SERVICE_KEY   --body "$$(grep SUPABASE_SERVICE_KEY apps/api/.env | cut -d= -f2)"
-	@gh secret set BETTER_AUTH_SECRET     --body "$$(grep BETTER_AUTH_SECRET apps/api/.env | cut -d= -f2)"
-	@echo "Done. Verify: gh secret list"
+	@gh secret set SUPABASE_SERVICE_KEY   --body "$$(grep ^SUPABASE_SERVICE_KEY apps/api/.env | cut -d= -f2)"
+	@gh secret set SUPABASE_JWT_SECRET    --body "$$(grep ^SUPABASE_JWT_SECRET apps/api/.env | cut -d= -f2)"
+	@gh secret set BETTER_AUTH_SECRET     --body "$$(grep ^BETTER_AUTH_SECRET apps/api/.env | cut -d= -f2)"
+	@echo "Done. Full list: gh secret list"
+	@echo "NOTE: DATABASE_URL, ENCRYPTION_SECRET, JWT_SECRET, GMAIL_* live only in Fly.io secrets."
+	@echo "      To push those: make fly-secrets"

@@ -114,17 +114,26 @@ cd secureassess
 # 2. Install JS dependencies
 pnpm install
 
-# 3. Install Python dependencies
-cd apps/api && pip install -r requirements.txt && cd ../..
+# 3. Set up Python virtual environment and install API dependencies
+cd apps/api && python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && cd ../..
 
-# 4. Copy environment files and fill in values (see Environment Variables below)
-cp apps/desktop/.env.example apps/desktop/.env
-cp apps/api/.env.example apps/api/.env
+# 4. Copy environment files — defaults work out of the box, no editing required
+cp apps/desktop/.env.example    apps/desktop/.env
+cp apps/api/.env.example        apps/api/.env
 cp apps/admin/.env.local.example apps/admin/.env.local
 
-# 5. Start Judge0 (required for code execution)
-cd infra/judge0 && docker-compose up -d && cd ../..
+# 5. Start local Supabase (auth + PostgreSQL — requires Docker)
+make supabase-start
+make supabase-migrate        # apply schema
+# make supabase-seed         # optional: load sample data
+
+# 6. Code execution uses LocalExecutor in dev — no Judge0 needed
+#    Judge0 runs on a remote machine via ngrok — see docs/LOCAL_SETUP.md#judge0
 ```
+
+> For production environment templates see each app's `.env.production.example` /
+> `.env.production.local.example`. Production secrets live in Fly.io and Vercel — never in files.
 
 ---
 
@@ -166,34 +175,49 @@ pnpm --filter desktop test
 
 ## Environment Variables
 
+See each app's `.env.example` for local dev defaults (pre-filled, no editing needed).
+For production templates see `.env.production.example` / `.env.production.local.example`.
+
 ### `apps/desktop/.env`
 
-| Variable | Description |
-|---|---|
-| `VITE_API_BASE_URL` | FastAPI base URL (e.g. `http://localhost:8000`) |
-| `VITE_SUPABASE_URL` | Your Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `VITE_JUDGE0_URL` | Judge0 base URL (e.g. `http://localhost:2358`) |
+| Variable | Local dev value | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:8000` | FastAPI base URL |
+| `VITE_ADMIN_URL` | `http://localhost:3000` | Admin dashboard URL |
+| `VITE_BETTER_AUTH_URL` | `http://localhost:3000` | Better Auth base URL |
+| `VITE_SUPABASE_URL` | `http://localhost:54321` | Local Supabase auth API |
+| `VITE_SUPABASE_ANON_KEY` | local default key | Well-known dev key — not a real secret |
+| `VITE_JUDGE0_URL` | _(empty)_ | ngrok URL for Judge0 (prod only) |
+| `VITE_EXECUTION_BACKEND` | `local` | `local` for dev, `judge0` for prod |
 
 ### `apps/api/.env`
 
-| Variable | Description |
-|---|---|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_SERVICE_KEY` | Supabase service role key (never expose to frontend) |
-| `SUPABASE_JWT_SECRET` | JWT secret from Supabase project settings |
-| `JUDGE0_URL` | Judge0 base URL |
-| `JUDGE0_API_KEY` | Judge0 API key (leave empty for local) |
-| `ENCRYPTION_SECRET` | Secret for submission HMAC signing |
-| `LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` (default: `INFO`) |
+| Variable | Local dev value | Description |
+|---|---|---|
+| `SUPABASE_URL` | `http://localhost:54321` | Local Supabase auth API |
+| `SUPABASE_ANON_KEY` | local default key | Well-known dev key — not a real secret |
+| `SUPABASE_SERVICE_KEY` | local default key | Well-known dev key — not a real secret |
+| `SUPABASE_JWT_SECRET` | local default secret | Real secret required in prod |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:54322/postgres` | Supabase bundled PostgreSQL |
+| `BETTER_AUTH_URL` | `http://localhost:3000` | Admin dashboard URL |
+| `BETTER_AUTH_SECRET` | local default | Must match admin `.env.local` |
+| `ADMIN_URL` | `http://localhost:3000` | CORS trusted origin |
+| `ENCRYPTION_SECRET` | `000...000` | Real 64-char hex string in prod |
+| `JWT_SECRET` | same as `SUPABASE_JWT_SECRET` | JWT verification |
+| `GMAIL_ADDRESS` | _(empty)_ | Set in Fly.io secrets for prod |
+| `GMAIL_APP_PASSWORD` | _(empty)_ | Set in Fly.io secrets for prod |
 
 ### `apps/admin/.env.local`
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `NEXT_PUBLIC_API_BASE_URL` | FastAPI base URL |
+| Variable | Local dev value | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `http://localhost:54321` | Local Supabase auth API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | local default key | Well-known dev key — not a real secret |
+| `API_BASE_URL` | `http://localhost:8000` | FastAPI base URL (server-side only) |
+| `BETTER_AUTH_URL` | `http://localhost:3000` | Better Auth base URL |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | `http://localhost:3000` | Better Auth URL (client-side) |
+| `BETTER_AUTH_SECRET` | local default | Must match API `.env` |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:54322/postgres` | Supabase bundled PostgreSQL |
 
 ---
 

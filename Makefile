@@ -17,7 +17,8 @@
         release-patch release-minor release-major \
         release-status release-watch release-logs \
         releases-list release-open release-delete-old \
-        db-setup db-setup-docker db-start db-stop db-shell db-migrate db-seed db-reset db-status
+        db-setup db-setup-docker db-start db-stop db-shell db-migrate db-seed db-reset db-status \
+        supabase-start supabase-stop supabase-status supabase-migrate supabase-studio supabase-reset supabase-seed
 
 # ─── Tool paths ───────────────────────────────────────────────────────────────
 FLY := $(shell which flyctl 2>/dev/null || which fly 2>/dev/null || echo "$(HOME)/.fly/bin/fly")
@@ -62,7 +63,15 @@ help:
 	@printf "  $(CYAN)make deploy-status$(RESET)        Show recent deploy workflow runs\n"
 	@printf "  $(CYAN)make production-health$(RESET)    Check all production services (API + Admin + Judge0)\n"
 	@printf "  $(CYAN)make secrets-sync$(RESET)         Sync all secrets to GitHub from local .env files\n"
-	@printf "\n$(BOLD)Database — Local Dev$(RESET)\n"
+	@printf "\n$(BOLD)Local Supabase (auth + DB — recommended)$(RESET)\n"
+	@printf "  $(CYAN)make supabase-start$(RESET)       Start local Supabase stack (auth + PostgreSQL on :54321/:54322)\n"
+	@printf "  $(CYAN)make supabase-stop$(RESET)        Stop local Supabase stack (data preserved)\n"
+	@printf "  $(CYAN)make supabase-status$(RESET)      Show local Supabase service URLs and keys\n"
+	@printf "  $(CYAN)make supabase-migrate$(RESET)     Run all SQL migrations against local Supabase PostgreSQL\n"
+	@printf "  $(CYAN)make supabase-seed$(RESET)        Seed dev data into local Supabase PostgreSQL\n"
+	@printf "  $(CYAN)make supabase-studio$(RESET)      Open Supabase Studio in browser (http://localhost:54323)\n"
+	@printf "  $(CYAN)make supabase-reset$(RESET)       Wipe and re-migrate local Supabase DB $(RED)(destructive)$(RESET)\n"
+	@printf "\n$(BOLD)Database — Alternative Local Dev (native psql / Docker)$(RESET)\n"
 	@printf "  $(CYAN)make db-setup$(RESET)             First-time native psql setup (creates user + db 'secureassess')\n"
 	@printf "  $(CYAN)make db-setup-docker$(RESET)      First-time Docker setup (pulls postgres:16, starts container)\n"
 	@printf "  $(CYAN)make db-start$(RESET)             Start existing Docker postgres container\n"
@@ -114,9 +123,13 @@ help:
 	@printf "\n$(BOLD)Secrets$(RESET)\n"
 	@printf "  $(CYAN)make secrets-sync$(RESET)         Sync all secrets to GitHub from local .env files\n"
 	@printf "\n$(BOLD)Port map (local dev)$(RESET)\n"
-	@printf "  FastAPI  :8000    ← local dev / Rust sync worker\n"
-	@printf "  Next.js  :3000    ← admin dashboard\n"
-	@printf "  Judge0   :2358    ← runs on ASUS, exposed via ngrok static domain\n"
+	@printf "  FastAPI         :8000    ← local dev / Rust sync worker\n"
+	@printf "  Next.js         :3000    ← admin dashboard\n"
+	@printf "  Supabase Auth   :54321   ← local Supabase API\n"
+	@printf "  Supabase DB     :54322   ← local Supabase PostgreSQL\n"
+	@printf "  Supabase Studio :54323   ← database UI\n"
+	@printf "  Supabase Email  :54324   ← Inbucket email catcher\n"
+	@printf "  Judge0          :2358    ← runs on ASUS, exposed via ngrok static domain\n"
 	@printf "\n$(BOLD)Device Testing — Build & Share$(RESET)\n"
 	@printf "  $(CYAN)make build-mac$(RESET)            Build macOS installer (uses NGROK_STATIC_DOMAIN from .env)\n"
 	@printf "  $(CYAN)make build-mac-url$(RESET)        Build macOS installer with a prompted API URL\n"
@@ -274,6 +287,76 @@ db-reset: ## Drop and recreate 'secureassess' DB, then re-run all migrations (DE
 		|| docker compose exec postgres psql -U $(DB_USER) -c "CREATE DATABASE $(DB_NAME);" 2>/dev/null
 	$(MAKE) db-migrate
 	@printf "$(GREEN)Database reset complete$(RESET)\n"
+
+# ─── Local Supabase ───────────────────────────────────────────────────────────
+# Runs a full Supabase stack (auth + PostgreSQL) in Docker.
+# Local keys (anon, service_role, JWT secret) are well-known dev defaults —
+# they are pre-filled in .env.example files and safe to use locally.
+#
+# Ports:
+#   54321  API / Auth
+#   54322  PostgreSQL
+#   54323  Studio (web UI)
+#   54324  Inbucket (email catcher)
+
+SUPA_DB_URL := postgresql://postgres:postgres@localhost:54322/postgres
+
+supabase-start: ## Start local Supabase stack (requires Docker)
+	$(call log,Starting local Supabase stack)
+	@command -v supabase >/dev/null 2>&1 || { \
+		printf "$(RED)✗ supabase CLI not found.$(RESET)\n"; \
+		printf "  macOS: brew install supabase/tap/supabase\n"; \
+		exit 1; \
+	}
+	@command -v docker >/dev/null 2>&1 || { \
+		printf "$(RED)✗ Docker not found — required for local Supabase.$(RESET)\n"; \
+		printf "  macOS: https://docs.docker.com/desktop/install/mac-install/\n"; \
+		exit 1; \
+	}
+	supabase start
+	@printf "\n$(GREEN)✓ Local Supabase is running$(RESET)\n"
+	@printf "$(CYAN)Run 'make supabase-migrate' to apply schema migrations.$(RESET)\n"
+	@printf "$(CYAN)Run 'make supabase-studio'  to open the database UI.$(RESET)\n"
+
+supabase-stop: ## Stop local Supabase stack (data is preserved)
+	$(call log,Stopping local Supabase stack)
+	supabase stop
+	@printf "$(YELLOW)Local Supabase stopped. Data preserved. Run 'make supabase-start' to resume.$(RESET)\n"
+
+supabase-status: ## Show local Supabase service URLs and API keys
+	$(call log,Local Supabase status)
+	supabase status
+
+supabase-migrate: ## Run all SQL migrations against local Supabase PostgreSQL (:54322)
+	$(call log,Running migrations against local Supabase PostgreSQL)
+	@command -v psql >/dev/null 2>&1 || { \
+		printf "$(RED)✗ psql not found.$(RESET)\n"; \
+		printf "  macOS: brew install postgresql@16\n"; \
+		exit 1; \
+	}
+	@for f in $$(ls $(MIGRATIONS_DIR)/*.sql 2>/dev/null | sort); do \
+		printf "  $(CYAN)→ $$f$(RESET)\n"; \
+		psql "$(SUPA_DB_URL)" -f "$$f" || exit 1; \
+	done
+	@printf "$(GREEN)Migrations complete. Run 'make supabase-seed' to load test data.$(RESET)\n"
+
+supabase-seed: ## Seed dev data into local Supabase PostgreSQL
+	$(call log,Seeding local Supabase database with dev data)
+	@psql "$(SUPA_DB_URL)" -f apps/api/seeds/seed_dev.sql
+	@printf "$(GREEN)Seed complete.$(RESET)\n"
+
+supabase-studio: ## Open Supabase Studio in the browser
+	$(call log,Opening Supabase Studio)
+	@open http://localhost:54323 2>/dev/null || xdg-open http://localhost:54323 2>/dev/null || \
+		printf "$(CYAN)Open manually: http://localhost:54323$(RESET)\n"
+
+supabase-reset: ## Wipe and re-migrate local Supabase DB (DESTRUCTIVE — data lost)
+	$(call log,Resetting local Supabase database)
+	@printf "$(RED)$(BOLD)WARNING: All data in local Supabase will be destroyed. Continue? [y/N] $(RESET)"; \
+	read ans; [ "$$ans" = "y" ] || { echo "Aborted."; exit 1; }
+	supabase db reset
+	$(MAKE) supabase-migrate
+	@printf "$(GREEN)Local Supabase reset complete.$(RESET)\n"
 
 # ─── Setup ────────────────────────────────────────────────────────────────────
 install:
@@ -718,13 +801,17 @@ fly-secrets: ## Set all required environment variables on Fly.io from apps/api/.
 	@cd apps/api && \
 	$(FLY) secrets set \
 		SUPABASE_URL="$$(grep ^SUPABASE_URL .env | cut -d= -f2)" \
-		SUPABASE_SERVICE_KEY="$$(grep SUPABASE_SERVICE_KEY .env | cut -d= -f2)" \
-		SUPABASE_JWT_SECRET="$$(grep SUPABASE_JWT_SECRET .env | cut -d= -f2)" \
-		BETTER_AUTH_SECRET="$$(grep BETTER_AUTH_SECRET .env | cut -d= -f2)" \
+		SUPABASE_ANON_KEY="$$(grep ^SUPABASE_ANON_KEY .env | cut -d= -f2)" \
+		SUPABASE_SERVICE_KEY="$$(grep ^SUPABASE_SERVICE_KEY .env | cut -d= -f2)" \
+		SUPABASE_JWT_SECRET="$$(grep ^SUPABASE_JWT_SECRET .env | cut -d= -f2)" \
+		DATABASE_URL="$$(grep ^DATABASE_URL .env | cut -d= -f2)" \
+		BETTER_AUTH_SECRET="$$(grep ^BETTER_AUTH_SECRET .env | cut -d= -f2)" \
 		BETTER_AUTH_URL="$$(grep ^BETTER_AUTH_URL .env | cut -d= -f2)" \
 		ADMIN_URL="$$(grep ^ADMIN_URL .env | cut -d= -f2)" \
-		JUDGE0_URL="$$(grep ^JUDGE0_URL .env | cut -d= -f2)" \
-		EXECUTION_BACKEND="$$(grep ^EXECUTION_BACKEND .env | cut -d= -f2)" \
+		ENCRYPTION_SECRET="$$(grep ^ENCRYPTION_SECRET .env | cut -d= -f2)" \
+		JWT_SECRET="$$(grep ^JWT_SECRET .env | cut -d= -f2)" \
+		GMAIL_ADDRESS="$$(grep ^GMAIL_ADDRESS .env | cut -d= -f2)" \
+		GMAIL_APP_PASSWORD="$$(grep ^GMAIL_APP_PASSWORD .env | cut -d= -f2)" \
 		LOG_LEVEL="INFO" \
 		ENVIRONMENT="production"
 	@echo "Secrets set. Run: make fly-deploy"
@@ -852,13 +939,18 @@ production-health: ## Check all production services
 
 secrets-sync: ## Sync all secrets to GitHub from local .env files
 	@echo "Syncing secrets to GitHub..."
+	@# ── Tauri build-time secrets (VITE_* embedded into the desktop binary) ──────
 	@gh secret set VITE_API_BASE_URL      --body "https://secureassess-api.fly.dev"
 	@gh secret set VITE_BETTER_AUTH_URL   --body "https://admin-delta-ecru.vercel.app"
-	@gh secret set JUDGE0_URL             --body "https://unkind-freeware-unmoved.ngrok-free.dev"
-	@gh secret set EXECUTION_BACKEND      --body "judge0"
+	@gh secret set VITE_JUDGE0_URL        --body "https://unkind-freeware-unmoved.ngrok-free.dev"
+	@gh secret set VITE_EXECUTION_BACKEND --body "judge0"
 	@gh secret set VITE_SUPABASE_URL      --body "$$(grep ^VITE_SUPABASE_URL apps/desktop/.env | cut -d= -f2)"
-	@gh secret set VITE_SUPABASE_ANON_KEY --body "$$(grep VITE_SUPABASE_ANON_KEY apps/desktop/.env | cut -d= -f2)"
+	@gh secret set VITE_SUPABASE_ANON_KEY --body "$$(grep ^VITE_SUPABASE_ANON_KEY apps/desktop/.env | cut -d= -f2)"
+	@# ── API secrets mirrored to GitHub (referenced by release.yml deploy step) ─
 	@gh secret set SUPABASE_URL           --body "$$(grep ^SUPABASE_URL apps/api/.env | cut -d= -f2)"
-	@gh secret set SUPABASE_SERVICE_KEY   --body "$$(grep SUPABASE_SERVICE_KEY apps/api/.env | cut -d= -f2)"
-	@gh secret set BETTER_AUTH_SECRET     --body "$$(grep BETTER_AUTH_SECRET apps/api/.env | cut -d= -f2)"
-	@echo "Done. Verify: gh secret list"
+	@gh secret set SUPABASE_SERVICE_KEY   --body "$$(grep ^SUPABASE_SERVICE_KEY apps/api/.env | cut -d= -f2)"
+	@gh secret set SUPABASE_JWT_SECRET    --body "$$(grep ^SUPABASE_JWT_SECRET apps/api/.env | cut -d= -f2)"
+	@gh secret set BETTER_AUTH_SECRET     --body "$$(grep ^BETTER_AUTH_SECRET apps/api/.env | cut -d= -f2)"
+	@echo "Done. Full list: gh secret list"
+	@echo "NOTE: DATABASE_URL, ENCRYPTION_SECRET, JWT_SECRET, GMAIL_* live only in Fly.io secrets."
+	@echo "      To push those: make fly-secrets"

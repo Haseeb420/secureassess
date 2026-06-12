@@ -49,10 +49,9 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        import bcrypt
         import psycopg2
     except ImportError:
-        print("Missing dependencies. Run: pip install bcrypt psycopg2-binary", file=sys.stderr)
+        print("Missing dependency. Run: pip install psycopg2-binary", file=sys.stderr)
         sys.exit(1)
 
     repo_root = Path(__file__).parent.parent
@@ -85,7 +84,11 @@ def main() -> None:
         conn.close()
         return
 
-    pw_hash    = bcrypt.hashpw(args.password.encode(), bcrypt.gensalt(rounds=10)).decode()
+    import hashlib
+    salt_hex   = os.urandom(16).hex()
+    key        = hashlib.scrypt(args.password.encode(), salt=salt_hex.encode(),
+                                n=16384, r=16, p=1, dklen=64, maxmem=128*16384*16*2)
+    pw_hash    = f"{salt_hex}:{key.hex()}"
     now        = datetime.datetime.now(datetime.timezone.utc)
     user_id    = secrets.token_urlsafe(24)
     account_id = secrets.token_urlsafe(24)

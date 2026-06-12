@@ -231,29 +231,47 @@ Never commit:
 
 ## Environment Variables
 
+See each app's `.env.example` / `.env.local.example` for the full variable list with inline documentation.
+
 ### Desktop App (`apps/desktop/.env`)
 ```
-VITE_API_BASE_URL=
+VITE_API_BASE_URL=http://localhost:8000
+VITE_ADMIN_URL=http://localhost:3000
+VITE_BETTER_AUTH_URL=http://localhost:3000
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_JUDGE0_URL=
+VITE_EXECUTION_BACKEND=local
 ```
 
 ### API (`apps/api/.env`)
 ```
+ENVIRONMENT=development
 SUPABASE_URL=
+SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_KEY=
-JUDGE0_URL=
-JUDGE0_API_KEY=
+SUPABASE_JWT_SECRET=
+DATABASE_URL=postgresql://secureassess:secureassess@localhost:5432/secureassess
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=
+ADMIN_URL=http://localhost:3000
 ENCRYPTION_SECRET=
 JWT_SECRET=
+GMAIL_ADDRESS=
+GMAIL_APP_PASSWORD=
+LOG_LEVEL=INFO
 ```
 
 ### Admin Dashboard (`apps/admin/.env.local`)
 ```
+ENVIRONMENT=development
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_API_BASE_URL=
+API_BASE_URL=http://localhost:8000
+BETTER_AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=
+DATABASE_URL=postgresql://secureassess:secureassess@localhost:5432/secureassess
 ```
 
 ---

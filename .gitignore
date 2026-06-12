@@ -67,3 +67,9 @@ dist/installers/
 
 # tmux
 .tmux.conf.local
+
+# Operational data — invite logs, assessment docs, one-off scripts
+*.docx
+scripts/*_invites_sent.csv
+scripts/seed_coding_competition_invites.py
+scripts/seed_wamolabs_*.py

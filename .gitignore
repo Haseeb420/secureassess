@@ -68,6 +68,9 @@ dist/installers/
 # tmux
 .tmux.conf.local
 
+# Onboarding doc — shared externally, not tracked in repo
+ONBOARDING.md
+
 # Operational data — invite logs, assessment docs, one-off scripts
 *.docx
 scripts/*_invites_sent.csv

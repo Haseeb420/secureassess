@@ -21,10 +21,6 @@ export function GlobalQuitButton() {
   const isPreAssessment    = location.pathname === '/pre-assessment'
   const needsKioskExit     = isAssessmentActive || isMockActive || isPreAssessment
 
-  // AssessmentPage has its own well-designed exit flow — don't duplicate it.
-  // The TopBar Exit button there is the canonical UX for mid-attempt exits.
-  if (isAssessmentActive) return null
-
   const handleConfirm = async () => {
     setLoading(true)
     try {
@@ -41,15 +37,26 @@ export function GlobalQuitButton() {
 
   const title = isMockActive
     ? 'End practice round?'
-    : isPreAssessment
-      ? 'Quit SecureAssess?'
-      : 'Quit SecureAssess?'
+    : isAssessmentActive
+      ? 'Abandon assessment?'
+      : isPreAssessment
+        ? 'Quit SecureAssess?'
+        : 'Quit SecureAssess?'
 
   const description = isMockActive
     ? 'Your practice round will end. You can start a new one from the assessment portal.'
-    : isPreAssessment
-      ? 'The security checks will be cancelled and the app will close.'
-      : 'Are you sure you want to close SecureAssess?'
+    : isAssessmentActive
+      ? 'Your current answers will not be submitted. This action cannot be undone.'
+      : isPreAssessment
+        ? 'The security checks will be cancelled and the app will close.'
+        : 'Are you sure you want to close SecureAssess?'
+
+  // On the assessment page the TopBar already has an Exit button. Keep this
+  // button visible but subtle so it doesn't distract — it's a safety fallback
+  // for when the TopBar button is locked (e.g. code is running).
+  const buttonClass = isAssessmentActive
+    ? 'fixed right-16 top-[62px] z-[9999] flex h-6 w-6 items-center justify-center rounded-md text-white/10 transition-colors duration-150 hover:bg-white/10 hover:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40'
+    : 'fixed right-4 top-4 z-[9999] flex h-7 w-7 items-center justify-center rounded-lg text-white/20 transition-colors duration-150 hover:bg-white/10 hover:text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40'
 
   return (
     <>
@@ -57,9 +64,9 @@ export function GlobalQuitButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Quit SecureAssess"
-        className="fixed right-4 top-4 z-[9999] flex h-7 w-7 items-center justify-center rounded-lg text-white/20 transition-colors duration-150 hover:bg-white/10 hover:text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+        className={buttonClass}
       >
-        <PowerOff size={14} aria-hidden="true" />
+        <PowerOff size={isAssessmentActive ? 12 : 14} aria-hidden="true" />
       </button>
 
       <AnimatePresence>

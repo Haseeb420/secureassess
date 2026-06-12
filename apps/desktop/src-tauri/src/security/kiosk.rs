@@ -46,6 +46,47 @@ pub struct AssessmentActiveFlag(pub Arc<AtomicBool>);
 
 // ── Windows ───────────────────────────────────────────────────────────────────
 
+/// Hide the Windows taskbar and secondary trays so the candidate cannot click
+/// them to switch windows. Must be paired with `show_taskbar_windows` on exit.
+#[cfg(target_os = "windows")]
+pub(crate) fn hide_taskbar_windows() {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowW, ShowWindow, SW_HIDE};
+    let primary: Vec<u16> = "Shell_TrayWnd\0".encode_utf16().collect();
+    let secondary: Vec<u16> = "Shell_SecondaryTrayWnd\0".encode_utf16().collect();
+    unsafe {
+        let hwnd = FindWindowW(primary.as_ptr(), std::ptr::null());
+        if hwnd != 0 {
+            ShowWindow(hwnd, SW_HIDE);
+        }
+        // Hide secondary taskbars on additional monitors.
+        let mut hwnd2 = FindWindowW(secondary.as_ptr(), std::ptr::null());
+        while hwnd2 != 0 {
+            ShowWindow(hwnd2, SW_HIDE);
+            use windows_sys::Win32::UI::WindowsAndMessaging::FindWindowExW;
+            hwnd2 = FindWindowExW(0, hwnd2, secondary.as_ptr(), std::ptr::null());
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn show_taskbar_windows() {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowW, ShowWindow, SW_SHOW};
+    let primary: Vec<u16> = "Shell_TrayWnd\0".encode_utf16().collect();
+    let secondary: Vec<u16> = "Shell_SecondaryTrayWnd\0".encode_utf16().collect();
+    unsafe {
+        let hwnd = FindWindowW(primary.as_ptr(), std::ptr::null());
+        if hwnd != 0 {
+            ShowWindow(hwnd, SW_SHOW);
+        }
+        let mut hwnd2 = FindWindowW(secondary.as_ptr(), std::ptr::null());
+        while hwnd2 != 0 {
+            ShowWindow(hwnd2, SW_SHOW);
+            use windows_sys::Win32::UI::WindowsAndMessaging::FindWindowExW;
+            hwnd2 = FindWindowExW(0, hwnd2, secondary.as_ptr(), std::ptr::null());
+        }
+    }
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) unsafe fn apply_kiosk_frame_windows(hwnd: isize) {
     use windows_sys::Win32::Graphics::Gdi::{
@@ -153,9 +194,11 @@ pub fn enter_kiosk_mode(
 
     #[cfg(target_os = "windows")]
     {
-        // hwnd() returns *mut c_void (same convention as ns_window() on macOS).
         let hwnd = window.hwnd().map_err(|e| e.to_string())?.0 as isize;
         unsafe { apply_kiosk_frame_windows(hwnd) };
+
+        // Hide the taskbar so the candidate cannot click it to switch windows.
+        hide_taskbar_windows();
 
         // Install the low-level keyboard hook to block Alt+Tab, Win key, etc.
         crate::security::keyboard_hook::install_keyboard_hook();
@@ -197,6 +240,9 @@ pub fn exit_kiosk_mode(
     #[cfg(target_os = "windows")]
     {
         crate::security::keyboard_hook::uninstall_keyboard_hook();
+
+        // Restore the taskbar before releasing topmost so the desktop is usable again.
+        show_taskbar_windows();
 
         use windows_sys::Win32::UI::WindowsAndMessaging::{
             SetWindowPos, HWND_NOTOPMOST, SWP_FRAMECHANGED, SWP_NOMOVE, SWP_NOSIZE,

@@ -79,6 +79,14 @@ pub fn start_fullscreen_watchdog<R: Runtime>(
                     let _ = app_handle.emit("security:fullscreen-restored", ());
                 }
             }
+
+            // Re-install the keyboard hook if its thread died unexpectedly.
+            // WH_KEYBOARD_LL hooks are automatically removed by Windows if the
+            // owning thread exits, so we guard against that here.
+            if !crate::security::keyboard_hook::is_hook_running() {
+                tracing::warn!("Keyboard hook thread died — reinstalling");
+                crate::security::keyboard_hook::install_keyboard_hook();
+            }
         }
 
         // Linux: re-assert position/size and always-on-top if the compositor

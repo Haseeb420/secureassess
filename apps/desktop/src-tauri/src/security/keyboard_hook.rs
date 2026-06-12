@@ -23,6 +23,7 @@ mod imp {
     const LLKHF_ALTDOWN: u32 = 0x20;
 
     pub(super) static HOOK_ACTIVE: AtomicBool = AtomicBool::new(false);
+    pub(super) static HOOK_THREAD_ALIVE: AtomicBool = AtomicBool::new(false);
     static HOOK_HANDLE: AtomicIsize = AtomicIsize::new(0);
     static HOOK_THREAD_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -52,13 +53,23 @@ mod imp {
     }
 
     pub fn install() {
+        // Don't spawn a second thread if one is already running.
+        if HOOK_THREAD_ALIVE.load(Ordering::Relaxed) {
+            return;
+        }
         HOOK_ACTIVE.store(true, Ordering::Relaxed);
         std::thread::Builder::new()
             .name("keyboard-hook".into())
             .spawn(|| unsafe {
+                HOOK_THREAD_ALIVE.store(true, Ordering::Relaxed);
                 HOOK_THREAD_ID.store(GetCurrentThreadId(), Ordering::Relaxed);
                 let hmod = GetModuleHandleW(std::ptr::null());
                 let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), hmod, 0);
+                if hook == 0 {
+                    tracing::error!("SetWindowsHookExW failed — keyboard blocking unavailable");
+                    HOOK_THREAD_ALIVE.store(false, Ordering::Relaxed);
+                    return;
+                }
                 HOOK_HANDLE.store(hook, Ordering::Relaxed);
 
                 // Pump messages — the hook callback fires on this thread.
@@ -70,6 +81,7 @@ mod imp {
 
                 UnhookWindowsHookEx(HOOK_HANDLE.load(Ordering::Relaxed));
                 HOOK_HANDLE.store(0, Ordering::Relaxed);
+                HOOK_THREAD_ALIVE.store(false, Ordering::Relaxed);
             })
             .expect("failed to spawn keyboard-hook thread");
     }
@@ -93,4 +105,12 @@ pub fn install_keyboard_hook() {
 pub fn uninstall_keyboard_hook() {
     #[cfg(target_os = "windows")]
     imp::uninstall();
+}
+
+/// Returns true if the hook thread is alive and blocking keys.
+pub fn is_hook_running() -> bool {
+    #[cfg(target_os = "windows")]
+    return imp::HOOK_THREAD_ALIVE.load(std::sync::atomic::Ordering::Relaxed);
+    #[cfg(not(target_os = "windows"))]
+    return false;
 }
